@@ -1,0 +1,121 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy import func, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import get_settings
+from app.database import get_db
+from app.models import KnowledgeChunk, KnowledgeDocument, User
+from app.services.auth_service import get_current_user, require_admin_user
+from app.services.operations import build_backup_status, create_sqlite_backup, request_metrics
+from app.services.release_checks import run_release_checks
+
+router = APIRouter(prefix="/api/system", tags=["system"])
+
+
+@router.get("/status")
+async def status(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    settings = get_settings()
+    database_ok = True
+    database_error = None
+
+    try:
+        await db.execute(text("SELECT 1"))
+    except Exception as exc:
+        database_ok = False
+        database_error = str(exc)
+
+    document_count = 0
+    chunk_count = 0
+    if database_ok:
+        document_count = await db.scalar(select(func.count()).select_from(KnowledgeDocument)) or 0
+        chunk_count = await db.scalar(select(func.count()).select_from(KnowledgeChunk)) or 0
+
+    llm_provider = settings.LLM_PROVIDER.lower()
+    return {
+        "app": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "environment": settings.APP_ENV,
+        "public_base_url": settings.PUBLIC_BASE_URL,
+        "database": {
+            "ok": database_ok,
+            "driver": settings.DATABASE_URL.split("://", 1)[0],
+            "error": database_error,
+        },
+        "llm": {
+            "provider": llm_provider,
+            "model": settings.LLM_MODEL,
+            "configured": llm_provider == "local" or bool(settings.LLM_API_KEY),
+            "local_fallback": llm_provider == "local" or not bool(settings.LLM_API_KEY),
+            "fallback_allowed": settings.LLM_ALLOW_FALLBACK,
+        },
+        "rag": {
+            "enabled": True,
+            "retriever": "keyword",
+            "document_count": document_count,
+            "chunk_count": chunk_count,
+        },
+        "limits": {
+            "max_file_size_mb": round(settings.MAX_FILE_SIZE / 1024 / 1024, 1),
+            "max_resume_text_length": settings.MAX_RESUME_TEXT_LENGTH,
+            "max_jd_text_length": settings.MAX_JD_TEXT_LENGTH,
+            "max_answer_length": settings.MAX_ANSWER_LENGTH,
+        },
+        "security": {
+            "admin_enabled": bool(settings.admin_email_list),
+            "cors_origins": settings.CORS_ALLOW_ORIGINS,
+            "trusted_hosts": settings.TRUSTED_HOSTS,
+            "docs_enabled": settings.ENABLE_DOCS,
+            "auto_create_db": settings.AUTO_CREATE_DB,
+            "rate_limit_window_seconds": settings.RATE_LIMIT_WINDOW_SECONDS,
+            "auth_requests_per_window": settings.RATE_LIMIT_AUTH_REQUESTS,
+            "api_requests_per_window": settings.RATE_LIMIT_API_REQUESTS,
+        },
+        "business": {
+            "billing_enabled": settings.BILLING_ENABLED,
+            "payment_provider": settings.PAYMENT_PROVIDER or "not_configured",
+            "upgrade_contact": settings.BILLING_UPGRADE_CONTACT,
+            "free_resume_quota": settings.FREE_RESUME_QUOTA,
+            "free_interview_quota": settings.FREE_INTERVIEW_QUOTA,
+            "free_optimize_quota": settings.FREE_OPTIMIZE_QUOTA,
+            "free_jd_adapt_quota": settings.FREE_JD_ADAPT_QUOTA,
+            "free_report_export_quota": settings.FREE_REPORT_EXPORT_QUOTA,
+            "pro_monthly_price_cny": settings.PRO_MONTHLY_PRICE_CNY,
+            "pro_resume_quota": settings.PRO_RESUME_QUOTA,
+            "pro_interview_quota": settings.PRO_INTERVIEW_QUOTA,
+            "pro_optimize_quota": settings.PRO_OPTIMIZE_QUOTA,
+            "pro_jd_adapt_quota": settings.PRO_JD_ADAPT_QUOTA,
+            "pro_report_export_quota": settings.PRO_REPORT_EXPORT_QUOTA,
+            "sprint_package_price_cny": settings.SPRINT_PACKAGE_PRICE_CNY,
+        },
+        "operations": {
+            "metrics_enabled": settings.METRICS_ENABLED,
+            "metrics": request_metrics.snapshot(),
+            "backup": build_backup_status(settings),
+            "release": {
+                "deployment_color": settings.DEPLOYMENT_COLOR,
+                "release_channel": settings.RELEASE_CHANNEL,
+                "canary_percent": settings.CANARY_PERCENT,
+            },
+        },
+        "release": run_release_checks(settings),
+    }
+
+
+@router.get("/release-checks")
+async def release_checks(current_user: User = Depends(get_current_user)):
+    settings = get_settings()
+    return run_release_checks(settings)
+
+
+@router.get("/admin/metrics")
+async def admin_metrics(current_user: User = Depends(require_admin_user)):
+    return request_metrics.snapshot()
+
+
+@router.post("/admin/backup")
+async def admin_backup(current_user: User = Depends(require_admin_user)):
+    settings = get_settings()
+    return create_sqlite_backup(settings)

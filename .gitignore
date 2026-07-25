@@ -1,0 +1,48 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Python
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+
+# Databases and runtime data
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+backups/
+
+# Node / frontend
+node_modules/
+dist/
+.vite-cache/
+
+# Test and build reports
+test-results/
+playwright-report/
+coverage/
+htmlcov/
+
+# Logs
+*.log
+*.err
+
+# Local IDE / OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/
+
+# Local helper scripts
+cleanup_node.ps1
+setup_node_path.bat
