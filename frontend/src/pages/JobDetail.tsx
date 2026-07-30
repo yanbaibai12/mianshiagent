@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { ArrowLeft, BrainCircuit, Download, FileText, Gauge, Play, RefreshCcw, RotateCcw, ShieldCheck, Target, XCircle } from 'lucide-react'
+import { ArrowLeft, BrainCircuit, Download, FileText, Gauge, MessageSquare, Play, RefreshCcw, RotateCcw, ShieldCheck, Target, XCircle } from 'lucide-react'
 import AppShell from '../components/AppShell'
-import { Badge, Button, Card, EmptyState, LoadingState, ProgressBar, StatTile } from '../components/ui'
+import { Badge, Button, Card, EmptyState, Field, LoadingState, ProgressBar, StatTile } from '../components/ui'
 import { interviewApi } from '../services/interview'
 import { jobsApi, type JobApplication } from '../services/jobs'
+import { qualityApi } from '../services/quality'
 import { type AtsReport } from '../services/resume'
 import { taskApi, type AsyncTask } from '../services/tasks'
 
@@ -67,6 +68,8 @@ function AtsPanel({ report }: { report: AtsReport | null }) {
   )
 }
 
+const QUALITY_LABELS = ['改动具体', '内容真实', '对比清晰', '证据不足', '表达套话', '遗漏 JD 要求']
+
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -76,6 +79,10 @@ export default function JobDetailPage() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [qualityScore, setQualityScore] = useState(4)
+  const [qualityLabels, setQualityLabels] = useState<string[]>(['改动具体'])
+  const [qualityNotes, setQualityNotes] = useState('')
+  const [qualitySubmitting, setQualitySubmitting] = useState(false)
 
   const atsReport = useMemo(() => {
     const report = job?.ats_report
@@ -172,6 +179,39 @@ export default function JobDetailPage() {
       setError(err.response?.data?.detail || '创建岗位面试失败')
     } finally {
       setBusy(false)
+    }
+  }
+
+  const toggleQualityLabel = (label: string) => {
+    setQualityLabels((current) =>
+      current.includes(label) ? current.filter((item) => item !== label) : [...current, label],
+    )
+  }
+
+  const submitQualityFeedback = async () => {
+    if (!job) return
+    setQualitySubmitting(true)
+    setError('')
+    setMessage('')
+    try {
+      await qualityApi.createAnnotation({
+        target_type: 'job',
+        target_id: job.id,
+        score: qualityScore,
+        labels: qualityLabels,
+        notes: qualityNotes.trim() || undefined,
+        metadata: {
+          job_status: job.status,
+          has_resume_version: Boolean(job.current_resume_version_id),
+          match_score: job.match_score,
+        },
+      })
+      setQualityNotes('')
+      setMessage('质量反馈已记录，会进入人工标注与后续回归评测。')
+    } catch (err: any) {
+      setError(err.response?.data?.detail || '质量反馈提交失败')
+    } finally {
+      setQualitySubmitting(false)
     }
   }
 
@@ -301,6 +341,68 @@ export default function JobDetailPage() {
 
         <Card>
           <AtsPanel report={atsReport} />
+        </Card>
+
+        <Card>
+          <div className="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+            <div>
+              <h2 className="card-title">优化结果质量反馈</h2>
+              <p className="card-subtitle">用于人工标注和回归评测，只记录评分、标签和短备注。</p>
+            </div>
+            <MessageSquare size={20} className="text-cyan-700" />
+          </div>
+          <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
+            <Field label="质量评分">
+              <select className="select" value={qualityScore} onChange={(event) => setQualityScore(Number(event.target.value))}>
+                <option value={5}>5 分 - 可直接投递</option>
+                <option value={4}>4 分 - 基本可用</option>
+                <option value={3}>3 分 - 需要人工改</option>
+                <option value={2}>2 分 - 问题较多</option>
+                <option value={1}>1 分 - 不可用</option>
+              </select>
+            </Field>
+            <div>
+              <div className="mb-2 text-sm font-semibold text-slate-700">标签</div>
+              <div className="flex flex-wrap gap-2">
+                {QUALITY_LABELS.map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => toggleQualityLabel(label)}
+                    className={`rounded-md border px-3 py-2 text-sm font-semibold ${
+                      qualityLabels.includes(label)
+                        ? 'border-cyan-500 bg-cyan-50 text-cyan-800'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Field label="备注">
+              <textarea
+                className="textarea min-h-24"
+                value={qualityNotes}
+                onChange={(event) => setQualityNotes(event.target.value)}
+                maxLength={1000}
+                placeholder="例如：项目改写有具体技术点，但结果指标还需要人工确认。"
+              />
+            </Field>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button
+              type="button"
+              onClick={submitQualityFeedback}
+              disabled={qualitySubmitting || !job.current_resume_version_id}
+              data-testid="submit-quality-feedback-button"
+            >
+              <MessageSquare size={16} />
+              {qualitySubmitting ? '提交中...' : '提交质量反馈'}
+            </Button>
+          </div>
         </Card>
       </div>
     </AppShell>

@@ -143,6 +143,29 @@ export interface SystemStatus {
         updated_at: string
       }>
     }
+    alerting?: {
+      enabled: boolean
+      configured: boolean
+      webhook_configured: boolean
+      token_configured: boolean
+      min_severity: string
+      dedupe_minutes: number
+      status_counts: Record<string, number>
+      recent: Array<{
+        id: string
+        alert_key: string
+        severity: string
+        feature: string
+        title: string
+        destination: string
+        status: string
+        attempts: number
+        error_type: string | null
+        error_message: string
+        sent_at: string | null
+        created_at: string
+      }>
+    }
     backup: {
       enabled: boolean
       backup_dir: string
@@ -162,6 +185,19 @@ export interface SystemStatus {
     }
   }
   release: ReleaseChecks
+  alerts: {
+    health: 'ok' | 'warning' | 'critical'
+    critical_count: number
+    warning_count: number
+    alerts: Array<{
+      key: string
+      severity: 'info' | 'warning' | 'critical'
+      title: string
+      message: string
+      recommendation: string
+      feature: string
+    }>
+  }
 }
 
 export interface ResumeReindexAllResult {
@@ -186,6 +222,25 @@ export interface ResumeReindexAllResult {
 export const systemApi = {
   status: () => api.get<SystemStatus>('/api/system/status'),
   releaseChecks: () => api.get<ReleaseChecks>('/api/system/release-checks'),
+  alerts: () => api.get<SystemStatus['alerts']>('/api/system/alerts'),
+  notifyAlerts: (payload: { include_warnings?: boolean; force?: boolean } = {}) =>
+    api.post<{
+      configured: boolean
+      enabled: boolean
+      min_severity: string
+      eligible_count: number
+      sent_count: number
+      failed_count: number
+      skipped_count: number
+      reason?: string
+      notifications: Array<{
+        alert_key: string
+        status: string
+        reason?: string
+        notification_id?: string
+        error_type?: string | null
+      }>
+    }>('/api/system/admin/alerts/notify', payload),
   rerankProbe: (query: string, documents: string[]) =>
     api.post('/api/system/rerank/probe', { query, documents }),
   adminBackup: () => api.post<{ filename: string; path: string; size_bytes: number; created_at: string }>('/api/system/admin/backup'),

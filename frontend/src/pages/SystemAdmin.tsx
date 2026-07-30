@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { ArrowLeft, BrainCircuit, CheckCircle2, CreditCard, Database, RefreshCw, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, BellRing, BrainCircuit, CheckCircle2, CreditCard, Database, MessageSquare, RefreshCw, Send, ShieldCheck } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { Badge, Button, Card, EmptyState, Field, LoadingState, StatTile } from '../components/ui'
 import { auditApi, AuditLog } from '../services/audit'
 import { businessApi, AdminUsageSummary, BusinessEntitlements } from '../services/business'
 import { knowledgeApi } from '../services/knowledge'
+import { qualityApi, type QualitySummary } from '../services/quality'
 import { systemApi, SystemStatus } from '../services/system'
 
 function auditTone(eventType: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
@@ -14,6 +15,13 @@ function auditTone(eventType: string): 'neutral' | 'success' | 'warning' | 'dang
   if (eventType.includes('login') || eventType.includes('register')) return 'success'
   if (eventType.includes('upload') || eventType.includes('finish')) return 'info'
   return 'neutral'
+}
+
+function severityTone(severity: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
+  if (severity === 'critical') return 'danger'
+  if (severity === 'warning') return 'warning'
+  if (severity === 'info') return 'info'
+  return 'success'
 }
 
 function formatMetadata(metadata: Record<string, unknown>) {
@@ -26,6 +34,7 @@ export default function SystemAdminPage() {
   const [status, setStatus] = useState<SystemStatus | null>(null)
   const [business, setBusiness] = useState<BusinessEntitlements | null>(null)
   const [adminSummary, setAdminSummary] = useState<AdminUsageSummary | null>(null)
+  const [qualitySummary, setQualitySummary] = useState<QualitySummary | null>(null)
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [auditEventType, setAuditEventType] = useState('')
   const [loading, setLoading] = useState(true)
@@ -42,6 +51,9 @@ export default function SystemAdminPage() {
   const [reindexMessage, setReindexMessage] = useState('')
   const [importingKnowledge, setImportingKnowledge] = useState(false)
   const [knowledgeImportMessage, setKnowledgeImportMessage] = useState('')
+  const [alertSending, setAlertSending] = useState(false)
+  const [alertMessage, setAlertMessage] = useState('')
+  const [qualityCandidateUpdating, setQualityCandidateUpdating] = useState('')
 
   useEffect(() => {
     loadData()
@@ -56,15 +68,18 @@ export default function SystemAdminPage() {
         setStatus(statusRes.data)
         setBusiness(businessRes.data)
       try {
-        const [adminRes, auditRes] = await Promise.all([
+        const [adminRes, auditRes, qualityRes] = await Promise.all([
           businessApi.adminUsageSummary(),
           auditApi.adminLogs({ limit: 80, event_type: auditEventType.trim() || undefined }),
+          qualityApi.adminSummary(20),
         ])
         setAdminSummary(adminRes.data)
         setAuditLogs(auditRes.data.logs)
+        setQualitySummary(qualityRes.data)
       } catch (err: any) {
         setAdminSummary(null)
         setAuditLogs([])
+        setQualitySummary(null)
         setAdminError(err.response?.data?.detail || '当前账号没有管理员权限')
       }
     } catch (err: any) {
@@ -164,6 +179,38 @@ export default function SystemAdminPage() {
     }
   }
 
+  const handleNotifyAlerts = async () => {
+    setAdminError('')
+    setAlertMessage('')
+    setAlertSending(true)
+    try {
+      const res = await systemApi.notifyAlerts({ include_warnings: true })
+      const statusRes = await systemApi.status()
+      setStatus(statusRes.data)
+      setAlertMessage(
+        `已处理 ${res.data.eligible_count} 条告警，发送 ${res.data.sent_count} 条，跳过 ${res.data.skipped_count} 条，失败 ${res.data.failed_count} 条。`,
+      )
+    } catch (err: any) {
+      setAdminError(err.response?.data?.detail || '告警通知发送失败')
+    } finally {
+      setAlertSending(false)
+    }
+  }
+
+  const handleMarkCandidateAdded = async (candidateId: string) => {
+    setAdminError('')
+    setQualityCandidateUpdating(candidateId)
+    try {
+      await qualityApi.updateEvalCandidateStatus(candidateId, 'added_to_eval')
+      const qualityRes = await qualityApi.adminSummary(20)
+      setQualitySummary(qualityRes.data)
+    } catch (err: any) {
+      setAdminError(err.response?.data?.detail || '评测候选状态更新失败')
+    } finally {
+      setQualityCandidateUpdating('')
+    }
+  }
+
   if (loading) return <LoadingState label="正在加载系统巡检" />
 
   return (
@@ -193,6 +240,46 @@ export default function SystemAdminPage() {
                 icon={<CheckCircle2 size={18} />}
               />
             </div>
+
+            {status.alerts?.alerts?.length ? (
+              <Card className={status.alerts.health === 'critical' ? 'border-rose-200 bg-rose-50' : 'border-amber-200 bg-amber-50'}>
+                <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+                  <div>
+                    <h2 className="card-title">运行告警</h2>
+                    <p className="card-subtitle">
+                      {status.alerts.critical_count} critical / {status.alerts.warning_count} warning，按风险优先级处理。
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {adminSummary && (
+                      <Button type="button" size="sm" variant="secondary" onClick={handleNotifyAlerts} disabled={alertSending}>
+                        <Send size={14} />
+                        {alertSending ? '发送中...' : '发送当前告警'}
+                      </Button>
+                    )}
+                    <AlertTriangle size={20} className={status.alerts.health === 'critical' ? 'text-rose-700' : 'text-amber-700'} />
+                  </div>
+                </div>
+                {alertMessage && (
+                  <div className="mb-3 rounded-md border border-emerald-200 bg-white px-3 py-2 text-sm text-emerald-700">
+                    {alertMessage}
+                  </div>
+                )}
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {status.alerts.alerts.slice(0, 6).map((alert) => (
+                    <div key={alert.key} className="rounded-md border border-white/70 bg-white px-4 py-3">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Badge tone={severityTone(alert.severity)}>{alert.severity}</Badge>
+                        <span className="font-semibold text-slate-950">{alert.title}</span>
+                        <span className="text-xs text-slate-500">{alert.feature}</span>
+                      </div>
+                      <p className="text-sm leading-6 text-slate-700">{alert.message}</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-500">{alert.recommendation}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ) : null}
 
             {adminSummary && (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -356,6 +443,25 @@ export default function SystemAdminPage() {
                         <div className="text-xs text-slate-500">灰度</div>
                         <div className="mt-1 font-bold text-slate-950">{status.operations.release.canary_percent}%</div>
                       </div>
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">告警出口</div>
+                        <div className="mt-1 font-bold text-slate-950">
+                          {status.operations.alerting?.configured ? '已配置' : '未配置'}
+                        </div>
+                      </div>
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">告警发送</div>
+                        <div className="mt-1 font-bold text-slate-950">
+                          {status.operations.alerting?.status_counts.sent || 0}/{status.operations.alerting?.status_counts.failed || 0}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-md bg-slate-50 px-3 py-2">
+                      <div className="text-xs text-slate-500">告警策略</div>
+                      <div className="mt-1 flex items-center gap-2 font-semibold text-slate-900">
+                        <BellRing size={14} className="text-cyan-700" />
+                        {status.operations.alerting?.enabled ? status.operations.alerting.min_severity : '未开启'} · 去重 {status.operations.alerting?.dedupe_minutes || 0} 分钟
+                      </div>
                     </div>
                     <div className="rounded-md bg-slate-50 px-3 py-2">
                       <div className="text-xs text-slate-500">最新备份</div>
@@ -466,6 +572,80 @@ export default function SystemAdminPage() {
                         </div>
                       ))}
                       {adminSummary.upgrade_requests.length === 0 && <EmptyState title="暂无升级意向" />}
+                    </div>
+                  </Card>
+                )}
+
+                {qualitySummary && (
+                  <Card>
+                    <div className="mb-5 flex items-start justify-between gap-4">
+                      <div>
+                        <h2 className="card-title">人工质量标注</h2>
+                        <p className="card-subtitle">用户对优化结果、ATS 报告和面试内容的反馈闭环。</p>
+                      </div>
+                      <MessageSquare size={18} className="text-cyan-700" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">标注数</div>
+                        <div className="mt-1 font-bold text-slate-950">{qualitySummary.total}</div>
+                      </div>
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">均分</div>
+                        <div className="mt-1 font-bold text-slate-950">{qualitySummary.avg_score || '-'}</div>
+                      </div>
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">待回归</div>
+                        <div className="mt-1 font-bold text-slate-950">{qualitySummary.eval_candidates?.open || 0}</div>
+                      </div>
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">已入评测</div>
+                        <div className="mt-1 font-bold text-slate-950">{qualitySummary.eval_candidates?.added_to_eval || 0}</div>
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {qualitySummary.top_labels.slice(0, 6).map((item) => (
+                        <div key={item.label} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-sm">
+                          <span className="font-semibold text-slate-800">{item.label}</span>
+                          <Badge tone="info">{item.count}</Badge>
+                        </div>
+                      ))}
+                      {qualitySummary.top_labels.length === 0 && <EmptyState title="暂无质量标签" />}
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {qualitySummary.eval_candidates?.recent.slice(0, 3).map((item) => (
+                        <div key={item.id} className="rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-slate-950">评测候选 · P{item.priority}</span>
+                            <Badge tone={item.status === 'open' ? 'warning' : item.status === 'added_to_eval' ? 'success' : 'neutral'}>{item.status}</Badge>
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">{item.target_type} · 原评分 {item.source_score} · {new Date(item.created_at).toLocaleString()}</div>
+                          {item.issue_summary && <p className="mt-2 text-sm leading-6 text-slate-700">{item.issue_summary}</p>}
+                          {item.status === 'open' && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              className="mt-3"
+                              onClick={() => handleMarkCandidateAdded(item.id)}
+                              disabled={qualityCandidateUpdating === item.id}
+                            >
+                              <CheckCircle2 size={14} />
+                              {qualityCandidateUpdating === item.id ? '更新中...' : '标记已入评测'}
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      {qualitySummary.recent.slice(0, 3).map((item) => (
+                        <div key={item.id} className="rounded-md border border-slate-200 bg-white px-3 py-3 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-slate-950">{item.email}</span>
+                            <Badge tone={item.score >= 4 ? 'success' : item.score >= 3 ? 'warning' : 'danger'}>{item.score} 分</Badge>
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">{item.target_type} · {new Date(item.created_at).toLocaleString()}</div>
+                          {item.notes && <p className="mt-2 text-sm leading-6 text-slate-600">{item.notes}</p>}
+                        </div>
+                      ))}
                     </div>
                   </Card>
                 )}

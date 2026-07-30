@@ -94,13 +94,13 @@ class Settings(BaseSettings):
 
     # 安全
     ADMIN_EMAILS: str = ""
-    CORS_ALLOW_ORIGINS: list[str] = [
+    CORS_ALLOW_ORIGINS: list[str] | str = [
         "http://127.0.0.1:5173",
         "http://127.0.0.1:5174",
         "http://localhost:5173",
         "http://localhost:5174",
     ]
-    TRUSTED_HOSTS: list[str] = ["127.0.0.1", "localhost", "testserver"]
+    TRUSTED_HOSTS: list[str] | str = ["127.0.0.1", "localhost", "testserver"]
     RATE_LIMIT_WINDOW_SECONDS: int = 60
     RATE_LIMIT_AUTH_REQUESTS: int = 30
     RATE_LIMIT_API_REQUESTS: int = 180
@@ -113,6 +113,12 @@ class Settings(BaseSettings):
     DEPLOYMENT_COLOR: str = "blue"
     RELEASE_CHANNEL: str = "stable"
     CANARY_PERCENT: int = 0
+    ALERT_NOTIFY_ENABLED: bool = False
+    ALERT_WEBHOOK_URL: str = ""
+    ALERT_WEBHOOK_TOKEN: str = ""
+    ALERT_MIN_SEVERITY: str = "critical"  # critical / warning / info
+    ALERT_DEDUPE_MINUTES: int = 60
+    QUALITY_EVAL_CANDIDATE_SCORE_THRESHOLD: int = 2
 
     # 商业化发布开关
     BILLING_ENABLED: bool = False
@@ -143,7 +149,7 @@ class Settings(BaseSettings):
     def admin_email_list(self) -> list[str]:
         return [email.strip().lower() for email in self.ADMIN_EMAILS.split(",") if email.strip()]
 
-    @field_validator("DEBUG", "ENFORCE_RELEASE_CHECKS", "AUTO_CREATE_DB", "ENABLE_DOCS", "BILLING_ENABLED", "LLM_ALLOW_FALLBACK", "METRICS_ENABLED", "BACKUP_ENABLED", "QDRANT_SYNC_ON_STARTUP", "EMBEDDING_USE_FP16", "EMBEDDING_ALLOW_FALLBACK", "RERANK_USE_FP16", "RERANK_ALLOW_FALLBACK", "TASK_ALLOW_LOCAL_FALLBACK", mode="before")
+    @field_validator("DEBUG", "ENFORCE_RELEASE_CHECKS", "AUTO_CREATE_DB", "ENABLE_DOCS", "BILLING_ENABLED", "LLM_ALLOW_FALLBACK", "METRICS_ENABLED", "BACKUP_ENABLED", "QDRANT_SYNC_ON_STARTUP", "EMBEDDING_USE_FP16", "EMBEDDING_ALLOW_FALLBACK", "RERANK_USE_FP16", "RERANK_ALLOW_FALLBACK", "TASK_ALLOW_LOCAL_FALLBACK", "ALERT_NOTIFY_ENABLED", mode="before")
     @classmethod
     def parse_bool_like(cls, value: Any) -> Any:
         if isinstance(value, str):

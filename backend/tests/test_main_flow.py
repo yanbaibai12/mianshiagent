@@ -105,7 +105,7 @@ class MainFlowTest(unittest.TestCase):
 
         exported = self.assert_ok(self.client.get("/api/account/export", headers=headers))
         self.assertEqual(exported["user"]["email"], user_email)
-        for key in ["resumes", "interviews", "usage_records", "audit_logs"]:
+        for key in ["resumes", "interviews", "usage_records", "audit_logs", "quality_annotations", "quality_eval_candidates"]:
             self.assertIn(key, exported)
         self.assertEqual(len(exported["resumes"]), 1)
         self.assertTrue(any(record["feature"] == "resume_upload" for record in exported["usage_records"]))
@@ -197,6 +197,25 @@ class MainFlowTest(unittest.TestCase):
         self.assertIn("operations", status_payload)
         self.assertTrue(status_payload["operations"]["backup"]["enabled"])
         self.assertIn("metrics", status_payload["operations"])
+        self.assertIn("alerting", status_payload["operations"])
+        self.assertIn("alerts", status_payload)
+        self.assertIn("task_queue_backend", {item["key"] for item in status_payload["release"]["checks"]})
+        self.assertIn("qdrant_external", {item["key"] for item in status_payload["release"]["checks"]})
+        self.assertIn("alert_webhook", {item["key"] for item in status_payload["release"]["checks"]})
+
+        alerts = self.assert_ok(self.client.get("/api/system/alerts", headers=admin_headers))
+        self.assertIn("health", alerts)
+        self.assertIn("alerts", alerts)
+        notify = self.assert_ok(
+            self.client.post(
+                "/api/system/admin/alerts/notify",
+                headers=admin_headers,
+                json={"include_warnings": True},
+            )
+        )
+        self.assertFalse(notify["configured"])
+        self.assertEqual(notify["sent_count"], 0)
+        self.assertEqual(notify.get("reason"), "alert_webhook_not_configured")
 
         backup = self.assert_ok(self.client.post("/api/system/admin/backup", headers=admin_headers))
         self.assertTrue(backup["filename"].endswith(".db"))
@@ -365,6 +384,66 @@ class MainFlowTest(unittest.TestCase):
         job_after = self.assert_ok(self.client.get(f"/api/jobs/{job['id']}", headers=headers))
         self.assertEqual(job_after["status"], "optimized")
         self.assertIsNotNone(job_after["current_resume_version_id"])
+
+        quality = self.assert_ok(
+            self.client.post(
+                "/api/quality/annotations",
+                headers=headers,
+                json={
+                    "target_type": "job",
+                    "target_id": job["id"],
+                    "score": 4,
+                    "labels": ["改动具体", "内容真实", "改动具体"],
+                    "notes": "优化结果能看到前后差异，但结果指标还需要人工确认。",
+                    "metadata": {"job_status": job_after["status"], "jd_text": "不应保存完整 JD"},
+                },
+            )
+        )
+        self.assertEqual(quality["score"], 4)
+        self.assertEqual(quality["labels"], ["改动具体", "内容真实"])
+        self.assertNotIn("jd_text", quality.get("annotation_metadata") or {})
+        quality_list = self.assert_ok(
+            self.client.get(
+                "/api/quality/annotations",
+                headers=headers,
+                params={"target_type": "job", "target_id": job["id"]},
+            )
+        )
+        self.assertEqual(len(quality_list), 1)
+        poor_quality = self.assert_ok(
+            self.client.post(
+                "/api/quality/annotations",
+                headers=headers,
+                json={
+                    "target_type": "job",
+                    "target_id": job["id"],
+                    "score": 2,
+                    "labels": ["表达套话", "遗漏 JD 要求"],
+                    "notes": "有套话，请联系 13800138000 / test@example.com，key sk-test-secret-1234567890 不应保存。",
+                    "metadata": {"source": "manual_review", "phone": "13800138000", "sample": "test@example.com"},
+                },
+            )
+        )
+        self.assertEqual(poor_quality["score"], 2)
+        self.assertIn("[phone_redacted]", poor_quality["notes"])
+        self.assertIn("[email_redacted]", poor_quality["notes"])
+        self.assertIn("[key_redacted]", poor_quality["notes"])
+        self.assertNotIn("phone", poor_quality.get("annotation_metadata") or {})
+        self.assertIn("[email_redacted]", poor_quality["annotation_metadata"]["sample"])
+        quality_summary = self.assert_ok(self.client.get("/api/quality/admin/summary", headers=admin_headers))
+        self.assertGreaterEqual(quality_summary["total"], 2)
+        self.assertGreaterEqual(len(quality_summary["top_labels"]), 1)
+        self.assertGreaterEqual(quality_summary["eval_candidates"]["open"], 1)
+        eval_candidates = self.assert_ok(self.client.get("/api/quality/admin/eval-candidates", headers=admin_headers))
+        self.assertGreaterEqual(len(eval_candidates), 1)
+        updated_candidate = self.assert_ok(
+            self.client.post(
+                f"/api/quality/admin/eval-candidates/{eval_candidates[0]['id']}/status",
+                headers=admin_headers,
+                json={"status": "added_to_eval"},
+            )
+        )
+        self.assertEqual(updated_candidate["status"], "added_to_eval")
 
         interview = self.assert_ok(
             self.client.post(

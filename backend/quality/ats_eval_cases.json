@@ -301,5 +301,305 @@
       "summary": "具备云端部署和 AI 后端服务开发经验。"
     },
     "jd": "任职要求：熟悉 Docker、Kubernetes、Python、FastAPI、RAG；了解 Redis；能负责云端服务部署和接口稳定性。"
+  },
+  {
+    "id": "mobile_app_021",
+    "role": "跨端应用开发实习生",
+    "expected_skills": ["React Native", "TypeScript", "API", "Git"],
+    "missing_skills": ["Flutter"],
+    "resume": {
+      "personal": {"name": "候选人 U", "job_intent": "跨端前端开发实习生"},
+      "education": [{"school": "某大学", "major": "软件工程", "degree": "本科", "time": "2023.09-2027.06"}],
+      "skills": ["React Native", "TypeScript", "API", "Git", "JavaScript"],
+      "projects": [{"name": "校园活动移动端", "role": "前端开发", "description": "负责 React Native 页面、活动列表、报名表单、API 请求封装和 Git 分支协作。", "tech_stack": ["React Native", "TypeScript", "API", "Git"]}],
+      "experience": [{"company": "课程项目组", "role": "移动端开发", "highlights": ["参与接口联调、异常提示和移动端适配。"]}],
+      "summary": "具备跨端页面开发和接口联调经验。"
+    },
+    "jd": "岗位要求：熟悉 React Native、TypeScript、API、Git；了解 Flutter；能完成移动端页面、状态管理和联调排查。"
+  },
+  {
+    "id": "python_cache_022",
+    "role": "Python 缓存后端实习生",
+    "expected_skills": ["Python", "FastAPI", "Redis", "MySQL"],
+    "missing_skills": ["Kafka"],
+    "resume": {
+      "personal": {"name": "候选人 V", "job_intent": "Python 后端开发实习生"},
+      "education": [{"school": "某理工大学", "major": "计算机科学与技术", "degree": "本科", "time": "2022.09-2026.06"}],
+      "skills": ["Python", "FastAPI", "Redis", "MySQL", "Linux", "Git"],
+      "projects": [{"name": "秒杀预约后端", "role": "后端开发", "description": "负责 FastAPI 接口、Redis 库存预扣、MySQL 订单记录和异常回滚处理。", "tech_stack": ["Python", "FastAPI", "Redis", "MySQL"]}],
+      "experience": [{"company": "后端训练营", "role": "项目成员", "highlights": ["分析接口超时，优化缓存 key 和数据库查询。"]}],
+      "summary": "熟悉 Python Web 接口、缓存和数据库协作。"
+    },
+    "jd": "岗位要求：熟悉 Python、FastAPI、Redis、MySQL；了解 Kafka；有缓存设计、接口优化和异常恢复经验。"
+  },
+  {
+    "id": "llm_ops_023",
+    "role": "LLM 应用评测实习生",
+    "expected_skills": ["Python", "API"],
+    "missing_skills": ["Kubernetes"],
+    "resume": {
+      "personal": {"name": "候选人 W", "job_intent": "大模型应用开发实习生"},
+      "education": [{"school": "某大学", "major": "人工智能", "degree": "本科", "time": "2023.09-2027.06"}],
+      "skills": ["LLM", "Prompt", "评测", "监控", "Python", "API"],
+      "projects": [{"name": "模型回答质量评测工具", "role": "AI 应用开发", "description": "负责 Prompt 版本管理、LLM 回答采样、评测规则、监控指标和失败样例记录。", "tech_stack": ["LLM", "Prompt", "评测", "监控", "Python"]}],
+      "experience": [{"company": "AI 实验室", "role": "研究助理", "highlights": ["整理人工标注表，复盘模型幻觉和拒答样例。"]}],
+      "summary": "熟悉大模型应用评测和质量分析。"
+    },
+    "jd": "岗位要求：熟悉 Python、API、LLM、Prompt、评测、监控；了解 Kubernetes；能建设质量评测集并跟踪线上失败样例。"
+  },
+  {
+    "id": "data_analysis_024",
+    "role": "数据分析开发实习生",
+    "expected_skills": ["Python", "SQL"],
+    "missing_skills": ["Spark"],
+    "resume": {
+      "personal": {"name": "候选人 X", "job_intent": "数据分析实习生"},
+      "education": [{"school": "某财经大学", "major": "统计学", "degree": "本科", "time": "2022.09-2026.06"}],
+      "skills": ["Python", "SQL", "Pandas", "可视化", "Excel", "Git"],
+      "projects": [{"name": "用户行为分析报表", "role": "数据分析开发", "description": "负责 SQL 取数、Pandas 清洗、指标口径校验和可视化图表输出。", "tech_stack": ["Python", "SQL", "Pandas", "可视化"]}],
+      "experience": [{"company": "数据协会", "role": "分析成员", "highlights": ["维护指标字典，复核异常数据来源。"]}],
+      "summary": "具备数据清洗、指标分析和报表交付经验。"
+    },
+    "jd": "任职要求：熟悉 Python、SQL、Pandas；了解 Spark；能完成数据清洗、口径校验、可视化输出和结果复盘。"
+  },
+  {
+    "id": "search_engine_025",
+    "role": "搜索后端开发实习生",
+    "expected_skills": ["Elasticsearch", "Java", "API", "SQL"],
+    "missing_skills": ["Qdrant"],
+    "resume": {
+      "personal": {"name": "候选人 Y", "job_intent": "搜索后端开发实习生"},
+      "education": [{"school": "某大学", "major": "软件工程", "degree": "本科", "time": "2022.09-2026.06"}],
+      "skills": ["Elasticsearch", "Java", "API", "SQL", "Spring", "Git"],
+      "projects": [{"name": "课程资源搜索系统", "role": "后端开发", "description": "负责 Elasticsearch 索引字段、Java 搜索接口、SQL 数据同步和搜索结果排序调试。", "tech_stack": ["Elasticsearch", "Java", "API", "SQL"]}],
+      "experience": [{"company": "软件工作室", "role": "后端成员", "highlights": ["排查搜索无结果和字段分词问题。"]}],
+      "summary": "熟悉搜索接口和索引字段设计。"
+    },
+    "jd": "岗位要求：熟悉 Elasticsearch、Java、API、SQL；了解 Qdrant；能处理索引设计、召回为空和排序调优。"
+  },
+  {
+    "id": "agent_memory_026",
+    "role": "Agent 记忆系统开发实习生",
+    "expected_skills": ["Agent", "Redis", "PostgreSQL", "API"],
+    "missing_skills": ["LangGraph"],
+    "resume": {
+      "personal": {"name": "候选人 Z", "job_intent": "Agent 应用开发实习生"},
+      "education": [{"school": "某大学", "major": "人工智能", "degree": "本科", "time": "2023.09-2027.06"}],
+      "skills": ["Agent", "Redis", "PostgreSQL", "API", "Python", "FastAPI"],
+      "projects": [{"name": "学习助手 Agent", "role": "后端与 Agent 开发", "description": "负责 Agent 会话状态、Redis 短期记忆、PostgreSQL 历史记录和 API 工具调用。", "tech_stack": ["Agent", "Redis", "PostgreSQL", "API", "Python"]}],
+      "experience": [{"company": "AI 社团", "role": "开发成员", "highlights": ["处理上下文过长、工具调用失败和会话恢复问题。"]}],
+      "summary": "熟悉 Agent 会话和工具调用的工程实现。"
+    },
+    "jd": "岗位要求：熟悉 Agent、Redis、PostgreSQL、API；了解 LangGraph；能设计记忆存储、上下文裁剪和失败恢复。"
+  },
+  {
+    "id": "security_backend_027",
+    "role": "安全后端开发实习生",
+    "expected_skills": ["Java", "Redis", "MySQL"],
+    "missing_skills": ["OAuth"],
+    "resume": {
+      "personal": {"name": "候选人 AA", "job_intent": "安全后端开发实习生"},
+      "education": [{"school": "某大学", "major": "信息安全", "degree": "本科", "time": "2022.09-2026.06"}],
+      "skills": ["Java", "Spring Security", "JWT", "Redis", "MySQL", "Git"],
+      "projects": [{"name": "权限管理系统", "role": "后端开发", "description": "负责 Spring Security 认证、JWT 登录态、Redis 黑名单和接口权限校验。", "tech_stack": ["Java", "Spring Security", "JWT", "Redis"]}],
+      "experience": [{"company": "安全实验室", "role": "开发成员", "highlights": ["整理越权访问用例，修复接口鉴权遗漏。"]}],
+      "summary": "熟悉后端认证鉴权和权限边界。"
+    },
+    "jd": "岗位要求：熟悉 Java、Redis、MySQL，具备 Spring Security、JWT 项目经验；了解 OAuth；能处理认证鉴权、越权测试和安全复盘。"
+  },
+  {
+    "id": "ai_frontend_workbench_028",
+    "role": "AI 工作台前端实习生",
+    "expected_skills": ["React", "TypeScript", "API", "ATS"],
+    "missing_skills": ["Next.js"],
+    "resume": {
+      "personal": {"name": "候选人 AB", "job_intent": "AI 前端开发实习生"},
+      "education": [{"school": "某大学", "major": "软件工程", "degree": "本科", "time": "2023.09-2027.06"}],
+      "skills": ["React", "TypeScript", "API", "ATS", "TailwindCSS", "Git"],
+      "projects": [{"name": "岗位匹配工作台", "role": "前端开发", "description": "负责 React 页面、ATS 评分卡片、前后对比视图、API 状态轮询和错误提示。", "tech_stack": ["React", "TypeScript", "API", "ATS"]}],
+      "experience": [{"company": "创业项目组", "role": "前端成员", "highlights": ["将复杂 JSON 结果整理成用户可读的评分和缺口列表。"]}],
+      "summary": "熟悉 AI 工具型工作台和结果解释页面。"
+    },
+    "jd": "岗位要求：熟悉 React、TypeScript、API、ATS；了解 Next.js；能构建清晰工作台、评分仪表盘和反馈闭环。"
+  },
+  {
+    "id": "database_perf_029",
+    "role": "数据库性能优化实习生",
+    "expected_skills": ["MySQL", "SQL", "Redis", "索引"],
+    "missing_skills": ["PostgreSQL"],
+    "resume": {
+      "personal": {"name": "候选人 AC", "job_intent": "数据库方向实习生"},
+      "education": [{"school": "某大学", "major": "计算机科学与技术", "degree": "本科", "time": "2022.09-2026.06"}],
+      "skills": ["MySQL", "SQL", "Redis", "索引", "Java", "Linux"],
+      "projects": [{"name": "订单查询优化", "role": "后端开发", "description": "负责 MySQL 慢查询分析、组合索引调整、Redis 热点订单缓存和 SQL 执行计划复盘。", "tech_stack": ["MySQL", "SQL", "Redis", "索引"]}],
+      "experience": [{"company": "数据库课程组", "role": "项目成员", "highlights": ["记录优化前后查询耗时和索引命中情况。"]}],
+      "summary": "熟悉数据库查询优化和缓存协同。"
+    },
+    "jd": "岗位要求：熟悉 MySQL、SQL、Redis、索引；了解 PostgreSQL；能分析慢查询、优化索引并交付复盘报告。"
+  },
+  {
+    "id": "cloud_backend_030",
+    "role": "云服务后端开发实习生",
+    "expected_skills": ["FastAPI", "Docker", "CI/CD", "监控"],
+    "missing_skills": ["Terraform"],
+    "resume": {
+      "personal": {"name": "候选人 AD", "job_intent": "云服务后端开发实习生"},
+      "education": [{"school": "某邮电大学", "major": "软件工程", "degree": "本科", "time": "2022.09-2026.06"}],
+      "skills": ["FastAPI", "Docker", "CI/CD", "监控", "Python", "Linux"],
+      "projects": [{"name": "文件处理云服务", "role": "后端开发", "description": "负责 FastAPI 上传接口、Docker 镜像、CI/CD 构建、健康检查和监控指标展示。", "tech_stack": ["FastAPI", "Docker", "CI/CD", "监控"]}],
+      "experience": [{"company": "云平台实验室", "role": "后端成员", "highlights": ["排查部署失败、接口 5xx 和日志缺失问题。"]}],
+      "summary": "具备云服务后端开发和部署排查经验。"
+    },
+    "jd": "岗位要求：熟悉 FastAPI、Docker、CI/CD、监控；了解 Terraform；能负责服务部署、健康检查和故障定位。"
+  },
+  {
+    "id": "python_rag_engineer_031",
+    "role": "RAG 应用开发实习生",
+    "expected_skills": ["Python", "FastAPI", "RAG", "Qdrant", "BGE-M3", "RRF"],
+    "missing_skills": ["Kubernetes"],
+    "resume": {
+      "personal": {"name": "候选人 AE", "job_intent": "AI 应用开发实习生"},
+      "education": [{"school": "某理工大学", "major": "软件工程", "degree": "本科", "time": "2023.09-2027.06"}],
+      "skills": ["Python", "FastAPI", "RAG", "Qdrant", "BGE-M3", "BM25", "RRF", "Git"],
+      "projects": [{"name": "课程资料 RAG 检索平台", "role": "后端开发", "description": "负责文档清洗、递归切片、BGE-M3 embedding、Qdrant 写入和 BM25/向量召回的 RRF 融合排序。", "tech_stack": ["Python", "FastAPI", "RAG", "Qdrant", "BGE-M3", "RRF"]}],
+      "experience": [{"company": "AI 创新实验室", "role": "研发助理", "highlights": ["排查召回为空、切片过长和来源引用错位问题。"]}],
+      "summary": "熟悉 RAG 检索链路和后端接口交付。"
+    },
+    "jd": "岗位要求：熟悉 Python、FastAPI、RAG、Qdrant、BGE-M3、RRF；了解 Kubernetes；能处理文档切片、向量化、召回融合和检索效果复盘。"
+  },
+  {
+    "id": "react_ai_tool_032",
+    "role": "AI 工具前端开发实习生",
+    "expected_skills": ["React", "TypeScript", "API", "Git"],
+    "missing_skills": ["Vue"],
+    "resume": {
+      "personal": {"name": "候选人 AF", "job_intent": "前端开发实习生"},
+      "education": [{"school": "某大学", "major": "数字媒体技术", "degree": "本科", "time": "2022.09-2026.06"}],
+      "skills": ["React", "TypeScript", "API", "TailwindCSS", "Git", "JavaScript"],
+      "projects": [{"name": "简历优化结果对比页", "role": "前端开发", "description": "负责 React 组件拆分、TypeScript 类型定义、API 轮询、前后对比表格和错误提示状态。", "tech_stack": ["React", "TypeScript", "API", "Git"]}],
+      "experience": [{"company": "校内工作室", "role": "前端成员", "highlights": ["和后端联调鉴权、导出下载和 loading 状态。"]}],
+      "summary": "熟悉 AI 工具型前端页面和接口联调。"
+    },
+    "jd": "岗位要求：熟悉 React、TypeScript、API、Git；了解 Vue；能完成 AI 工具前端状态管理、轮询、结果对比和异常提示。"
+  },
+  {
+    "id": "java_cache_api_033",
+    "role": "缓存与接口后端实习生",
+    "expected_skills": ["Java", "Spring", "Redis", "MySQL", "接口"],
+    "missing_skills": ["MongoDB"],
+    "resume": {
+      "personal": {"name": "候选人 AG", "job_intent": "Java 后端实习生"},
+      "education": [{"school": "某工业大学", "major": "计算机科学与技术", "degree": "本科", "time": "2022.09-2026.06"}],
+      "skills": ["Java", "Spring", "Redis", "MySQL", "接口", "Linux", "Git"],
+      "projects": [{"name": "校园预约系统", "role": "后端开发", "description": "负责 Spring 接口、MySQL 表设计、Redis 预约库存缓存和接口并发冲突排查。", "tech_stack": ["Java", "Spring", "Redis", "MySQL"]}],
+      "experience": [{"company": "软件协会", "role": "后端成员", "highlights": ["维护接口文档，记录缓存失效和数据库回写问题。"]}],
+      "summary": "具备 Java 后端、缓存和接口交付经验。"
+    },
+    "jd": "任职要求：熟悉 Java、Spring、Redis、MySQL、接口设计；了解 MongoDB；能完成缓存策略、接口联调和问题复盘。"
+  },
+  {
+    "id": "backend_observability_034",
+    "role": "后端观测开发实习生",
+    "expected_skills": ["Python", "FastAPI", "监控", "日志", "API"],
+    "missing_skills": ["Kubernetes"],
+    "resume": {
+      "personal": {"name": "候选人 AH", "job_intent": "后端开发实习生"},
+      "education": [{"school": "某邮电大学", "major": "软件工程", "degree": "本科", "time": "2023.09-2027.06"}],
+      "skills": ["Python", "FastAPI", "监控", "日志", "API", "Docker", "Linux"],
+      "projects": [{"name": "接口运行监控面板", "role": "后端开发", "description": "负责 FastAPI 中间件记录 request_id、耗时、状态码、错误类型，并在管理页展示接口成功率和最近错误。", "tech_stack": ["Python", "FastAPI", "监控", "日志", "API"]}],
+      "experience": [{"company": "云服务实验室", "role": "后端成员", "highlights": ["排查 5xx、慢接口和日志字段缺失问题。"]}],
+      "summary": "熟悉后端观测、接口指标和故障定位。"
+    },
+    "jd": "岗位要求：熟悉 Python、FastAPI、API、日志、监控；了解 Kubernetes；能建设接口成功率、错误追踪和告警复盘能力。"
+  },
+  {
+    "id": "agent_tool_calling_035",
+    "role": "Agent 工具调用开发实习生",
+    "expected_skills": ["Agent", "Function Calling", "Tool Calling", "Python", "API"],
+    "missing_skills": ["Prompt Injection"],
+    "resume": {
+      "personal": {"name": "候选人 AI", "job_intent": "Agent 应用开发实习生"},
+      "education": [{"school": "某大学", "major": "人工智能", "degree": "本科", "time": "2023.09-2027.06"}],
+      "skills": ["Agent", "Function Calling", "Tool Calling", "Python", "API", "FastAPI"],
+      "projects": [{"name": "任务规划 Agent", "role": "AI 应用开发", "description": "负责 Agent 意图识别、Function Calling 参数校验、Tool Calling 权限边界和 API 调用失败兜底。", "tech_stack": ["Agent", "Function Calling", "Tool Calling", "Python"]}],
+      "experience": [{"company": "AI 社团项目组", "role": "开发成员", "highlights": ["复盘工具调用失败、参数缺失和多轮上下文污染问题。"]}],
+      "summary": "熟悉 Agent 工具调用和接口封装。"
+    },
+    "jd": "岗位要求：熟悉 Agent、Function Calling、Tool Calling、Python、API；了解 Prompt Injection；能设计工具权限、参数校验和失败兜底。"
+  },
+  {
+    "id": "sql_platform_036",
+    "role": "数据平台后端实习生",
+    "expected_skills": ["Python", "SQL", "PostgreSQL", "Docker", "API"],
+    "missing_skills": ["Redis"],
+    "resume": {
+      "personal": {"name": "候选人 AJ", "job_intent": "数据平台开发实习生"},
+      "education": [{"school": "某财经大学", "major": "数据科学与大数据技术", "degree": "本科", "time": "2022.09-2026.06"}],
+      "skills": ["Python", "SQL", "PostgreSQL", "Docker", "API", "Git"],
+      "projects": [{"name": "指标查询服务", "role": "后端开发", "description": "负责 PostgreSQL 表结构、SQL 聚合查询、Python API 封装、Docker 部署和指标口径校验。", "tech_stack": ["Python", "SQL", "PostgreSQL", "Docker", "API"]}],
+      "experience": [{"company": "数据实验室", "role": "研发助理", "highlights": ["维护指标字典，排查 SQL 结果不一致问题。"]}],
+      "summary": "具备数据平台接口和 SQL 交付经验。"
+    },
+    "jd": "任职要求：熟悉 Python、SQL、PostgreSQL、Docker、API；了解 Redis；能完成指标查询、数据校验和接口交付。"
+  },
+  {
+    "id": "devops_ci_037",
+    "role": "DevOps 开发实习生",
+    "expected_skills": ["Docker", "CI/CD", "Linux", "Git", "监控"],
+    "missing_skills": ["Kubernetes"],
+    "resume": {
+      "personal": {"name": "候选人 AK", "job_intent": "DevOps 开发实习生"},
+      "education": [{"school": "某大学", "major": "网络工程", "degree": "本科", "time": "2022.09-2026.06"}],
+      "skills": ["Docker", "CI/CD", "Linux", "Git", "监控", "Python"],
+      "projects": [{"name": "自动化部署流水线", "role": "DevOps 开发", "description": "负责 Docker 镜像构建、CI/CD 流水线脚本、Linux 部署检查和监控告警页面。", "tech_stack": ["Docker", "CI/CD", "Linux", "Git", "监控"]}],
+      "experience": [{"company": "云计算协会", "role": "运维开发成员", "highlights": ["记录部署失败、端口冲突和环境变量缺失问题。"]}],
+      "summary": "熟悉基础部署、流水线和故障排查。"
+    },
+    "jd": "岗位要求：熟悉 Docker、CI/CD、Linux、Git、监控；了解 Kubernetes；能维护部署流水线、健康检查和故障复盘。"
+  },
+  {
+    "id": "rag_security_038",
+    "role": "RAG 安全评测实习生",
+    "expected_skills": ["RAG", "Prompt Injection", "Python", "API", "检索"],
+    "missing_skills": ["Kubernetes"],
+    "resume": {
+      "personal": {"name": "候选人 AL", "job_intent": "大模型安全实习生"},
+      "education": [{"school": "某大学", "major": "信息安全", "degree": "本科", "time": "2023.09-2027.06"}],
+      "skills": ["RAG", "Prompt Injection", "Python", "API", "检索", "Git"],
+      "projects": [{"name": "RAG 注入攻击评测", "role": "安全评测开发", "description": "负责构造 Prompt Injection 样例、检索污染用例、Python API 测试脚本和失败样例复盘。", "tech_stack": ["RAG", "Prompt Injection", "Python", "API"]}],
+      "experience": [{"company": "安全实验室", "role": "研究助理", "highlights": ["整理越权回答、来源引用错误和拒答失败样例。"]}],
+      "summary": "熟悉 RAG 安全风险和接口评测。"
+    },
+    "jd": "岗位要求：熟悉 RAG、Prompt Injection、Python、API、检索；了解 Kubernetes；能建设安全评测集和失败样例复盘。"
+  },
+  {
+    "id": "backend_async_queue_039",
+    "role": "异步任务后端实习生",
+    "expected_skills": ["Python", "FastAPI", "Redis", "任务队列", "异步"],
+    "missing_skills": ["Kubernetes"],
+    "resume": {
+      "personal": {"name": "候选人 AM", "job_intent": "后端开发实习生"},
+      "education": [{"school": "某大学", "major": "软件工程", "degree": "本科", "time": "2023.09-2027.06"}],
+      "skills": ["Python", "FastAPI", "Redis", "任务队列", "异步", "Docker"],
+      "projects": [{"name": "简历解析异步队列", "role": "后端开发", "description": "负责 FastAPI 入队接口、Redis 任务队列、异步状态轮询、失败重试和取消状态更新。", "tech_stack": ["Python", "FastAPI", "Redis", "任务队列", "异步"]}],
+      "experience": [{"company": "互联网项目组", "role": "后端成员", "highlights": ["排查任务重复执行、队列连接失败和前端进度不同步问题。"]}],
+      "summary": "熟悉异步任务、队列状态和接口设计。"
+    },
+    "jd": "岗位要求：熟悉 Python、FastAPI、Redis、任务队列、异步；了解 Kubernetes；能实现长任务进度、失败重试和状态追踪。"
+  },
+  {
+    "id": "resume_product_ops_040",
+    "role": "AI 简历产品运营实习生",
+    "expected_skills": ["SQL", "API", "RAG", "优化"],
+    "missing_skills": ["Java"],
+    "resume": {
+      "personal": {"name": "候选人 AN", "job_intent": "AI 产品运营实习生"},
+      "education": [{"school": "某财经大学", "major": "信息管理与信息系统", "degree": "本科", "time": "2022.09-2026.06"}],
+      "skills": ["SQL", "API", "RAG", "优化", "数据分析", "Excel"],
+      "projects": [{"name": "简历优化质量看板", "role": "产品运营", "description": "负责梳理 JD 匹配指标、SQL 统计用户反馈、API 数据核对、RAG 答案缺陷分类和优化建议复盘。", "tech_stack": ["SQL", "API", "RAG", "优化"]}],
+      "experience": [{"company": "AI 工具创业团队", "role": "产品运营实习生", "highlights": ["整理用户低分反馈、标注套话问题并转成回归评测样例。"]}],
+      "summary": "具备 AI 工具运营、数据分析和质量闭环经验。"
+    },
+    "jd": "岗位要求：熟悉 SQL、API、RAG、优化；了解 Java；能分析用户反馈、拆解质量问题并沉淀评测集。"
   }
 ]

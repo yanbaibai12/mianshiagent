@@ -26,6 +26,11 @@ def _has_local_origin(origins: list[str]) -> bool:
     return any("localhost" in origin or "127.0.0.1" in origin for origin in origins)
 
 
+def _is_local_endpoint(value: str | None) -> bool:
+    normalized = (value or "").strip().lower()
+    return any(marker in normalized for marker in ("localhost", "127.0.0.1", "0.0.0.0", "::1"))
+
+
 def run_release_checks(settings: Settings) -> dict:
     checks: list[ReleaseCheck] = []
     is_production = settings.is_production
@@ -164,6 +169,98 @@ def run_release_checks(settings: Settings) -> dict:
             severity="pass" if settings.METRICS_ENABLED else "warning",
             message="运行指标已启用" if settings.METRICS_ENABLED else "运行指标未启用",
             recommendation="生产环境保持 METRICS_ENABLED=true，并接入网关/云监控告警。",
+        )
+    )
+
+    alert_webhook_missing = settings.ALERT_NOTIFY_ENABLED and not settings.ALERT_WEBHOOK_URL
+    alerting_absent = is_production and not settings.ALERT_NOTIFY_ENABLED
+    checks.append(
+        ReleaseCheck(
+            key="alert_webhook",
+            severity="critical" if alert_webhook_missing else "warning" if alerting_absent else "pass",
+            message="告警通知已开启但缺少 Webhook 地址" if alert_webhook_missing else "生产环境未开启主动告警通知" if alerting_absent else "主动告警通知配置可接受",
+            recommendation="生产环境建议配置 ALERT_NOTIFY_ENABLED=true、ALERT_WEBHOOK_URL 和 ALERT_MIN_SEVERITY，用于企业微信/飞书/Sentry 等外部告警渠道。",
+        )
+    )
+
+    task_backend = settings.TASK_QUEUE_BACKEND.lower().strip()
+    task_backend_ok = task_backend in {"redis", "rq", "redis-rq", "redis_rq"}
+    checks.append(
+        ReleaseCheck(
+            key="task_queue_backend",
+            severity="critical" if is_production and not task_backend_ok else "warning" if not task_backend_ok else "pass",
+            message="长任务仍使用本地队列" if not task_backend_ok else "长任务队列已配置为 Redis/RQ",
+            recommendation="生产环境设置 TASK_QUEUE_BACKEND=redis_rq，并独立启动 RQ worker；本地队列只允许开发调试。",
+        )
+    )
+
+    redis_local = _is_local_endpoint(settings.TASK_REDIS_URL)
+    checks.append(
+        ReleaseCheck(
+            key="task_redis_url",
+            severity="critical" if is_production and task_backend_ok and redis_local else "warning" if task_backend_ok and redis_local else "pass",
+            message="Redis 指向本机地址" if redis_local else "Redis 连接地址可接受",
+            recommendation="生产环境使用独立 Redis 服务或云 Redis，并为 worker/API 使用同一个队列名和连接串。",
+        )
+    )
+
+    checks.append(
+        ReleaseCheck(
+            key="task_local_fallback",
+            severity="critical" if is_production and settings.TASK_ALLOW_LOCAL_FALLBACK else "warning" if settings.TASK_ALLOW_LOCAL_FALLBACK else "pass",
+            message="任务队列失败会降级到本地后台任务" if settings.TASK_ALLOW_LOCAL_FALLBACK else "任务队列失败不会静默本地降级",
+            recommendation="生产环境设置 TASK_ALLOW_LOCAL_FALLBACK=false，避免多实例部署时任务丢失或重复执行。",
+        )
+    )
+
+    vector_backend = settings.VECTOR_STORE_BACKEND.lower().strip()
+    qdrant_enabled = vector_backend == "qdrant"
+    qdrant_external = bool(settings.QDRANT_URL and not _is_local_endpoint(settings.QDRANT_URL))
+    checks.append(
+        ReleaseCheck(
+            key="qdrant_external",
+            severity="critical" if is_production and not (qdrant_enabled and qdrant_external) else "warning" if qdrant_enabled and not qdrant_external else "pass",
+            message="Qdrant 未使用外部服务" if qdrant_enabled and not qdrant_external else "向量库不是 Qdrant" if not qdrant_enabled else "Qdrant 已配置外部服务",
+            recommendation="生产环境设置 VECTOR_STORE_BACKEND=qdrant、QDRANT_URL=https://... 或内网服务地址；embedded Qdrant 只适合本地开发。",
+        )
+    )
+
+    bge_m3_expected = settings.EMBEDDING_MODEL.lower().endswith("bge-m3") and settings.QDRANT_VECTOR_SIZE == 1024
+    checks.append(
+        ReleaseCheck(
+            key="embedding_vector_size",
+            severity="warning" if not bge_m3_expected else "pass",
+            message="Embedding 模型与 Qdrant 维度需要复核" if not bge_m3_expected else "BGE-M3 与 1024 维索引配置一致",
+            recommendation="使用 BAAI/bge-m3 时保持 QDRANT_VECTOR_SIZE=1024；切换模型必须重建知识库和简历索引。",
+        )
+    )
+
+    embedding_hash = settings.EMBEDDING_PROVIDER.lower().strip() == "hash"
+    checks.append(
+        ReleaseCheck(
+            key="embedding_provider",
+            severity="critical" if is_production and embedding_hash else "warning" if embedding_hash else "pass",
+            message="Embedding 仍使用 hash 开发兜底" if embedding_hash else "Embedding 服务已配置为真实模型",
+            recommendation="生产环境使用 BGE-M3 本地服务或 OpenAI-compatible embedding 服务，不得使用 hash embedding。",
+        )
+    )
+
+    checks.append(
+        ReleaseCheck(
+            key="embedding_fallback",
+            severity="critical" if is_production and settings.EMBEDDING_ALLOW_FALLBACK else "warning" if settings.EMBEDDING_ALLOW_FALLBACK else "pass",
+            message="Embedding 失败会降级到 hash" if settings.EMBEDDING_ALLOW_FALLBACK else "Embedding 失败不会静默降级",
+            recommendation="生产环境保持 EMBEDDING_ALLOW_FALLBACK=false，失败时展示任务失败原因并允许重试。",
+        )
+    )
+
+    rerank_disabled = settings.RERANK_PROVIDER.lower().strip() in {"", "none", "off"}
+    checks.append(
+        ReleaseCheck(
+            key="rerank_provider",
+            severity="warning" if rerank_disabled else "pass",
+            message="未启用重精排" if rerank_disabled else "重精排已配置",
+            recommendation="面试题库和简历证据召回建议接入 bge-reranker-v2-m3 或远程 rerank 服务，并保留召回评测集。",
         )
     )
 

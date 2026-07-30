@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import AuditLog, BillingAccount, Interview, InterviewQuestion, Organization, OrganizationMember, PaymentOrder, Resume, UsageRecord, User
+from app.models import AuditLog, BillingAccount, Interview, InterviewQuestion, Organization, OrganizationMember, PaymentOrder, QualityAnnotation, QualityEvalCandidate, Resume, UsageRecord, User
 from app.services.audit import log_audit_event
 from app.services.auth_service import get_current_user
 from app.services.resume_index import delete_resume_vectors
@@ -37,6 +37,12 @@ async def export_account_data(
     interviews = (await db.execute(select(Interview).where(Interview.user_id == current_user.id))).scalars().all()
     usage_records = (await db.execute(select(UsageRecord).where(UsageRecord.user_id == current_user.id))).scalars().all()
     payment_orders = (await db.execute(select(PaymentOrder).where(PaymentOrder.user_id == current_user.id))).scalars().all()
+    quality_annotations = (
+        await db.execute(select(QualityAnnotation).where(QualityAnnotation.user_id == current_user.id))
+    ).scalars().all()
+    quality_eval_candidates = (
+        await db.execute(select(QualityEvalCandidate).where(QualityEvalCandidate.user_id == current_user.id))
+    ).scalars().all()
     organizations = (
         await db.execute(
             select(Organization, OrganizationMember)
@@ -172,6 +178,39 @@ async def export_account_data(
                 "paid_at": _dt(order.paid_at),
             }
             for order in payment_orders
+        ],
+        "quality_annotations": [
+            {
+                "id": str(annotation.id),
+                "target_type": annotation.target_type,
+                "target_id": annotation.target_id,
+                "score": annotation.score,
+                "labels": annotation.labels,
+                "notes": annotation.notes,
+                "status": annotation.status,
+                "reviewer_role": annotation.reviewer_role,
+                "metadata": annotation.annotation_metadata,
+                "created_at": _dt(annotation.created_at),
+                "updated_at": _dt(annotation.updated_at),
+            }
+            for annotation in quality_annotations
+        ],
+        "quality_eval_candidates": [
+            {
+                "id": str(candidate.id),
+                "annotation_id": str(candidate.annotation_id) if candidate.annotation_id else None,
+                "target_type": candidate.target_type,
+                "target_id": candidate.target_id,
+                "source_score": candidate.source_score,
+                "priority": candidate.priority,
+                "labels": candidate.labels,
+                "issue_summary": candidate.issue_summary,
+                "status": candidate.status,
+                "metadata": candidate.candidate_metadata,
+                "created_at": _dt(candidate.created_at),
+                "updated_at": _dt(candidate.updated_at),
+            }
+            for candidate in quality_eval_candidates
         ],
         "audit_logs": [
             {

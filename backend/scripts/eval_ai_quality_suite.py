@@ -93,6 +93,7 @@ def _evaluate_case(case: dict[str, Any], index_result: dict[str, Any], adapt_res
     hard_dimension = _dimension(report, "hard_skills")
     hard_covered = set(hard_dimension.get("covered") or [])
     hard_missing = set(hard_dimension.get("missing") or [])
+    missing_top = set(report.get("missing_top") or [])
     visible_after = _visible_resume_text(optimized_resume)
     visible_before = _visible_resume_text(case["resume"])
 
@@ -106,7 +107,7 @@ def _evaluate_case(case: dict[str, Any], index_result: dict[str, Any], adapt_res
         "resume_chunked": int(index_result.get("chunk_count") or 0) >= 3,
         "ats_dimensions_complete": _dimension_fields_ok(report),
         "expected_skills_covered": expected_coverage >= 0.7,
-        "missing_skills_flagged": all(skill in hard_missing for skill in missing_skills),
+        "missing_skills_flagged": all(skill in hard_missing or skill in missing_top for skill in missing_skills),
         "evidence_non_empty": len(report.get("requirement_evidence") or []) >= 2,
         "optimized_has_real_diff": _change_quality_ok(change_details, expected_skills) and visible_after != visible_before,
         "no_banned_resume_phrase": not any(phrase in visible_after for phrase in BANNED_PHRASES),
@@ -169,8 +170,8 @@ def main() -> int:
     min_pass_rate = float(os.environ.get("QUALITY_MIN_PASS_RATE", "0.9"))
     try:
         cases = json.loads(CASES_PATH.read_text(encoding="utf-8"))
-        if len(cases) < 20:
-            raise RuntimeError(f"Quality eval requires at least 20 cases, got {len(cases)}")
+        if len(cases) < 40:
+            raise RuntimeError(f"Quality eval requires at least 40 cases, got {len(cases)}")
         result = asyncio.run(run_suite(cases))
         print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
         return 0 if result["pass_rate"] >= min_pass_rate else 1

@@ -335,6 +335,58 @@ class JobApplicationResponse(BaseModel):
         from_attributes = True
 
 
+# ==================== Quality annotation ====================
+
+class QualityAnnotationCreateRequest(BaseModel):
+    target_type: str = Field(pattern=r"^(job|resume_version|interview|interview_report|interview_question|ats_report)$")
+    target_id: str = Field(min_length=1, max_length=120)
+    score: int = Field(ge=1, le=5)
+    labels: list[str] = Field(default_factory=list, max_length=12)
+    notes: str | None = Field(default=None, max_length=1000)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class QualityAnnotationResponse(BaseModel):
+    id: UUID
+    organization_id: UUID | None = None
+    target_type: str
+    target_id: str
+    score: int
+    labels: list[str] | None = None
+    notes: str | None = None
+    status: str
+    reviewer_role: str
+    annotation_metadata: dict[str, Any] | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class QualityEvalCandidateResponse(BaseModel):
+    id: UUID
+    organization_id: UUID | None = None
+    annotation_id: UUID | None = None
+    target_type: str
+    target_id: str
+    source_score: int
+    priority: int
+    labels: list[str] | None = None
+    issue_summary: str | None = None
+    status: str
+    candidate_metadata: dict[str, Any] | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class QualityEvalCandidateStatusRequest(BaseModel):
+    status: str = Field(pattern=r"^(open|accepted|added_to_eval|dismissed)$")
+
+
 # ==================== Payment ====================
 
 class CheckoutCreateRequest(BaseModel):

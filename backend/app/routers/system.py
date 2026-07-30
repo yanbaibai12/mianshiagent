@@ -11,6 +11,8 @@ from app.database import get_db
 from app.models import KnowledgeChunk, KnowledgeDocument, ResumeChunk, User
 from app.services.auth_service import get_current_user, require_admin_user
 from app.services.audit import log_audit_event
+from app.services.alerting import build_alerting_status, dispatch_system_alerts
+from app.services.monitoring import build_system_alerts
 from app.services.operations import build_backup_status, create_sqlite_backup, request_metrics
 from app.services.resume_index import reindex_all_resume_chunks
 from app.services.rerank_service import rerank_documents, rerank_status
@@ -29,6 +31,11 @@ class RerankProbeRequest(BaseModel):
 class ResumeReindexAllRequest(BaseModel):
     only_missing: bool = True
     limit: int | None = Field(default=None, ge=1, le=1000)
+
+
+class AlertNotifyRequest(BaseModel):
+    include_warnings: bool = False
+    force: bool = False
 
 
 @router.get("/status")
@@ -55,6 +62,17 @@ async def status(
         resume_chunk_count = await db.scalar(select(func.count()).select_from(ResumeChunk)) or 0
     vector_status = await vector_store_status(db)
     queue_metrics = await task_queue_metrics(db)
+    request_snapshot = request_metrics.snapshot()
+    rerank_snapshot = rerank_status()
+    release_snapshot = run_release_checks(settings)
+    alerts = build_system_alerts(
+        settings=settings,
+        release=release_snapshot,
+        request_metrics=request_snapshot,
+        queue_metrics=queue_metrics,
+        vector_status=vector_status,
+        rerank_status=rerank_snapshot,
+    )
 
     llm_provider = settings.LLM_PROVIDER.lower()
     return {
@@ -81,7 +99,7 @@ async def status(
             "chunk_count": chunk_count,
             "resume_chunk_count": resume_chunk_count,
             "vector_store": vector_status,
-            "rerank": rerank_status(),
+            "rerank": rerank_snapshot,
         },
         "limits": {
             "max_file_size_mb": round(settings.MAX_FILE_SIZE / 1024 / 1024, 1),
@@ -118,8 +136,9 @@ async def status(
         },
         "operations": {
             "metrics_enabled": settings.METRICS_ENABLED,
-            "metrics": request_metrics.snapshot(),
+            "metrics": request_snapshot,
             "task_queue": queue_metrics,
+            "alerting": await build_alerting_status(db, settings),
             "backup": build_backup_status(settings),
             "release": {
                 "deployment_color": settings.DEPLOYMENT_COLOR,
@@ -127,8 +146,73 @@ async def status(
                 "canary_percent": settings.CANARY_PERCENT,
             },
         },
-        "release": run_release_checks(settings),
+        "release": release_snapshot,
+        "alerts": alerts,
     }
+
+
+@router.get("/alerts")
+async def system_alerts(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin_user),
+):
+    settings = get_settings()
+    vector_status = await vector_store_status(db)
+    queue_metrics = await task_queue_metrics(db)
+    release_snapshot = run_release_checks(settings)
+    return build_system_alerts(
+        settings=settings,
+        release=release_snapshot,
+        request_metrics=request_metrics.snapshot(),
+        queue_metrics=queue_metrics,
+        vector_status=vector_status,
+        rerank_status=rerank_status(),
+    )
+
+
+@router.post("/admin/alerts/notify")
+async def admin_notify_alerts(
+    req: AlertNotifyRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin_user),
+):
+    settings = get_settings()
+    vector_status = await vector_store_status(db)
+    queue_metrics = await task_queue_metrics(db)
+    release_snapshot = run_release_checks(settings)
+    alerts = build_system_alerts(
+        settings=settings,
+        release=release_snapshot,
+        request_metrics=request_metrics.snapshot(),
+        queue_metrics=queue_metrics,
+        vector_status=vector_status,
+        rerank_status=rerank_status(),
+    )
+    result = await dispatch_system_alerts(
+        db,
+        settings=settings,
+        alerts=alerts,
+        min_severity="warning" if req.include_warnings else None,
+        force=req.force,
+    )
+    log_audit_event(
+        db,
+        event_type="system.alert_notify",
+        resource_type="system_alert",
+        actor_user_id=current_user.id,
+        target_user_id=current_user.id,
+        request=request,
+        metadata={
+            "eligible_count": result.get("eligible_count"),
+            "sent_count": result.get("sent_count"),
+            "failed_count": result.get("failed_count"),
+            "skipped_count": result.get("skipped_count"),
+            "configured": result.get("configured"),
+        },
+    )
+    await db.commit()
+    return result
 
 
 @router.get("/release-checks")

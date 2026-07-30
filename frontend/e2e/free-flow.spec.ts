@@ -58,6 +58,9 @@ test('free user can complete resume to report delivery flow', async ({ page }) =
     await page.getByRole('button', { name: '优化结果' }).click()
     await expect(page.getByTestId('change-details-panel')).toBeVisible()
     await expect(page.getByTestId('change-details-panel')).toContainText('修改后')
+    await page.goto(jobUrl)
+    await page.getByTestId('submit-quality-feedback-button').click()
+    await expect(page.getByText('质量反馈已记录')).toBeVisible()
   })
 
   await test.step('generate interview questions, answer three, and finish report', async () => {

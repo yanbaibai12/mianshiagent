@@ -1,12 +1,29 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { ArrowRight, BriefcaseBusiness, FileText, RefreshCcw, Sparkles, Target } from 'lucide-react'
+import { ArrowRight, BriefcaseBusiness, CheckCircle2, FileText, RefreshCcw, Sparkles, Target } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { Badge, Button, Card, EmptyState, Field, LoadingState, ProgressBar, StatTile } from '../components/ui'
 import { jobsApi, type JobApplication } from '../services/jobs'
 import { resumeApi, type ResumeSummary } from '../services/resume'
 import { taskApi, type AsyncTask } from '../services/tasks'
 import { SAMPLE_COMPANY, SAMPLE_JD_TEXT, SAMPLE_JOB_TITLE } from '../data/examples'
+
+function workflowSteps(job: JobApplication) {
+  return [
+    { key: 'resume', label: '绑定简历', done: Boolean(job.resume_id) },
+    { key: 'optimized', label: 'JD 优化', done: Boolean(job.current_resume_version_id) || job.status === 'optimized' },
+    { key: 'interview', label: '面试训练', done: Boolean(job.interview_id) },
+    { key: 'report', label: '报告复盘', done: job.status === 'reported' },
+  ]
+}
+
+function nextAction(job: JobApplication) {
+  if (!job.resume_id) return '先绑定一份简历'
+  if (!job.current_resume_version_id && job.status !== 'optimized') return '生成 JD 优化版'
+  if (!job.interview_id) return '进入岗位面试训练'
+  if (job.status !== 'reported') return '完成面试并导出报告'
+  return '已完成主链路'
+}
 
 export default function JobWorkbenchPage() {
   const navigate = useNavigate()
@@ -128,9 +145,10 @@ export default function JobWorkbenchPage() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatTile label="岗位任务" value={jobs.length} meta="JD 工作流数量" icon={<BriefcaseBusiness size={18} />} />
           <StatTile label="已优化" value={jobs.filter((job) => job.status === 'optimized').length} meta="已生成简历版本" icon={<Sparkles size={18} />} />
+          <StatTile label="待推进" value={jobs.filter((job) => nextAction(job) !== '已完成主链路').length} meta="还有下一步动作" icon={<CheckCircle2 size={18} />} />
           <StatTile label="平均匹配" value={jobs.length ? Math.round(jobs.reduce((sum, job) => sum + Number(job.match_score || 0), 0) / jobs.length) : '-'} meta="ATS/JD 分数" icon={<Target size={18} />} />
         </div>
 
@@ -181,6 +199,22 @@ export default function JobWorkbenchPage() {
                         <Badge tone={job.status === 'optimized' ? 'success' : 'neutral'}>{job.status}</Badge>
                         {job.match_score !== null && <Badge tone="info">{job.match_score} 分</Badge>}
                       </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {workflowSteps(job).map((step) => (
+                          <span
+                            key={step.key}
+                            className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold ${
+                              step.done
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                : 'border-slate-200 bg-white text-slate-500'
+                            }`}
+                          >
+                            {step.done && <CheckCircle2 size={12} />}
+                            {step.label}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-3 text-sm font-semibold text-cyan-800">下一步：{nextAction(job)}</div>
                       <p className="mt-2 max-h-12 overflow-hidden text-sm leading-6 text-slate-500">{job.jd_text}</p>
                     </div>
                     <div className="flex shrink-0 flex-wrap gap-2">

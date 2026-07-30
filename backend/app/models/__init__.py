@@ -27,6 +27,8 @@ class User(Base):
     async_tasks = relationship("AsyncTask", back_populates="user", cascade="all, delete-orphan")
     resume_versions = relationship("ResumeVersion", back_populates="user", cascade="all, delete-orphan")
     job_applications = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
+    quality_annotations = relationship("QualityAnnotation", back_populates="user", cascade="all, delete-orphan")
+    quality_eval_candidates = relationship("QualityEvalCandidate", back_populates="user", cascade="all, delete-orphan")
 
 
 class Organization(Base):
@@ -48,6 +50,8 @@ class Organization(Base):
     async_tasks = relationship("AsyncTask", back_populates="organization")
     resume_versions = relationship("ResumeVersion", back_populates="organization")
     job_applications = relationship("JobApplication", back_populates="organization")
+    quality_annotations = relationship("QualityAnnotation", back_populates="organization")
+    quality_eval_candidates = relationship("QualityEvalCandidate", back_populates="organization")
 
 
 class OrganizationMember(Base):
@@ -316,6 +320,70 @@ class KnowledgeChunk(Base):
     created_at = Column(DateTime, default=utc_now)
 
     document = relationship("KnowledgeDocument", back_populates="chunks")
+
+
+class QualityAnnotation(Base):
+    __tablename__ = "quality_annotations"
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"))
+    target_type = Column(String(60), nullable=False)
+    target_id = Column(String(120), nullable=False)
+    score = Column(Integer, nullable=False)
+    labels = Column(JSON, default=list)
+    notes = Column(Text)
+    status = Column(String(30), nullable=False, default="open")
+    reviewer_role = Column(String(40), nullable=False, default="user")
+    annotation_metadata = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    user = relationship("User", back_populates="quality_annotations")
+    organization = relationship("Organization", back_populates="quality_annotations")
+    eval_candidate = relationship("QualityEvalCandidate", back_populates="annotation", uselist=False)
+
+
+class QualityEvalCandidate(Base):
+    __tablename__ = "quality_eval_candidates"
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"))
+    annotation_id = Column(Uuid(as_uuid=True), ForeignKey("quality_annotations.id", ondelete="SET NULL"), unique=True)
+    target_type = Column(String(60), nullable=False)
+    target_id = Column(String(120), nullable=False)
+    source_score = Column(Integer, nullable=False)
+    priority = Column(Integer, nullable=False, default=2)
+    labels = Column(JSON, default=list)
+    issue_summary = Column(Text)
+    status = Column(String(30), nullable=False, default="open")
+    candidate_metadata = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    user = relationship("User", back_populates="quality_eval_candidates")
+    organization = relationship("Organization", back_populates="quality_eval_candidates")
+    annotation = relationship("QualityAnnotation", back_populates="eval_candidate")
+
+
+class AlertNotification(Base):
+    __tablename__ = "alert_notifications"
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    alert_key = Column(String(160), nullable=False)
+    message_hash = Column(String(64), nullable=False)
+    severity = Column(String(20), nullable=False)
+    feature = Column(String(80), nullable=False, default="system")
+    title = Column(String(200), nullable=False)
+    destination = Column(String(200), nullable=False, default="webhook")
+    status = Column(String(30), nullable=False, default="pending")
+    attempts = Column(Integer, nullable=False, default=0)
+    error_type = Column(String(120))
+    error_message = Column(Text)
+    sent_at = Column(DateTime)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
 
 class AuditLog(Base):

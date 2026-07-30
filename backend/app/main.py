@@ -9,7 +9,7 @@ from app.config import get_settings
 from app.database import init_db, async_session_maker
 from app.middleware import InMemoryRateLimitMiddleware, RequestMetricsMiddleware, SecurityHeadersMiddleware
 from app.models import ResumeTemplate
-from app.routers import account, audit, auth, resumes, templates, interviews, system, knowledge, business, organizations, payments, tasks, jobs
+from app.routers import account, audit, auth, resumes, templates, interviews, system, knowledge, business, organizations, payments, tasks, jobs, quality
 from app.services.knowledge_base import seed_builtin_knowledge
 from app.services.llm_client import LLMCallError
 from app.services.release_checks import assert_release_ready
@@ -170,6 +170,7 @@ app.include_router(interviews.router)
 app.include_router(system.router)
 app.include_router(knowledge.router)
 app.include_router(business.router)
+app.include_router(quality.router)
 
 
 @app.exception_handler(LLMCallError)
