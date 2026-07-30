@@ -54,7 +54,14 @@ COMMON_SKILLS = [
     "留存",
 ]
 
-DIMENSION_KEYS = ["completeness", "logic", "consistency", "conciseness", "depth"]
+DIMENSION_KEYS = [
+    "technical_accuracy",
+    "project_understanding",
+    "structure_clarity",
+    "troubleshooting",
+    "engineering_delivery",
+    "reflection",
+]
 
 
 class LLMCallError(RuntimeError):
@@ -265,7 +272,7 @@ class LocalLLMClient:
             return self._adapt_jd(prompt)
         if "生成 5 个递进式面试小问题" in prompt:
             return self._generate_questions(prompt)
-        if "资深面试官" in prompt and "用户回答" in prompt:
+        if "面试官" in prompt and "用户回答" in prompt:
             return self._score_answer(prompt)
         if "面试辅导专家" in prompt:
             return self._summarize_interview(prompt)
@@ -509,25 +516,36 @@ class LocalLLMClient:
         answer_len = len(answer.strip())
         has_structure = bool(re.search(r"首先|其次|最后|背景|目标|行动|结果|因为|所以|一方面|另一方面", answer))
         has_numbers = bool(re.search(r"\d+|%|QPS|DAU|ROI", answer, re.IGNORECASE))
-        has_depth = bool(re.search(r"方案|架构|取舍|优化|复盘|指标|数据|风险|定位|排查", answer))
+        has_technical_terms = bool(
+            re.search(
+                r"RAG|Agent|FastAPI|Redis|SQL|MySQL|PostgreSQL|Qdrant|BGE|RRF|BM25|接口|缓存|索引|重排|切片|embedding",
+                answer,
+                re.IGNORECASE,
+            )
+        )
+        has_project_context = bool(re.search(r"背景|目标|职责|负责|参与|交付|上线|用户|业务|模块", answer))
+        has_troubleshooting = bool(re.search(r"定位|排查|复现|日志|监控|验证|回滚|失败|异常|原因", answer))
+        has_delivery = bool(re.search(r"接口|联调|测试|上线|验收|稳定|性能|成本|重试|队列|权限", answer))
+        has_reflection = bool(re.search(r"复盘|取舍|指标|优化|不足|改进|下一步|风险|教训", answer))
 
         scores = {
-            "completeness": self._clamp(4 + answer_len // 45 + (2 if question[:12] in answer else 0)),
-            "logic": self._clamp(5 + (2 if has_structure else 0) + answer_len // 120),
-            "consistency": self._clamp(7 + (1 if answer_len > 20 else 0)),
-            "conciseness": self._clamp(9 if answer_len < 260 else 7 if answer_len < 500 else 5),
-            "depth": self._clamp(5 + (2 if has_depth else 0) + (1 if has_numbers else 0)),
+            "technical_accuracy": self._clamp(4 + (2 if has_technical_terms else 0) + answer_len // 100),
+            "project_understanding": self._clamp(4 + (2 if has_project_context else 0) + (1 if answer_len > 80 else 0)),
+            "structure_clarity": self._clamp(4 + (3 if has_structure else 0) + answer_len // 160),
+            "troubleshooting": self._clamp(4 + (3 if has_troubleshooting else 0) + (1 if has_numbers else 0)),
+            "engineering_delivery": self._clamp(4 + (3 if has_delivery else 0) + (1 if has_numbers else 0)),
+            "reflection": self._clamp(4 + (3 if has_reflection else 0) + (1 if has_numbers else 0)),
         }
         total = round(sum(scores.values()) / len(scores), 1)
         feedback = "优点：回答已覆盖基本内容" + ("，并体现了结构化表达" if has_structure else "")
-        feedback += "。不足：建议补充背景、个人动作、量化结果和复盘思考，让答案更像真实面试表达。"
+        feedback += "。不足：建议补充具体技术链路、排查验证过程、上线验收结果和复盘指标。"
 
         refined = answer.strip()
         if refined:
             refined = refined[:140]
-            refined = f"可按 STAR 表达：背景是{question[:24]}相关场景；我的行动是{refined}；结果需补充可验证指标，并说明复盘改进。"
+            refined = f"可按 STAR 表达：背景是{question[:24]}相关场景；我的行动是{refined}；结果需补充可验证指标、联调或排查过程，并说明复盘改进。"
         else:
-            refined = "可按 STAR 表达：先说明项目背景和目标，再讲自己的关键动作、方案取舍和遇到的困难，最后补充结果指标与复盘改进。"
+            refined = "可按 STAR 表达：先说明项目背景和目标，再讲自己的关键动作、技术方案、联调排查和上线验收，最后补充结果指标与复盘改进。"
 
         return {
             "scores": scores,
@@ -557,20 +575,20 @@ class LocalLLMClient:
         avg = sum(dimension_scores.values()) / len(DIMENSION_KEYS) if answered_count else 0
 
         weak_points = [
-            "回答需要更稳定地覆盖背景、行动、结果三段信息",
-            "建议补充量化指标，避免只描述过程",
-            "方案取舍和复盘可以再具体，体现思考深度",
+            "技术回答需要更稳定地覆盖链路、边界条件和验证方式",
+            "项目表达需要补充个人交付边界、联调排查过程和上线验收结果",
+            "复盘部分需要补充指标、方案取舍和下一步优化动作",
         ]
         suggestions = [
-            "为每段项目经历准备 1 份 STAR 版本和 1 份 60 秒精简版本",
-            "整理关键指标、技术难点、本人贡献，形成面试素材表",
-            "针对低分维度复盘答案，优先补足结果数据和方案理由",
+            "为每段项目经历准备 1 份 STAR 版本和 1 份 60 秒精简版本，固定包含接口或模块边界",
+            "整理关键指标、技术难点、联调问题、本人贡献，形成面试素材表",
+            "针对低分维度复盘答案，优先补足排查过程、结果数据和方案理由",
         ]
 
         return {
             "total_score": round(avg * 10, 1),
             "dimension_scores": dimension_scores,
-            "summary": f"本次完成 {answered_count} 道题，整体能覆盖基本问题，但答案还需要更突出个人贡献、量化结果和复盘思考。",
+            "summary": f"本次完成 {answered_count} 道题，整体能覆盖基本问题，但答案还需要更突出技术准确性、个人贡献、工程交付证据和复盘思考。",
             "weak_points": weak_points,
             "suggestions": suggestions,
         }

@@ -311,6 +311,7 @@ class KnowledgeChunk(Base):
     sequence = Column(Integer, nullable=False, default=1)
     content = Column(Text, nullable=False)
     keywords = Column(JSON, default=list)
+    chunk_metadata = Column("metadata", JSON, default=dict)
     token_estimate = Column(Integer, default=0)
     created_at = Column(DateTime, default=utc_now)
 

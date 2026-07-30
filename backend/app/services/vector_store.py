@@ -1,4 +1,7 @@
 import asyncio
+import gc
+import json
+import shutil
 import time
 from pathlib import Path
 from typing import Any
@@ -52,6 +55,78 @@ def get_qdrant_client():
     return _client
 
 
+def reset_qdrant_client() -> None:
+    global _client
+    if _client is not None:
+        close = getattr(_client, "close", None)
+        if callable(close):
+            try:
+                close()
+            except Exception:
+                pass
+    _client = None
+    gc.collect()
+
+
+def _read_local_meta(local_path: Path) -> dict[str, Any]:
+    meta_path = local_path / "meta.json"
+    if not meta_path.exists():
+        return {}
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return meta if isinstance(meta, dict) else {}
+
+
+def _write_local_meta(local_path: Path, meta: dict[str, Any]) -> None:
+    (local_path / "meta.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+
+
+def _local_meta_has_collection(local_path: Path, collection_name: str) -> bool:
+    collections = _read_local_meta(local_path).get("collections")
+    return isinstance(collections, dict) and collection_name in collections
+
+
+def _is_empty_directory(path: Path) -> bool:
+    try:
+        return path.is_dir() and next(path.iterdir(), None) is None
+    except (OSError, PermissionError):
+        return False
+
+
+def _purge_local_collection_storage(collection_name: str) -> None:
+    settings = _settings()
+    if settings.QDRANT_URL:
+        return
+    local_path = Path(settings.QDRANT_LOCAL_PATH or "qdrant_storage").resolve()
+    collection_root = (local_path / "collection").resolve()
+    collection_path = (collection_root / collection_name).resolve()
+    if collection_root not in collection_path.parents:
+        raise RuntimeError("refusing to purge collection outside Qdrant local storage")
+    collection_in_meta = _local_meta_has_collection(local_path, collection_name)
+    if collection_path.exists():
+        if not collection_in_meta and _is_empty_directory(collection_path):
+            return
+        for attempt in range(8):
+            try:
+                shutil.rmtree(collection_path)
+                break
+            except PermissionError:
+                if not collection_in_meta and _is_empty_directory(collection_path):
+                    return
+                if attempt == 7:
+                    raise
+                gc.collect()
+                time.sleep(0.25)
+
+    meta = _read_local_meta(local_path)
+    collections = meta.get("collections")
+    if isinstance(collections, dict) and collection_name in collections:
+        collections.pop(collection_name, None)
+        _write_local_meta(local_path, meta)
+
+
 def _collection_name() -> str:
     return _settings().QDRANT_COLLECTION
 
@@ -61,9 +136,21 @@ def ensure_vector_collection(collection_name: str, *, recreate: bool = False) ->
     client = get_qdrant_client()
     _, models = _qdrant_imports()
     exists = client.collection_exists(collection_name)
-    if recreate and exists:
-        client.delete_collection(collection_name)
-        exists = False
+    if recreate:
+        if exists:
+            client.delete_collection(collection_name)
+            reset_qdrant_client()
+            _purge_local_collection_storage(collection_name)
+            client = get_qdrant_client()
+            exists = client.collection_exists(collection_name)
+            if exists:
+                client.delete_collection(collection_name)
+                reset_qdrant_client()
+                _purge_local_collection_storage(collection_name)
+                client = get_qdrant_client()
+                exists = client.collection_exists(collection_name)
+        if exists:
+            raise RuntimeError(f"failed to recreate Qdrant collection: {collection_name}")
     if not exists:
         client.create_collection(
             collection_name=collection_name,
@@ -106,6 +193,39 @@ def _count_points(collection_name: str | None = None) -> int:
         return 0
 
 
+def _prune_collection_points(collection_name: str, valid_point_ids: set[str]) -> int:
+    client = get_qdrant_client()
+    _, models = _qdrant_imports()
+    if not client.collection_exists(collection_name):
+        return 0
+
+    stale_ids: list[Any] = []
+    next_offset: Any | None = None
+    while True:
+        records, next_offset = client.scroll(
+            collection_name=collection_name,
+            limit=256,
+            offset=next_offset,
+            with_payload=False,
+            with_vectors=False,
+        )
+        for record in records:
+            point_id = getattr(record, "id", None)
+            if point_id is not None and str(point_id) not in valid_point_ids:
+                stale_ids.append(point_id)
+        if next_offset is None:
+            break
+
+    for start in range(0, len(stale_ids), 256):
+        batch = stale_ids[start : start + 256]
+        client.delete(
+            collection_name=collection_name,
+            points_selector=models.PointIdsList(points=batch),
+            wait=True,
+        )
+    return len(stale_ids)
+
+
 def _qdrant_filter(filters: dict[str, Any] | None):
     if not filters:
         return None
@@ -123,11 +243,20 @@ def _qdrant_filter(filters: dict[str, Any] | None):
 def _chunk_text(document: KnowledgeDocument, chunk: KnowledgeChunk) -> str:
     keywords = " ".join(chunk.keywords or [])
     tags = " ".join(document.tags or [])
-    return f"{document.title}\ncategory:{document.category}\ntags:{tags}\nkeywords:{keywords}\n{chunk.content}"
+    metadata = chunk.chunk_metadata or {}
+    skills = " ".join(metadata.get("skills") or [])
+    section = metadata.get("section") or ""
+    difficulty = metadata.get("difficulty") or ""
+    return (
+        f"{document.title}\ncategory:{document.category}\ntags:{tags}\nkeywords:{keywords}\n"
+        f"section:{section}\ndifficulty:{difficulty}\nskills:{skills}\n{chunk.content}"
+    )
 
 
 def _payload(document: KnowledgeDocument, chunk: KnowledgeChunk) -> dict[str, Any]:
+    metadata = chunk.chunk_metadata or {}
     return {
+        "doc_type": metadata.get("doc_type", "knowledge"),
         "document_id": str(document.id),
         "chunk_id": str(chunk.id),
         "title": document.title,
@@ -135,6 +264,15 @@ def _payload(document: KnowledgeDocument, chunk: KnowledgeChunk) -> dict[str, An
         "source": document.source or "builtin",
         "tags": document.tags or [],
         "keywords": chunk.keywords or [],
+        "metadata": metadata,
+        "question_id": metadata.get("question_id", ""),
+        "section": metadata.get("section", ""),
+        "difficulty": metadata.get("difficulty", ""),
+        "skills": metadata.get("skills", []),
+        "roles": metadata.get("roles", []),
+        "source_version": metadata.get("source_version", ""),
+        "slice_index": metadata.get("slice_index", 1),
+        "slice_count": metadata.get("slice_count", 1),
         "content": chunk.content,
         "sequence": chunk.sequence,
     }
@@ -189,6 +327,7 @@ async def sync_knowledge_to_vector_store(
         client = get_qdrant_client()
         batch_size = max(1, settings.EMBEDDING_BATCH_SIZE)
         total = 0
+        valid_point_ids = {str(chunk.id) for _, chunk in chunks}
         for start in range(0, len(chunks), batch_size):
             batch = chunks[start : start + batch_size]
             texts = [_chunk_text(document, chunk) for document, chunk in batch]
@@ -204,12 +343,16 @@ async def sync_knowledge_to_vector_store(
             await asyncio.to_thread(client.upsert, collection_name=settings.QDRANT_COLLECTION, points=points)
             total += len(points)
 
+        pruned_count = await asyncio.to_thread(_prune_collection_points, settings.QDRANT_COLLECTION, valid_point_ids)
+        points_count = await asyncio.to_thread(_count_points)
         _last_error = None
         _last_sync = {
             "status": "success",
             "collection": settings.QDRANT_COLLECTION,
-            "points_count": await asyncio.to_thread(_count_points),
+            "points_count": points_count,
+            "expected_count": expected_count,
             "synced_count": total,
+            "pruned_count": pruned_count,
             "duration_ms": round((time.perf_counter() - started_at) * 1000, 2),
             "embedding": embedding_status(),
         }

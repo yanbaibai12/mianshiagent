@@ -15,8 +15,26 @@ export interface KnowledgeSearchResult {
   source: string
   tags: string[]
   keywords: string[]
+  metadata?: Record<string, unknown>
   content: string
   score: number
+}
+
+export interface InterviewBankImportResult {
+  source: string
+  version: string
+  documents: number
+  questions: number
+  chunks: number
+  duplicates_removed: number
+  path: string
+  vector_sync?: {
+    status?: string
+    collection?: string
+    points_count?: number
+    synced_count?: number
+    error?: string
+  } | null
 }
 
 export const knowledgeApi = {
@@ -27,4 +45,6 @@ export const knowledgeApi = {
       categories,
       limit,
     }),
+  adminImportInterviewBank: (payload: { path?: string | null; skip_vector?: boolean; recreate_vector?: boolean } = {}) =>
+    api.post<InterviewBankImportResult>('/api/knowledge/admin/import-interview-bank', payload),
 }

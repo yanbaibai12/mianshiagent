@@ -83,7 +83,7 @@ GENERATE_QUESTIONS_PROMPT = """你是一位技术/业务面试官。请基于以
 6. 输出 JSON 数组，每个元素包含 question_id（如 p1-q1）和 question_text
 """
 
-SCORE_ANSWER_PROMPT = """你是一位资深面试官。请根据以下题目和用户回答，给出评分和精简答案。
+SCORE_ANSWER_PROMPT = """你是一位资深技术面试官。请根据以下题目和用户回答，给出评分和精简答案。
 
 题目：
 {question}
@@ -94,18 +94,19 @@ SCORE_ANSWER_PROMPT = """你是一位资深面试官。请根据以下题目和�
 简历上下文：
 {resume_context}
 
-请从以下 5 个维度评分（1-10 分）：
-1. completeness（完整性）：是否回答了问题的核心
-2. logic（逻辑清晰度）：结构是否清楚
-3. consistency（与简历一致性）：是否与简历描述一致
-4. conciseness（表达精炼度）：是否简洁不啰嗦
-5. depth（技术/业务深度）：是否有深度思考
+请从以下 6 个技术面试维度评分（1-10 分）：
+1. technical_accuracy（技术准确性）：概念、链路、方案和边界是否正确
+2. project_understanding（项目理解）：是否说清项目背景、个人职责、业务目标和交付边界
+3. structure_clarity（表达结构）：是否按背景、动作、结果、复盘组织答案
+4. troubleshooting（问题定位）：是否能拆解问题、定位原因、说明验证方式
+5. engineering_delivery（工程落地）：是否体现接口实现、联调排查、上线验收、稳定性和成本意识
+6. reflection（复盘能力）：是否能说明指标、取舍、失败教训和下一步优化
 
 输出 JSON：
 {{
-  "scores": {{"completeness": 8, "logic": 7, "consistency": 9, "conciseness": 6, "depth": 7}},
+  "scores": {{"technical_accuracy": 8, "project_understanding": 7, "structure_clarity": 9, "troubleshooting": 6, "engineering_delivery": 7, "reflection": 6}},
   "total_score": 7.5,
-  "feedback": "优点：... 不足：...",
+  "feedback": "优点：... 不足：... 下一题应补充：...",
   "refined_answer": "100-200字的精简答案，包含STAR结构和关键词"
 }}
 """
@@ -118,11 +119,11 @@ SUMMARIZE_INTERVIEW_PROMPT = """你是一位面试辅导专家。请根据以下
 请输出 JSON：
 {{
   "total_score": 82,
-  "dimension_scores": {{"completeness": 8, "logic": 7, "consistency": 9, "conciseness": 6, "depth": 7}},
+  "dimension_scores": {{"technical_accuracy": 8, "project_understanding": 7, "structure_clarity": 9, "troubleshooting": 6, "engineering_delivery": 7, "reflection": 6}},
   "summary": "整体表现总结",
   "weak_points": ["薄弱点1", "薄弱点2", "薄弱点3"],
   "suggestions": ["建议1", "建议2", "建议3"]
 }}
 
-语言专业、鼓励性，但指出问题要直接。
+语言专业、直接。总结必须指出：技术准确性、项目证据、排查思路、工程落地、复盘训练中最需要补强的 2-3 项。
 """

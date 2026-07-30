@@ -13,6 +13,24 @@ INTERNAL_KEYS = {
     "change_details",
 }
 
+SCORE_LABELS = {
+    "technical_accuracy": "技术准确性",
+    "project_understanding": "项目理解",
+    "structure_clarity": "表达结构",
+    "troubleshooting": "问题定位",
+    "engineering_delivery": "工程落地",
+    "reflection": "复盘能力",
+    "completeness": "完整性",
+    "logic": "逻辑清晰度",
+    "consistency": "简历一致性",
+    "conciseness": "表达精炼度",
+    "depth": "技术/业务深度",
+}
+
+
+def _score_label(key: str) -> str:
+    return SCORE_LABELS.get(key, key)
+
 FIELD_LABELS = {
     "name": "姓名",
     "phone": "电话",
@@ -193,7 +211,7 @@ def interview_report_to_markdown(report: Any) -> str:
         "\n## 分项得分\n",
     ]
     for key, value in (report.dimension_scores or {}).items():
-        lines.append(f"- {key}: {value}\n")
+        lines.append(f"- {_score_label(str(key))}: {value}\n")
     lines.extend([f"\n## 表现总结\n\n{report.summary}\n", "\n## 薄弱点\n"])
     for i, point in enumerate(report.weak_points or [], 1):
         lines.append(f"{i}. {point}\n")
@@ -227,7 +245,7 @@ def interview_report_to_docx_bytes(report: Any) -> bytes:
     doc.add_paragraph(report.summary or "")
     doc.add_heading("分项得分", level=1)
     for key, value in (report.dimension_scores or {}).items():
-        doc.add_paragraph(f"{key}: {value}", style="List Bullet")
+        doc.add_paragraph(f"{_score_label(str(key))}: {value}", style="List Bullet")
     doc.add_heading("薄弱点", level=1)
     for point in report.weak_points or []:
         doc.add_paragraph(str(point), style="List Bullet")

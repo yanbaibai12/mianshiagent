@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     QDRANT_SYNC_ON_STARTUP: bool = True
     RESUME_CHUNK_SIZE: int = 700
     RESUME_CHUNK_OVERLAP: int = 100
+    KNOWLEDGE_CHUNK_SIZE: int = 1200
+    KNOWLEDGE_CHUNK_OVERLAP: int = 120
 
     EMBEDDING_PROVIDER: str = "bge_m3"  # bge_m3 / openai_compatible / hash
     EMBEDDING_MODEL: str = "BAAI/bge-m3"

@@ -63,6 +63,24 @@ TECH_PATTERNS: list[tuple[str, tuple[str, ...]]] = [
     ("可观测性", ("日志", "监控", "链路追踪", "request_id", "metrics", "observability")),
 ]
 
+SCORE_DIMENSION_KEYS = [
+    "technical_accuracy",
+    "project_understanding",
+    "structure_clarity",
+    "troubleshooting",
+    "engineering_delivery",
+    "reflection",
+]
+
+LEGACY_SCORE_ALIASES = {
+    "technical_accuracy": ("depth", "consistency"),
+    "project_understanding": ("completeness", "consistency"),
+    "structure_clarity": ("logic", "conciseness"),
+    "troubleshooting": ("depth",),
+    "engineering_delivery": ("completeness", "depth"),
+    "reflection": ("depth", "logic"),
+}
+
 
 def _fallback_point(exp: dict[str, Any]) -> dict[str, str]:
     title = exp.get("name") or exp.get("company") or exp.get("role") or "核心经历"
@@ -81,6 +99,29 @@ def _dedupe_text(items: list[str]) -> list[str]:
             seen.add(key)
             result.append(text)
     return result
+
+
+def _safe_score(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return max(0.0, min(10.0, number))
+
+
+def _normalize_score_dimensions(scores: Any) -> dict[str, float]:
+    if not isinstance(scores, dict):
+        return {}
+    normalized: dict[str, float] = {}
+    for key in SCORE_DIMENSION_KEYS:
+        value = _safe_score(scores.get(key))
+        if value is None:
+            alias_values = [_safe_score(scores.get(alias)) for alias in LEGACY_SCORE_ALIASES.get(key, ())]
+            alias_values = [item for item in alias_values if item is not None]
+            value = round(sum(alias_values) / len(alias_values), 1) if alias_values else None
+        if value is not None:
+            normalized[key] = round(value, 1)
+    return normalized
 
 
 def _compact_text(value: Any, max_chars: int = 1600) -> str:
@@ -333,7 +374,7 @@ def _term_question(term: str, subject: str, module: str) -> str:
 def _module_fallback_questions(batch: QuestionBatch) -> list[str]:
     subject = batch.title.replace("项目：", "").replace("实习：", "").replace("Agent 八股：", "") or "这段经历"
     source_text = f"{batch.title} {batch.description} {batch.context}"
-    terms = _detect_tech_terms(source_text if batch.module == "agent_fundamentals" else f"{batch.title} {batch.description}")
+    terms = _detect_tech_terms(source_text)
     questions: list[str] = []
 
     if batch.module == "agent_fundamentals":
@@ -349,15 +390,15 @@ def _module_fallback_questions(batch: QuestionBatch) -> list[str]:
         questions.append("如果模型回答看似正确但引用了错误知识，你会如何设计评测集、人工复核和线上回滚机制？")
         return _dedupe_text(questions)[: batch.limit]
 
+    for term in terms[:5]:
+        questions.append(_term_question(term, subject, batch.module))
+
     if batch.module == "project":
         questions.append(f"{subject}的业务目标、用户场景和个人交付边界是什么？请按请求链路或数据链路讲清楚。")
     elif batch.module == "internship":
         questions.append(f"{subject}中你实际负责了哪些模块或接口？请说明输入输出、依赖方、上线标准和验收结果。")
     else:
         questions.append(f"请介绍{subject}的背景、目标、个人职责和最终交付。")
-
-    for term in terms[:5]:
-        questions.append(_term_question(term, subject, batch.module))
 
     questions.extend(
         [
@@ -367,6 +408,58 @@ def _module_fallback_questions(batch: QuestionBatch) -> list[str]:
         ]
     )
     return _dedupe_text(questions)[: batch.limit]
+
+
+def _extract_bank_question(content: str) -> str:
+    for line in (content or "").splitlines():
+        text = line.strip()
+        if text.startswith("题目："):
+            return text.replace("题目：", "", 1).strip()
+    match = re.search(r"题目[:：]\s*(.+)", content or "")
+    return match.group(1).strip() if match else ""
+
+
+def _compatible_bank_sections(module: str) -> set[str]:
+    if module == "project":
+        return {"project_deep_dive", "system_design", "troubleshooting"}
+    if module == "internship":
+        return {"internship_deep_dive", "system_design", "troubleshooting"}
+    if module == "agent_fundamentals":
+        return {"agent_fundamentals", "system_design", "troubleshooting"}
+    return {"project_deep_dive", "internship_deep_dive", "system_design", "troubleshooting", "agent_fundamentals"}
+
+
+def _contextualize_bank_question(question: str, batch: QuestionBatch) -> str:
+    question = question.strip()
+    if not question:
+        return ""
+    subject = batch.title.replace("项目：", "").replace("实习：", "").replace("Agent 八股：", "") or "这段经历"
+    if batch.module == "agent_fundamentals":
+        return question
+    if subject and subject not in question:
+        return f"结合{subject}，{question}"
+    return question
+
+
+def _rag_question_suggestions(snippets: list[Any], batch: QuestionBatch, *, limit: int = 3) -> list[str]:
+    source_text = f"{batch.title} {batch.description} {batch.context}".lower()
+    compatible_sections = _compatible_bank_sections(batch.module)
+    suggestions: list[str] = []
+    for snippet in snippets:
+        metadata = getattr(snippet, "metadata", {}) or {}
+        section = str(metadata.get("section") or "")
+        if section and section not in compatible_sections:
+            continue
+        skills = [str(item).lower() for item in metadata.get("skills") or []]
+        keywords = [str(item).lower() for item in getattr(snippet, "keywords", []) or []]
+        if skills or keywords:
+            if not any(item and item in source_text for item in [*skills, *keywords]):
+                continue
+        question = _extract_bank_question(getattr(snippet, "content", ""))
+        contextualized = _contextualize_bank_question(question, batch)
+        if contextualized:
+            suggestions.append(contextualized)
+    return _dedupe_text(suggestions)[:limit]
 
 
 def _response_question_items(response: Any) -> list[dict[str, str]]:
@@ -670,7 +763,10 @@ async def generate_questions(
 
         items = _merge_question_items(
             _response_question_items(response),
-            _module_fallback_questions(batch),
+            _dedupe_text([
+                *_rag_question_suggestions(rag_snippets, batch),
+                *_module_fallback_questions(batch),
+            ]),
             batch.limit,
         )
         for item in items[: batch.limit]:
@@ -792,7 +888,7 @@ async def submit_answer(
         started_at=started_at,
     )
 
-    scores = response.get("scores", {})
+    scores = _normalize_score_dimensions(response.get("scores", {}))
     total = response.get("total_score", 0)
     if not total and scores:
         total = sum(scores.values()) / len(scores)
@@ -902,7 +998,10 @@ async def regenerate_question(
 
     items = _merge_question_items(
         _response_question_items(response),
-        _module_fallback_questions(batch),
+        _dedupe_text([
+            *_rag_question_suggestions(rag_snippets, batch),
+            *_module_fallback_questions(batch),
+        ]),
         batch.limit,
     )
 
@@ -973,10 +1072,11 @@ async def finish_interview(
     # 准备总结输入
     qa_records = []
     for q in answered:
+        normalized_scores = _normalize_score_dimensions(q.scores)
         qa_records.append({
             "question": q.question,
             "answer": q.user_answer,
-            "scores": q.scores,
+            "scores": normalized_scores,
             "feedback": q.feedback,
         })
 
@@ -1003,19 +1103,22 @@ async def finish_interview(
     )
 
     # 计算平均分
-    total_scores = {key: [] for key in ["completeness", "logic", "consistency", "conciseness", "depth"]}
+    total_scores = {key: [] for key in SCORE_DIMENSION_KEYS}
     for q in answered:
-        if q.scores:
-            for key in total_scores:
-                if key in q.scores:
-                    total_scores[key].append(q.scores[key])
+        normalized_scores = _normalize_score_dimensions(q.scores)
+        for key in total_scores:
+            if key in normalized_scores:
+                total_scores[key].append(normalized_scores[key])
 
     dimension_scores = {k: round(sum(v) / len(v), 1) if v else 0 for k, v in total_scores.items()}
     avg_total = sum(dimension_scores.values()) / len(dimension_scores) if dimension_scores else 0
+    response_dimension_scores = _normalize_score_dimensions(response.get("dimension_scores", {}))
+    if len(response_dimension_scores) < len(SCORE_DIMENSION_KEYS):
+        response_dimension_scores = {**dimension_scores, **response_dimension_scores}
 
     interview.status = "completed"
     interview.total_score = float(response.get("total_score", avg_total * 10))
-    interview.dimension_scores = response.get("dimension_scores", dimension_scores)
+    interview.dimension_scores = response_dimension_scores or dimension_scores
     interview.summary = response.get("summary", "")
     interview.weak_points = response.get("weak_points", [])
     interview.suggestions = response.get("suggestions", [])

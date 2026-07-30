@@ -7,6 +7,12 @@ import { interviewApi, InterviewQuestion, InterviewReport } from '../services/in
 import { businessApi, BusinessEntitlements } from '../services/business'
 
 const scoreLabels: Record<string, string> = {
+  technical_accuracy: '技术准确性',
+  project_understanding: '项目理解',
+  structure_clarity: '表达结构',
+  troubleshooting: '问题定位',
+  engineering_delivery: '工程落地',
+  reflection: '复盘能力',
   completeness: '完整性',
   logic: '逻辑清晰度',
   consistency: '简历一致性',
@@ -141,7 +147,7 @@ export default function ReportPage() {
           <Card>
             <div className="mb-5">
               <h2 className="card-title">分项能力</h2>
-              <p className="card-subtitle">五个维度越均衡，面试表达越稳定。</p>
+              <p className="card-subtitle">技术、项目、排查、交付和复盘越均衡，面试表达越稳定。</p>
             </div>
             <div className="space-y-4">
               {Object.entries(report.dimension_scores || {}).map(([key, score]) => {

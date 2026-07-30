@@ -48,7 +48,7 @@ Python、FastAPI、PostgreSQL、Redis、Docker、React
 项目经历
 面试简历 Agent 项目 后端负责人 2026.01-2026.06
 负责 FastAPI 接口设计、认证鉴权、简历解析、模拟面试题生成和报告导出。
-通过 RAG 知识库增强面试评分标准，提升问题针对性。
+通过 RAG 知识库增强面试评分标准，使用 Qdrant 存储 BGE-M3 向量，并用 BM25 与向量召回的 RRF 排序融合提升问题针对性。
 
 实习经历
 某科技公司 后端实习生
@@ -201,6 +201,43 @@ class MainFlowTest(unittest.TestCase):
         backup = self.assert_ok(self.client.post("/api/system/admin/backup", headers=admin_headers))
         self.assertTrue(backup["filename"].endswith(".db"))
         self.assertGreater(backup["size_bytes"], 0)
+
+        forbidden_import = self.client.post(
+            "/api/knowledge/admin/import-interview-bank",
+            headers=member_headers,
+            json={"skip_vector": True},
+        )
+        self.assertEqual(forbidden_import.status_code, 403)
+
+        imported_bank = self.assert_ok(
+            self.client.post(
+                "/api/knowledge/admin/import-interview-bank",
+                headers=admin_headers,
+                json={"skip_vector": True},
+            )
+        )
+        self.assertEqual(imported_bank["questions"], 100)
+        self.assertGreaterEqual(imported_bank["chunks"], 100)
+        self.assertEqual(imported_bank["duplicates_removed"], 0)
+
+        knowledge_stats = self.assert_ok(self.client.get("/api/knowledge/stats", headers=admin_headers))
+        self.assertIn("agent_interview_questions", knowledge_stats["categories"])
+
+        recall = self.assert_ok(
+            self.client.post(
+                "/api/knowledge/search",
+                headers=admin_headers,
+                json={
+                    "query": "RRF 倒数排序 召回失败 项目混合检索",
+                    "categories": ["agent_interview_questions"],
+                    "limit": 3,
+                },
+            )
+        )
+        self.assertGreaterEqual(len(recall["results"]), 1)
+        recall_text = json.dumps(recall["results"], ensure_ascii=False)
+        self.assertRegex(recall_text, r"RRF|混合检索|召回")
+        self.assertIn("metadata", recall["results"][0])
 
     def test_resume_to_report_flow(self):
         headers = self.auth_headers()
@@ -359,6 +396,7 @@ class MainFlowTest(unittest.TestCase):
         self.assertTrue(all(question.get("source_section") is not None for question in questions))
         self.assertIn("agent_fundamentals", question_types)
         self.assertRegex(question_text, r"RAG|FastAPI|Redis|PostgreSQL|Agent|Qdrant|BGE-M3")
+        self.assertRegex(question_text, r"RRF|混合检索|BM25")
         self.assertNotIn("面向该 JD", question_text)
 
         regenerated = self.assert_ok(
@@ -384,11 +422,17 @@ class MainFlowTest(unittest.TestCase):
                 )
             )
             self.assertIsNotNone(scored["total_score"])
+            self.assertIn("technical_accuracy", scored["scores"])
+            self.assertIn("engineering_delivery", scored["scores"])
+            self.assertIn("reflection", scored["scores"])
 
         report = self.assert_ok(
             self.client.post(f"/api/interviews/{interview['id']}/finish", headers=headers)
         )
         self.assertGreater(report["total_score"], 0)
+        self.assertIn("technical_accuracy", report["dimension_scores"])
+        self.assertIn("troubleshooting", report["dimension_scores"])
+        self.assertIn("engineering_delivery", report["dimension_scores"])
 
         exported = self.assert_ok(
             self.client.get(f"/api/interviews/{interview['id']}/report/export", headers=headers)

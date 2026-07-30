@@ -5,6 +5,7 @@ import AppShell from '../components/AppShell'
 import { Badge, Button, Card, EmptyState, Field, LoadingState, StatTile } from '../components/ui'
 import { auditApi, AuditLog } from '../services/audit'
 import { businessApi, AdminUsageSummary, BusinessEntitlements } from '../services/business'
+import { knowledgeApi } from '../services/knowledge'
 import { systemApi, SystemStatus } from '../services/system'
 
 function auditTone(eventType: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
@@ -39,6 +40,8 @@ export default function SystemAdminPage() {
   const [backuping, setBackuping] = useState(false)
   const [reindexing, setReindexing] = useState(false)
   const [reindexMessage, setReindexMessage] = useState('')
+  const [importingKnowledge, setImportingKnowledge] = useState(false)
+  const [knowledgeImportMessage, setKnowledgeImportMessage] = useState('')
 
   useEffect(() => {
     loadData()
@@ -139,6 +142,25 @@ export default function SystemAdminPage() {
       setAdminError(err.response?.data?.detail || '简历向量索引回填失败')
     } finally {
       setReindexing(false)
+    }
+  }
+
+  const handleImportInterviewBank = async () => {
+    setAdminError('')
+    setKnowledgeImportMessage('')
+    setImportingKnowledge(true)
+    try {
+      const res = await knowledgeApi.adminImportInterviewBank({ recreate_vector: false })
+      const statusRes = await systemApi.status()
+      setStatus(statusRes.data)
+      const vectorStatus = res.data.vector_sync?.status ? `，向量同步：${res.data.vector_sync.status}` : ''
+      setKnowledgeImportMessage(
+        `已导入 ${res.data.documents} 个题库文档、${res.data.questions} 道题、${res.data.chunks} 个切片${vectorStatus}。`,
+      )
+    } catch (err: any) {
+      setAdminError(err.response?.data?.detail || '面试题库导入失败')
+    } finally {
+      setImportingKnowledge(false)
     }
   }
 
@@ -250,6 +272,11 @@ export default function SystemAdminPage() {
                         {reindexMessage}
                       </div>
                     )}
+                    {knowledgeImportMessage && (
+                      <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700">
+                        {knowledgeImportMessage}
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="rounded-md bg-slate-50 px-3 py-3">
                         <div className="text-xs text-slate-500">排队任务</div>
@@ -289,10 +316,16 @@ export default function SystemAdminPage() {
                       </div>
                     </div>
                     {adminSummary && (
-                      <Button type="button" variant="secondary" className="w-full" onClick={handleReindexResumes} disabled={reindexing}>
-                        <RefreshCw size={16} />
-                        {reindexing ? '回填中...' : '回填简历向量索引'}
-                      </Button>
+                      <div className="space-y-2">
+                        <Button type="button" variant="secondary" className="w-full" onClick={handleImportInterviewBank} disabled={importingKnowledge}>
+                          <RefreshCw size={16} />
+                          {importingKnowledge ? '导入中...' : '导入面试题库并同步索引'}
+                        </Button>
+                        <Button type="button" variant="secondary" className="w-full" onClick={handleReindexResumes} disabled={reindexing}>
+                          <RefreshCw size={16} />
+                          {reindexing ? '回填中...' : '回填简历向量索引'}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </Card>

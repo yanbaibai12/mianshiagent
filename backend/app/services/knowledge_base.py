@@ -136,10 +136,16 @@ class KnowledgeSnippet:
     source: str
     tags: list[str]
     keywords: list[str]
+    metadata: dict[str, Any]
     content: str
     score: float
 
     def to_dict(self) -> dict[str, Any]:
+        public_metadata = {
+            key: self.metadata.get(key)
+            for key in ["question_id", "section", "difficulty", "roles", "skills", "source_version", "slice_index", "slice_count"]
+            if self.metadata.get(key) is not None
+        }
         return {
             "document_id": self.document_id,
             "chunk_id": self.chunk_id,
@@ -148,6 +154,7 @@ class KnowledgeSnippet:
             "source": self.source,
             "tags": self.tags,
             "keywords": self.keywords,
+            "metadata": public_metadata,
             "content": self.content,
             "score": round(self.score, 3),
         }
@@ -249,6 +256,7 @@ def _score_chunk(
             document.category,
             " ".join(document.tags or []),
             " ".join(chunk.keywords or []),
+            compact_json(getattr(chunk, "chunk_metadata", {}) or {}, 1200),
             chunk.content,
         ]
     ).lower()
@@ -297,6 +305,7 @@ async def _retrieve_keyword_knowledge(
                     source=document.source or "builtin",
                     tags=document.tags or [],
                     keywords=chunk.keywords or [],
+                    metadata=chunk.chunk_metadata or {},
                     content=chunk.content,
                     score=score,
                 )
@@ -307,6 +316,10 @@ async def _retrieve_keyword_knowledge(
 
 
 def _vector_payload_to_snippet(payload: dict[str, Any]) -> KnowledgeSnippet:
+    metadata = dict(payload.get("metadata") or {})
+    for key in ["question_id", "section", "difficulty", "roles", "skills", "source_version", "slice_index", "slice_count"]:
+        if key not in metadata and payload.get(key) is not None:
+            metadata[key] = payload.get(key)
     return KnowledgeSnippet(
         document_id=str(payload.get("document_id") or ""),
         chunk_id=str(payload.get("chunk_id") or ""),
@@ -315,6 +328,7 @@ def _vector_payload_to_snippet(payload: dict[str, Any]) -> KnowledgeSnippet:
         source=str(payload.get("source") or "vector"),
         tags=list(payload.get("tags") or []),
         keywords=list(payload.get("keywords") or []),
+        metadata=metadata,
         content=str(payload.get("content") or ""),
         score=float(payload.get("score") or 0),
     )
@@ -385,8 +399,18 @@ def build_rag_context(snippets: list[KnowledgeSnippet]) -> str:
     ]
     for index, snippet in enumerate(snippets, 1):
         keywords = "、".join(snippet.keywords[:6])
+        metadata_parts = []
+        if snippet.metadata.get("question_id"):
+            metadata_parts.append(f"题卡ID：{snippet.metadata['question_id']}")
+        if snippet.metadata.get("section"):
+            metadata_parts.append(f"方向：{snippet.metadata['section']}")
+        if snippet.metadata.get("difficulty"):
+            metadata_parts.append(f"难度：{snippet.metadata['difficulty']}")
+        if snippet.metadata.get("skills"):
+            metadata_parts.append(f"技能：{'、'.join(list(snippet.metadata['skills'])[:6])}")
+        metadata_line = f" | {'；'.join(metadata_parts)}" if metadata_parts else ""
         lines.append(
-            f"{index}. [{snippet.category}] {snippet.title} | 关键词：{keywords}\n{snippet.content}"
+            f"{index}. [{snippet.category}] {snippet.title} | 关键词：{keywords}{metadata_line}\n{snippet.content}"
         )
     return "\n".join(lines)
 
