@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { Badge, Button, EmptyState, Field } from './ui'
 
 export type ResumeData = {
@@ -448,7 +449,7 @@ function PreviewSection({
 }: {
   title: string
   emptyTitle: string
-  children: Array<JSX.Element>
+  children: ReactNode[]
 }) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4">

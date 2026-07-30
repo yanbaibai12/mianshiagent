@@ -48,19 +48,22 @@ ADAPT_JD_PROMPT = """你是一位岗位匹配专家。请根据以下岗位 JD�
 
 请完成：
 1. 提取 JD 核心要求（职责、必备技能、加分项、关键词）
-2. 分析简历与 JD 的匹配度，指出缺失或薄弱项
-3. 针对薄弱项，定向改写相关经历，突出 JD 关键词
-4. 输出匹配度评分（0-100）和优化后的简历
+2. 结合“简历证据检索结果”分析简历与 JD 的匹配度，指出缺失或薄弱项
+3. 只改写原简历中已经存在的实习与项目经历，突出可验证的岗位相关证据
+4. 输出匹配度评分（0-100）、优化后的完整简历和改动说明
 
 约束：
 - 不得虚构经历、技能或数据
 - 仅做表达重组和重点调整
+- 最终简历正文不得出现“面向该 JD”“可重点呈现”“岗位要求”“建议补充”等分析话术
+- 如果某个 JD 要求没有简历证据，只能放入 weak_points，不得写进 optimized_resume
 
 请输出 JSON 格式：
 {{
   "jd_requirements": {{"responsibilities": [], "required_skills": [], "bonus_skills": [], "keywords": []}},
   "match_score": 75,
   "weak_points": [],
+  "change_details": [{{"section": "projects", "before": "原句", "after": "改写后", "reason": "改动原因", "evidence": "来自原简历的证据"}}],
   "optimized_resume": {{...}}
 }}
 """
@@ -75,7 +78,9 @@ GENERATE_QUESTIONS_PROMPT = """你是一位技术/业务面试官。请基于以
 1. 5 个问题覆盖：背景、技术细节、决策原因、困难与解决、成果与反思
 2. 问题必须基于简历原文，不得引入用户未提及的技能
 3. 问题具体、有针对性，避免泛泛而谈
-4. 输出 JSON 数组，每个元素包含 question_id（如 p1-q1）和 question_text
+4. 如果经历中出现 RAG、RRF、BM25、Qdrant、BGE-M3、FastAPI、Redis、SQL、React、Agent、Tool Calling、Prompt Injection 等技术词，至少 3 个问题必须直接追问这些具体技术点、方案取舍或排查场景
+5. 不要生成“请介绍背景 / 做了什么 / 遇到困难 / 结果如何”这种可套用到任何经历的模板题
+6. 输出 JSON 数组，每个元素包含 question_id（如 p1-q1）和 question_text
 """
 
 SCORE_ANSWER_PROMPT = """你是一位资深面试官。请根据以下题目和用户回答，给出评分和精简答案。

@@ -9,6 +9,7 @@ __pycache__/
 *.py[cod]
 .Python
 .venv/
+.venv-codex/
 venv/
 env/
 .pytest_cache/
@@ -20,6 +21,10 @@ env/
 *.sqlite3
 uploads/
 backups/
+backend/models/
+backend/qdrant_storage*/
+backend/qdrant_*/
+backend/*dry_run.json
 
 # Node / frontend
 node_modules/

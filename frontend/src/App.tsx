@@ -1,8 +1,10 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router'
 import { useAuthStore } from './stores/auth'
 import LoginPage from './pages/Login'
 import ResumeListPage from './pages/ResumeList'
 import ResumeDetailPage from './pages/ResumeDetail'
+import JobWorkbenchPage from './pages/JobWorkbench'
+import JobDetailPage from './pages/JobDetail'
 import NewInterviewPage from './pages/NewInterview'
 import InterviewPage from './pages/Interview'
 import ReportPage from './pages/Report'
@@ -19,6 +21,22 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/jobs"
+        element={
+          <PrivateRoute>
+            <JobWorkbenchPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/jobs/:id"
+        element={
+          <PrivateRoute>
+            <JobDetailPage />
+          </PrivateRoute>
+        }
+      />
       <Route
         path="/resumes"
         element={
@@ -83,7 +101,7 @@ function App() {
           </PrivateRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/resumes" />} />
+      <Route path="/" element={<Navigate to="/jobs" />} />
     </Routes>
   )
 }

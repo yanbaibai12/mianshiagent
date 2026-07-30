@@ -18,6 +18,9 @@ export interface InterviewQuestion {
   id: string
   resume_point_id: string | null
   point_title: string | null
+  module: string
+  source_section: string | null
+  question_type: string
   sequence: number
   question: string
   user_answer: string | null
@@ -37,8 +40,10 @@ export const interviewApi = {
   get: (id: string) => api.get<Interview>(`/api/interviews/${id}`),
   create: (resumeId: string, jdText?: string) =>
     api.post<Interview>('/api/interviews', { resume_id: resumeId, jd_text: jdText }),
-  generateQuestions: (id: string) =>
-    api.post(`/api/interviews/${id}/generate-questions`),
+  generateQuestions: (id: string, force = false) =>
+    api.post(`/api/interviews/${id}/generate-questions`, null, {
+      params: force ? { force: true } : undefined,
+    }),
   regenerateQuestion: (id: string, questionId: string) =>
     api.post<InterviewQuestion>(`/api/interviews/${id}/regenerate-question`, null, {
       params: { question_id: questionId },
@@ -51,5 +56,7 @@ export const interviewApi = {
   getReport: (id: string) => api.get<InterviewReport>(`/api/interviews/${id}/report`),
   exportReport: (id: string) =>
     api.get<{ filename: string; content: string }>(`/api/interviews/${id}/report/export`),
+  exportReportFile: (id: string, format: 'docx' | 'pdf') =>
+    api.get<Blob>(`/api/interviews/${id}/report/export`, { params: { format }, responseType: 'blob' }),
   delete: (id: string) => api.delete(`/api/interviews/${id}`),
 }

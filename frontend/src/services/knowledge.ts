@@ -4,6 +4,7 @@ export interface KnowledgeStats {
   document_count: number
   chunk_count: number
   categories: string[]
+  vector_store?: Record<string, unknown>
 }
 
 export interface KnowledgeSearchResult {

@@ -32,6 +32,19 @@ COMMON_SKILLS = [
     "Git",
     "CI/CD",
     "A/B",
+    "Agent",
+    "RAG",
+    "BM25",
+    "RRF",
+    "Qdrant",
+    "BGE-M3",
+    "Embedding",
+    "Function Calling",
+    "Tool Calling",
+    "API",
+    "任务队列",
+    "异步",
+    "Prompt Injection",
     "数据分析",
     "用户调研",
     "需求分析",
@@ -349,6 +362,18 @@ class LocalLLMClient:
             return line
         return f"{fallback}：{line}"
 
+    def _rewrite_line_for_jd(self, line: str, terms: list[str], fallback: str) -> str:
+        cleaned = (line or "").strip()
+        if not cleaned:
+            return ""
+        focus_terms = [term for term in terms if not re.search(re.escape(term), cleaned, re.IGNORECASE)] or terms[:4]
+        focus = "、".join(focus_terms[:4])
+        if focus:
+            if any(marker in cleaned for marker in ("优化", "交付", "排查", "联调", "复盘", "提升", "降低")):
+                return f"{cleaned}；进一步明确{focus}相关的实现范围、联调问题和交付结果。"
+            return f"{cleaned}；完成{focus}相关的实现、联调排查和结果复盘。"
+        return self._polish_line(cleaned, fallback)
+
     def _adapt_jd(self, prompt: str) -> dict[str, Any]:
         jd_text = _between(prompt, "岗位 JD：", "当前简历：")
         resume_data = deepcopy(self._resume_data_from_prompt(prompt))
@@ -359,8 +384,54 @@ class LocalLLMClient:
         score = round(45 + coverage * 45 + min(len(matched), 5) * 2, 1)
         score = min(score, 96)
         weak_points = [kw for kw in keywords if kw not in matched][:5]
+        change_details: list[dict[str, str]] = []
 
         if resume_data:
+            project_items = resume_data.get("projects") if isinstance(resume_data.get("projects"), list) else []
+            for project in project_items:
+                if not isinstance(project, dict):
+                    continue
+                project_text = json.dumps(project, ensure_ascii=False)
+                project_terms = [term for term in matched if re.search(re.escape(term), project_text, re.IGNORECASE)]
+                before = str(project.get("description") or "").strip()
+                after = self._rewrite_line_for_jd(before, project_terms, "使用 STAR 结构呈现项目背景、个人行动和交付结果")
+                if after and after != before:
+                    project["description"] = after
+                    change_details.append(
+                        {
+                            "section": "projects",
+                            "before": before or "原项目描述未单独成句",
+                            "after": after,
+                            "reason": "围绕原项目中已出现的技能和交付动作增强表达，不新增经历。",
+                            "evidence": before or project.get("name", ""),
+                        }
+                    )
+
+            experience_items = resume_data.get("experience") if isinstance(resume_data.get("experience"), list) else []
+            for experience in experience_items:
+                if not isinstance(experience, dict):
+                    continue
+                experience_text = json.dumps(experience, ensure_ascii=False)
+                experience_terms = [term for term in matched if re.search(re.escape(term), experience_text, re.IGNORECASE)]
+                highlights = experience.get("highlights") if isinstance(experience.get("highlights"), list) else []
+                updated_highlights = []
+                for highlight in highlights:
+                    before = str(highlight or "").strip()
+                    after = self._rewrite_line_for_jd(before, experience_terms, "补充实习中的任务边界、协作过程和交付结果")
+                    updated_highlights.append(after or before)
+                    if after and after != before:
+                        change_details.append(
+                            {
+                                "section": "experience",
+                                "before": before,
+                                "after": after,
+                                "reason": "基于原实习描述补强接口实现、联调排查或交付复盘表达。",
+                                "evidence": before,
+                            }
+                        )
+                if updated_highlights:
+                    experience["highlights"] = updated_highlights
+
             resume_data["jd_alignment"] = {
                 "matched_keywords": matched[:12],
                 "recommended_focus": weak_points,
@@ -376,6 +447,7 @@ class LocalLLMClient:
             },
             "match_score": score,
             "weak_points": weak_points,
+            "change_details": change_details,
             "optimized_resume": resume_data,
         }
 
@@ -394,13 +466,38 @@ class LocalLLMClient:
         title = _between(prompt, "要点：", "要点描述：") or "该经历"
         description = _between(prompt, "要点描述：", "关联经历：")
         subject = title.strip() or description[:16] or "该经历"
-        templates = [
-            f"请介绍一下{subject}的背景、目标，以及你在其中承担的角色。",
-            f"围绕{subject}，你具体做了哪些关键动作或实现步骤？",
-            f"当时为什么选择这个方案？有没有比较过其他方案或做过取舍？",
-            f"推进{subject}时遇到的最大困难是什么？你是如何定位并解决的？",
-            f"{subject}最终取得了什么结果？如果再做一次你会如何优化？",
-        ]
+        lowered = prompt.lower()
+        templates = [f"{subject}的业务目标、用户场景和个人交付边界是什么？请按请求链路或数据链路讲清楚。"]
+        if any(term in lowered for term in ["rrf", "bm25", "混合检索", "倒数排序"]):
+            templates.append(
+                f"{subject}里如果用了 BM25 和向量召回，你如何用 RRF 做排序融合？为什么不能直接把两路分数相加？"
+            )
+        if "rag" in lowered or "检索增强" in lowered or "知识库" in lowered:
+            templates.append(
+                f"请拆解{subject}的 RAG 链路：清洗、切片、embedding、召回、重排、上下文拼接分别怎么做？"
+            )
+        if "qdrant" in lowered:
+            templates.append(
+                f"{subject}接入 Qdrant 时，collection 维度、payload、过滤条件和索引重建流程怎么设计？"
+            )
+        if "bge" in lowered:
+            templates.append("使用 BGE-M3 时为什么要确认 1024 维向量与向量库 collection 一致？模型切换后怎么重建索引？")
+        if "fastapi" in lowered:
+            templates.append(f"{subject}中的 FastAPI 接口如何拆分路由、鉴权、参数校验和异常返回？长任务为什么不能同步等待？")
+        if "redis" in lowered:
+            templates.append(f"如果{subject}用 Redis 做缓存或任务队列，你如何设计 key、过期策略、幂等和失败重试？")
+        if any(term in lowered for term in ["agent", "tool calling", "function calling", "工具调用"]):
+            templates.append(f"{subject}里的 Agent 工具调用链路怎么设计？tool schema、权限边界和失败兜底如何处理？")
+        if "prompt injection" in lowered or "提示词注入" in lowered:
+            templates.append(f"如果输入中夹带 prompt injection 指令，{subject}如何隔离不可信内容并防止越权调用工具？")
+        templates.extend(
+            [
+                f"{subject}推进过程中遇到过哪些联调、数据一致性、性能或权限问题？你如何定位根因并验证修复有效？",
+                f"{subject}里有哪些方案取舍？如果让你重做一次，你会从架构、成本、稳定性或用户体验上怎么优化？",
+                f"{subject}最终结果如何衡量？如果简历里没有量化数据，你会在面试中补充哪些可验证证据？",
+            ]
+        )
+        templates = _dedupe(templates)[:5]
         return [
             {"question_id": f"local-q{idx}", "question_text": question}
             for idx, question in enumerate(templates, 1)

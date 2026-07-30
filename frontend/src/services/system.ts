@@ -37,6 +37,45 @@ export interface SystemStatus {
     retriever: string
     document_count: number
     chunk_count: number
+    resume_chunk_count: number
+    vector_store?: {
+      enabled: boolean
+      backend: string
+      collection: string
+      resume_collection?: string
+      configured_vector_size: number
+      document_count: number | null
+      chunk_count: number | null
+      resume_chunk_count?: number | null
+      available: boolean
+      points_count: number
+      resume_points_count?: number
+      actual_vector_size: number | null
+      resume_actual_vector_size?: number | null
+      last_error: string | null
+      embedding: {
+        provider: string
+        model: string
+        vector_size: number
+        base_url_configured: boolean
+        device: string
+        model_loaded: boolean
+        allow_fallback: boolean
+      }
+    }
+    rerank?: {
+      enabled: boolean
+      provider: string
+      model: string
+      top_k?: number
+      batch_size?: number
+      max_length?: number
+      base_url_configured: boolean
+      device: string
+      allow_fallback: boolean
+      model_loaded: boolean
+      last_call?: Record<string, any>
+    }
   }
   limits: {
     max_file_size_mb: number
@@ -81,6 +120,29 @@ export interface SystemStatus {
       avg_duration_ms: number
       p95_duration_ms: number
     }
+    task_queue?: {
+      runtime: {
+        backend: string
+        queue_name: string
+        redis_configured: boolean
+        local_fallback_allowed: boolean
+        available: boolean
+        error?: string
+      }
+      status_counts: Record<string, number>
+      backend_counts: Record<string, number>
+      avg_queue_wait_ms: number
+      avg_execution_ms: number
+      recent_errors: Array<{
+        id: string
+        task_type: string
+        resource_type: string | null
+        resource_id: string | null
+        error_type: string | null
+        error_message: string
+        updated_at: string
+      }>
+    }
     backup: {
       enabled: boolean
       backup_dir: string
@@ -102,8 +164,31 @@ export interface SystemStatus {
   release: ReleaseChecks
 }
 
+export interface ResumeReindexAllResult {
+  status: string
+  resume_count: number
+  processed_count: number
+  skipped_count: number
+  chunk_count: number
+  indexed_count: number
+  failed_count: number
+  collection: string
+  items: Array<{
+    resume_id: string
+    title: string
+    status: string
+    chunk_count: number
+    vector_status?: string
+    vector_error?: string | null
+  }>
+}
+
 export const systemApi = {
   status: () => api.get<SystemStatus>('/api/system/status'),
   releaseChecks: () => api.get<ReleaseChecks>('/api/system/release-checks'),
+  rerankProbe: (query: string, documents: string[]) =>
+    api.post('/api/system/rerank/probe', { query, documents }),
   adminBackup: () => api.post<{ filename: string; path: string; size_bytes: number; created_at: string }>('/api/system/admin/backup'),
+  adminReindexResumes: (payload: { only_missing?: boolean; limit?: number | null } = {}) =>
+    api.post<ResumeReindexAllResult>('/api/system/admin/reindex-resumes', payload),
 }

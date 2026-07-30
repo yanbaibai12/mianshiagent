@@ -10,6 +10,7 @@ from app.database import get_db
 from app.models import AuditLog, BillingAccount, Interview, InterviewQuestion, Organization, OrganizationMember, PaymentOrder, Resume, UsageRecord, User
 from app.services.audit import log_audit_event
 from app.services.auth_service import get_current_user
+from app.services.resume_index import delete_resume_vectors
 from app.utils.storage import delete_uploaded_file
 from app.utils.time import utc_now
 
@@ -204,9 +205,8 @@ async def delete_account(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    resume_files = (
-        await db.execute(select(Resume.original_file).where(Resume.user_id == current_user.id))
-    ).scalars().all()
+    resumes = (await db.execute(select(Resume).where(Resume.user_id == current_user.id))).scalars().all()
+    resume_files = [resume.original_file for resume in resumes]
 
     anonymized_user = _anonymized_user_hash(current_user.id)
     await db.execute(
@@ -227,6 +227,9 @@ async def delete_account(
     )
     await db.delete(current_user)
     await db.commit()
+
+    for resume in resumes:
+        await delete_resume_vectors(current_user.id, resume.id)
 
     for file_path in resume_files:
         delete_uploaded_file(file_path)

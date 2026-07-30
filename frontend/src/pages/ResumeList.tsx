@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import {
   CreditCard,
   Crown,
@@ -19,6 +19,7 @@ import { resumeApi, ResumeSummary } from '../services/resume'
 import { interviewApi, Interview } from '../services/interview'
 import { businessApi, BusinessEntitlements } from '../services/business'
 import { paymentApi } from '../services/payments'
+import { SAMPLE_RESUME_TEXT, SAMPLE_RESUME_TITLE } from '../data/examples'
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString()
@@ -131,6 +132,13 @@ export default function ResumeListPage() {
     }
   }
 
+  const fillSampleResume = () => {
+    setTitle(SAMPLE_RESUME_TITLE)
+    setText(SAMPLE_RESUME_TEXT)
+    setFile(null)
+    setError('')
+  }
+
   const handleDeleteInterview = async (interviewId: string) => {
     const confirmed = window.confirm('确认删除这条面试记录？删除后无法恢复。')
     if (!confirmed) return
@@ -196,7 +204,7 @@ export default function ResumeListPage() {
               <Badge tone="info">解析 + RAG</Badge>
             </div>
 
-            <form onSubmit={handleUpload} className="space-y-4">
+            <form onSubmit={handleUpload} className="space-y-4" data-testid="resume-upload-form">
               <Field label="简历名称">
                 <input
                   type="text"
@@ -229,10 +237,14 @@ export default function ResumeListPage() {
                 </Field>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <Button type="submit" disabled={uploading || resumePaywallBlocked}>
+            <div className="flex flex-wrap items-center gap-3">
+                <Button type="submit" disabled={uploading || resumePaywallBlocked} data-testid="upload-resume-button">
                   <UploadCloud size={16} />
                   {uploading ? '解析中...' : resumePaywallBlocked ? '需升级后解析' : '上传并解析'}
+                </Button>
+                <Button type="button" variant="secondary" onClick={fillSampleResume} data-testid="fill-sample-resume-button">
+                  <Sparkles size={16} />
+                  填入示例简历
                 </Button>
                 <Button type="button" variant="secondary" onClick={loadData}>
                   <SearchCheck size={16} />

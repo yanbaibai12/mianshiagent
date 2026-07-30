@@ -1,0 +1,9 @@
+# Optional local embedding/rerank runtime for BGE-M3 and bge-reranker-v2-m3.
+# For CPU-only Windows installs, prefer:
+# python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+transformers
+sentencepiece
+safetensors
+
+# Heavy helper package, only install if you choose the FlagEmbedding implementation.
+# FlagEmbedding==1.4.0

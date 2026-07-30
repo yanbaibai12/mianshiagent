@@ -1,15 +1,34 @@
-from fastapi import APIRouter, Depends
+import asyncio
+from typing import Any
+
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import KnowledgeChunk, KnowledgeDocument, User
+from app.models import KnowledgeChunk, KnowledgeDocument, ResumeChunk, User
 from app.services.auth_service import get_current_user, require_admin_user
+from app.services.audit import log_audit_event
 from app.services.operations import build_backup_status, create_sqlite_backup, request_metrics
+from app.services.resume_index import reindex_all_resume_chunks
+from app.services.rerank_service import rerank_documents, rerank_status
+from app.services.task_queue import task_queue_metrics
 from app.services.release_checks import run_release_checks
+from app.services.vector_store import vector_store_status
 
 router = APIRouter(prefix="/api/system", tags=["system"])
+
+
+class RerankProbeRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=1000)
+    documents: list[str] = Field(min_length=2, max_length=20)
+
+
+class ResumeReindexAllRequest(BaseModel):
+    only_missing: bool = True
+    limit: int | None = Field(default=None, ge=1, le=1000)
 
 
 @router.get("/status")
@@ -29,9 +48,13 @@ async def status(
 
     document_count = 0
     chunk_count = 0
+    resume_chunk_count = 0
     if database_ok:
         document_count = await db.scalar(select(func.count()).select_from(KnowledgeDocument)) or 0
         chunk_count = await db.scalar(select(func.count()).select_from(KnowledgeChunk)) or 0
+        resume_chunk_count = await db.scalar(select(func.count()).select_from(ResumeChunk)) or 0
+    vector_status = await vector_store_status(db)
+    queue_metrics = await task_queue_metrics(db)
 
     llm_provider = settings.LLM_PROVIDER.lower()
     return {
@@ -53,9 +76,12 @@ async def status(
         },
         "rag": {
             "enabled": True,
-            "retriever": "keyword",
+            "retriever": settings.VECTOR_STORE_BACKEND,
             "document_count": document_count,
             "chunk_count": chunk_count,
+            "resume_chunk_count": resume_chunk_count,
+            "vector_store": vector_status,
+            "rerank": rerank_status(),
         },
         "limits": {
             "max_file_size_mb": round(settings.MAX_FILE_SIZE / 1024 / 1024, 1),
@@ -93,6 +119,7 @@ async def status(
         "operations": {
             "metrics_enabled": settings.METRICS_ENABLED,
             "metrics": request_metrics.snapshot(),
+            "task_queue": queue_metrics,
             "backup": build_backup_status(settings),
             "release": {
                 "deployment_color": settings.DEPLOYMENT_COLOR,
@@ -110,6 +137,19 @@ async def release_checks(current_user: User = Depends(get_current_user)):
     return run_release_checks(settings)
 
 
+@router.post("/rerank/probe")
+async def rerank_probe(
+    req: RerankProbeRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    order, observation = await asyncio.to_thread(rerank_documents, req.query, req.documents)
+    return {
+        "order": order,
+        "observation": observation,
+        "status": rerank_status(),
+    }
+
+
 @router.get("/admin/metrics")
 async def admin_metrics(current_user: User = Depends(require_admin_user)):
     return request_metrics.snapshot()
@@ -119,3 +159,36 @@ async def admin_metrics(current_user: User = Depends(require_admin_user)):
 async def admin_backup(current_user: User = Depends(require_admin_user)):
     settings = get_settings()
     return create_sqlite_backup(settings)
+
+
+@router.post("/admin/reindex-resumes")
+async def admin_reindex_resumes(
+    req: ResumeReindexAllRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin_user),
+):
+    result = await reindex_all_resume_chunks(
+        db,
+        only_missing=req.only_missing,
+        limit=req.limit,
+    )
+    log_audit_event(
+        db,
+        event_type="system.reindex_resumes",
+        resource_type="resume_index",
+        actor_user_id=current_user.id,
+        target_user_id=current_user.id,
+        organization_id=None,
+        request=request,
+        metadata={
+            "only_missing": req.only_missing,
+            "limit": req.limit,
+            "processed_count": result.get("processed_count"),
+            "chunk_count": result.get("chunk_count"),
+            "indexed_count": result.get("indexed_count"),
+            "failed_count": result.get("failed_count"),
+        },
+    )
+    await db.commit()
+    return result

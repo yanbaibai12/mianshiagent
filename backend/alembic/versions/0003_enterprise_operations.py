@@ -14,6 +14,17 @@ branch_labels = None
 depends_on = None
 
 
+def _add_nullable_org_fk_column(table_name: str) -> None:
+    bind = op.get_bind()
+    if bind.dialect.name == "sqlite":
+        op.add_column(table_name, sa.Column("organization_id", sa.Uuid()))
+        return
+    op.add_column(
+        table_name,
+        sa.Column("organization_id", sa.Uuid(), sa.ForeignKey("organizations.id", ondelete="SET NULL")),
+    )
+
+
 def upgrade() -> None:
     op.create_table(
         "organizations",
@@ -54,11 +65,11 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime()),
         sa.Column("paid_at", sa.DateTime()),
     )
-    op.add_column("billing_accounts", sa.Column("organization_id", sa.Uuid(), sa.ForeignKey("organizations.id", ondelete="SET NULL")))
-    op.add_column("resumes", sa.Column("organization_id", sa.Uuid(), sa.ForeignKey("organizations.id", ondelete="SET NULL")))
-    op.add_column("interviews", sa.Column("organization_id", sa.Uuid(), sa.ForeignKey("organizations.id", ondelete="SET NULL")))
-    op.add_column("usage_records", sa.Column("organization_id", sa.Uuid(), sa.ForeignKey("organizations.id", ondelete="SET NULL")))
-    op.add_column("audit_logs", sa.Column("organization_id", sa.Uuid(), sa.ForeignKey("organizations.id", ondelete="SET NULL")))
+    _add_nullable_org_fk_column("billing_accounts")
+    _add_nullable_org_fk_column("resumes")
+    _add_nullable_org_fk_column("interviews")
+    _add_nullable_org_fk_column("usage_records")
+    _add_nullable_org_fk_column("audit_logs")
     op.create_index("ix_organization_members_user_id", "organization_members", ["user_id"])
     op.create_index("ix_payment_orders_user_id", "payment_orders", ["user_id"])
     op.create_index("ix_payment_orders_status", "payment_orders", ["status"])

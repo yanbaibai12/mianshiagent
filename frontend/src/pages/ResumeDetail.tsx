@@ -1,21 +1,29 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router'
 import {
   ArrowLeft,
   BrainCircuit,
   BriefcaseBusiness,
+  Download,
   FileJson,
   FileText,
+  Gauge,
+  History,
   Play,
+  RefreshCcw,
   Save,
+  SearchCheck,
+  ShieldCheck,
   Sparkles,
+  Target,
   Trash2,
   Wand2,
   X,
 } from 'lucide-react'
 import AppShell from '../components/AppShell'
-import { Badge, Button, Card, EmptyState, Field, LoadingState, StatTile } from '../components/ui'
-import { resumeApi, Resume } from '../services/resume'
+import { Badge, Button, Card, EmptyState, Field, LoadingState, ProgressBar, StatTile } from '../components/ui'
+import { resumeApi, type AtsReport, type Resume, type ResumeChunk, type ResumeVersion } from '../services/resume'
+import { taskApi, type AsyncTask } from '../services/tasks'
 import { templateApi, ResumeTemplate } from '../services/template'
 import { businessApi, BusinessEntitlements } from '../services/business'
 import {
@@ -33,15 +41,149 @@ function referencesFrom(data: any): Array<{ title?: string; category?: string; s
   return Array.isArray(data?.rag_references) ? data.rag_references : []
 }
 
+function atsFrom(data: any): AtsReport | null {
+  return data?.ats_report && Array.isArray(data.ats_report.dimensions) ? data.ats_report : null
+}
+
+function changeDetailsFrom(data: any): Array<{ section?: string; before?: string; after?: string; reason?: string; evidence?: string }> {
+  return Array.isArray(data?.change_details) ? data.change_details.filter((item: any) => item && typeof item === 'object') : []
+}
+
+function scoreTone(score: number): 'success' | 'warning' | 'danger' {
+  if (score >= 80) return 'success'
+  if (score >= 65) return 'warning'
+  return 'danger'
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function AtsReportPanel({ report }: { report: AtsReport }) {
+  const evidence = report.requirement_evidence || []
+  return (
+    <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+        <div>
+          <h3 className="font-semibold text-slate-950">JD 匹配评分</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-500">基于简历片段检索、RRF 融合和规则评分生成。</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Gauge size={18} className="text-cyan-700" />
+          <span className="text-2xl font-bold text-slate-950">{report.total_score}</span>
+          <span className="text-sm text-slate-500">/ 100</span>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {(report.dimensions || []).map((dimension) => (
+          <div key={dimension.key} className="rounded-md border border-slate-200 bg-white p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-slate-900">{dimension.name}</span>
+              <Badge tone={scoreTone(dimension.score)}>{dimension.score}</Badge>
+            </div>
+            <ProgressBar value={dimension.score} />
+            {dimension.covered?.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {dimension.covered.slice(0, 5).map((item) => <Badge key={item} tone="success">{item}</Badge>)}
+              </div>
+            )}
+            {dimension.missing?.length > 0 && (
+              <div className="mt-3 text-xs leading-5 text-rose-700">缺口：{dimension.missing.slice(0, 4).join('、')}</div>
+            )}
+            {dimension.risk?.length > 0 && (
+              <div className="mt-2 text-xs leading-5 text-amber-700">风险：{dimension.risk.slice(0, 3).join('；')}</div>
+            )}
+            <div className="mt-2 text-xs leading-5 text-slate-500">{dimension.suggestion}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <div className="rounded-md border border-slate-200 bg-white p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <ShieldCheck size={16} className="text-emerald-700" />
+            投递建议
+          </div>
+          <ul className="space-y-1 text-sm leading-6 text-slate-600">
+            {(report.delivery_advice || []).map((item) => <li key={item}>- {item}</li>)}
+          </ul>
+        </div>
+        <div className="rounded-md border border-slate-200 bg-white p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <Target size={16} className="text-cyan-700" />
+            命中证据
+          </div>
+          <div className="space-y-2">
+            {evidence.slice(0, 4).map((item, index) => (
+              <div key={`${item.requirement}-${index}`} className="rounded-md bg-slate-50 p-2 text-xs leading-5 text-slate-600">
+                <div className="font-semibold text-slate-900">{item.requirement} · {item.section_label || item.section}</div>
+                <div>{item.item_title}</div>
+                <div className="mt-1">{item.excerpt}</div>
+              </div>
+            ))}
+            {evidence.length === 0 && <div className="text-sm text-slate-500">暂无明确证据，建议先补齐项目或实习细节。</div>}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ChangeDetailsPanel({ changes }: { changes: ReturnType<typeof changeDetailsFrom> }) {
+  if (!changes.length) return null
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white" data-testid="change-details-panel">
+      <div className="border-b border-slate-200 px-4 py-3">
+        <h3 className="font-semibold text-slate-950">修改前后对比</h3>
+        <p className="mt-1 text-sm text-slate-500">只展示基于原有素材的调整、增补和改写原因。</p>
+      </div>
+      <div className="divide-y divide-slate-200">
+        {changes.slice(0, 20).map((item, index) => (
+          <div key={`${item.section}-${index}`} className="grid gap-3 p-4 lg:grid-cols-[0.7fr_1fr_1fr_1fr]">
+            <div>
+              <div className="text-xs text-slate-500">模块</div>
+              <div className="mt-1 font-semibold text-slate-900">{item.section || '简历内容'}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500">修改前</div>
+              <div className="mt-1 text-sm leading-6 text-slate-600">{item.before || '原简历未单独成句'}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500">修改后</div>
+              <div className="mt-1 text-sm leading-6 text-slate-900">{item.after || '-'}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-500">改动说明</div>
+              <div className="mt-1 text-sm leading-6 text-slate-600">{item.reason || item.evidence || '-'}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export default function ResumeDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [resume, setResume] = useState<Resume | null>(null)
+  const [chunks, setChunks] = useState<ResumeChunk[]>([])
+  const [versions, setVersions] = useState<ResumeVersion[]>([])
+  const [activeTask, setActiveTask] = useState<AsyncTask | null>(null)
   const [templates, setTemplates] = useState<ResumeTemplate[]>([])
   const [business, setBusiness] = useState<BusinessEntitlements | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState('')
   const [jdText, setJdText] = useState('')
   const [loading, setLoading] = useState(false)
+  const [reindexing, setReindexing] = useState(false)
   const [activeTab, setActiveTab] = useState<'parsed' | 'optimized'>('parsed')
   const [editing, setEditing] = useState(false)
   const [editorData, setEditorData] = useState<ResumeData>({})
@@ -63,6 +205,8 @@ export default function ResumeDetailPage() {
 
   const displayData = activeTab === 'optimized' ? resume?.optimized_data : resume?.parsed_data
   const references = referencesFrom(resume?.optimized_data)
+  const atsReport = atsFrom(resume?.optimized_data)
+  const changeDetails = changeDetailsFrom(resume?.optimized_data)
   const optimizePaywallBlocked = Boolean(
     business?.entitlements.paywall_active && !business.entitlements.can_optimize_resume,
   )
@@ -81,20 +225,25 @@ export default function ResumeDetailPage() {
           (sum: number, item: any) => sum + countItems(item.interview_points),
           0,
         ) || 0,
+      chunks: chunks.length,
     }
-  }, [resume])
+  }, [resume, chunks.length])
 
   const loadData = async () => {
     setError('')
     try {
-      const [resumeRes, templateRes, businessRes] = await Promise.all([
+      const [resumeRes, templateRes, businessRes, chunkRes, versionRes] = await Promise.all([
         resumeApi.get(id!),
         templateApi.list(),
         businessApi.entitlements(),
+        resumeApi.chunks(id!),
+        resumeApi.versions(id!),
       ])
       setResume(resumeRes.data)
       setTemplates(templateRes.data)
       setBusiness(businessRes.data)
+      setChunks(chunkRes.data)
+      setVersions(versionRes.data)
       setSelectedTemplate(resumeRes.data.template_id || '')
     } catch (err: any) {
       setError(err.response?.data?.detail || '简历加载失败')
@@ -125,23 +274,44 @@ export default function ResumeDetailPage() {
     setError('')
     setMessage('')
     try {
-      await resumeApi.adaptJD(id!, jdText.trim())
-      const res = await resumeApi.get(id!)
+      const taskRes = await resumeApi.adaptJDTask(id!, jdText.trim())
+      let task: AsyncTask = taskRes.data.task
+      setActiveTask(task)
+      while (!['success', 'failed', 'cancelled'].includes(task.status)) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1500))
+        const next = await taskApi.get(task.id)
+        task = next.data
+        setActiveTask(task)
+      }
+      if (task.status !== 'success') {
+        throw new Error(task.error_message || 'JD 优化任务失败')
+      }
+      const [res, chunkRes, versionRes] = await Promise.all([
+        resumeApi.get(id!),
+        resumeApi.chunks(id!),
+        resumeApi.versions(id!),
+      ])
       setResume(res.data)
+      setChunks(chunkRes.data)
+      setVersions(versionRes.data)
       setActiveTab('optimized')
       setMessage('JD 定向完善完成，匹配度和优化结果已更新。')
       businessApi.entitlements().then((businessRes) => setBusiness(businessRes.data)).catch(() => undefined)
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'JD 适配失败')
+      setError(err.response?.data?.detail || err.message || 'JD 适配失败')
     } finally {
       setLoading(false)
+      setActiveTask(null)
     }
   }
 
   const handleUpdate = async (data: Partial<Resume>) => {
     try {
       const res = await resumeApi.update(id!, data)
+      const [chunkRes, versionRes] = await Promise.all([resumeApi.chunks(id!), resumeApi.versions(id!)])
       setResume(res.data)
+      setChunks(chunkRes.data)
+      setVersions(versionRes.data)
       setEditing(false)
       setError('')
       setMessage('结构化内容已保存。')
@@ -152,6 +322,62 @@ export default function ResumeDetailPage() {
 
   const handleSaveStructured = async () => {
     await handleUpdate(activeTab === 'optimized' ? { optimized_data: editorData } : { parsed_data: editorData })
+  }
+
+  const handleReindex = async () => {
+    setReindexing(true)
+    setError('')
+    setMessage('')
+    try {
+      await resumeApi.reindex(id!)
+      const chunkRes = await resumeApi.chunks(id!)
+      setChunks(chunkRes.data)
+      setMessage('简历证据索引已重建。')
+    } catch (err: any) {
+      setError(err.response?.data?.detail || '重建索引失败')
+    } finally {
+      setReindexing(false)
+    }
+  }
+
+  const handleCreateDelivery = async () => {
+    setError('')
+    setMessage('')
+    try {
+      await resumeApi.createDeliveryVersion(id!)
+      const versionRes = await resumeApi.versions(id!)
+      setVersions(versionRes.data)
+      setMessage('投递版已保存。')
+    } catch (err: any) {
+      setError(err.response?.data?.detail || '创建投递版失败')
+    }
+  }
+
+  const handleRollback = async (versionId: string) => {
+    setError('')
+    setMessage('')
+    try {
+      const res = await resumeApi.rollbackVersion(id!, versionId)
+      const [chunkRes, versionRes] = await Promise.all([resumeApi.chunks(id!), resumeApi.versions(id!)])
+      setResume(res.data)
+      setChunks(chunkRes.data)
+      setVersions(versionRes.data)
+      setActiveTab('optimized')
+      setMessage('已回滚到选中版本。')
+    } catch (err: any) {
+      setError(err.response?.data?.detail || '回滚失败')
+    }
+  }
+
+  const handleExportResume = async (variant: string, versionId?: string) => {
+    setError('')
+    try {
+      const res = await resumeApi.exportDocx(id!, { variant, version_id: versionId })
+      downloadBlob(res.data, `${resume?.title || '简历'}-${variant}.docx`)
+      setMessage('Word 文件已生成。')
+    } catch (err: any) {
+      setError(err.response?.data?.detail || '导出失败')
+    }
   }
 
   const handleDelete = async () => {
@@ -200,11 +426,12 @@ export default function ResumeDetailPage() {
         {error && <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
         {message && <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div>}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <StatTile label="项目经历" value={stats.projects} meta="结构化项目数量" icon={<BriefcaseBusiness size={18} />} />
           <StatTile label="工作/实习" value={stats.experience} meta="可复盘经历数量" icon={<FileText size={18} />} />
           <StatTile label="技能关键词" value={stats.skills} meta="用于 JD 匹配" icon={<Sparkles size={18} />} />
           <StatTile label="面试要点" value={stats.points} meta="用于自动出题" icon={<BrainCircuit size={18} />} />
+          <StatTile label="证据片段" value={stats.chunks} meta="用于 JD 相似度检索" icon={<SearchCheck size={18} />} />
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
@@ -261,15 +488,108 @@ export default function ResumeDetailPage() {
                     免费 JD 适配额度已用完，请升级 Pro 或联系管理员开通权益。
                   </div>
                 )}
-                <Button type="button" className="w-full" onClick={handleAdaptJD} disabled={loading || !jdText.trim() || jdAdaptPaywallBlocked}>
+                <Button type="button" className="w-full" onClick={handleAdaptJD} disabled={loading || !jdText.trim() || jdAdaptPaywallBlocked} data-testid="resume-adapt-jd-button">
                   <Sparkles size={16} />
-                  {loading ? '处理中...' : jdAdaptPaywallBlocked ? '需升级后适配' : '根据 JD 完善'}
+                  {loading ? '任务执行中...' : jdAdaptPaywallBlocked ? '需升级后适配' : '根据 JD 完善'}
                 </Button>
+                {activeTask && (
+                  <div className="rounded-md border border-cyan-100 bg-cyan-50 px-3 py-3" data-testid="resume-task-progress">
+                    <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                      <span className="font-semibold text-cyan-900">{activeTask.stage}</span>
+                      <span className="text-cyan-700">{activeTask.progress}%</span>
+                    </div>
+                    <ProgressBar value={activeTask.progress} />
+                  </div>
+                )}
                 {resume.match_score !== null && (
                   <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                     当前匹配度：<span className="font-bold">{resume.match_score}</span>
                   </div>
                 )}
+              </div>
+            </Card>
+
+            <Card data-testid="resume-evidence-index-card">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="card-title">简历证据索引</h2>
+                  <p className="card-subtitle">按模块切片后用于 JD 相似度检索。</p>
+                </div>
+                <Badge tone={chunks.length > 0 ? 'success' : 'warning'}>{chunks.length} 片</Badge>
+              </div>
+              <div className="space-y-3">
+                {chunks.slice(0, 4).map((chunk) => (
+                  <div key={chunk.id} className="rounded-md bg-slate-50 px-3 py-2 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-semibold text-slate-900">{chunk.item_title || chunk.section}</div>
+                      <Badge tone={chunk.embedding_status === 'indexed' ? 'success' : chunk.embedding_status === 'failed' ? 'danger' : 'neutral'}>
+                        {chunk.embedding_status}
+                      </Badge>
+                    </div>
+                    <div className="mt-1 max-h-10 overflow-hidden text-xs leading-5 text-slate-500">{chunk.content}</div>
+                  </div>
+                ))}
+                {chunks.length === 0 && <EmptyState title="暂无证据片段" description="可以点击重建索引，系统会按技能、实习和项目切片。" />}
+                <Button type="button" variant="secondary" className="w-full" onClick={handleReindex} disabled={reindexing || loading} data-testid="reindex-resume-button">
+                  <RefreshCcw size={16} />
+                  {reindexing ? '重建中...' : '重建简历索引'}
+                </Button>
+              </div>
+            </Card>
+
+            <Card>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="card-title">简历版本</h2>
+                  <p className="card-subtitle">原始版、优化版和投递版可回滚。</p>
+                </div>
+                <Badge tone="info">{versions.length} 版</Badge>
+              </div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant="secondary" onClick={() => handleExportResume('optimized')}>
+                    <Download size={16} />
+                    导出优化版
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={handleCreateDelivery}>
+                    <History size={16} />
+                    保存投递版
+                  </Button>
+                </div>
+                <Button type="button" variant="secondary" className="w-full" onClick={() => handleExportResume('delivery')} data-testid="export-resume-delivery-button">
+                  <Download size={16} />
+                  导出投递版 Word
+                </Button>
+                <div className="space-y-2">
+                  {versions.slice(0, 5).map((version) => (
+                    <div key={version.id} className="rounded-md bg-slate-50 p-3 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-semibold text-slate-900">v{version.version_number} · {version.title}</div>
+                        <Badge tone={version.version_type === 'delivery' ? 'success' : version.version_type === 'original' ? 'neutral' : 'info'}>
+                          {version.version_type}
+                        </Badge>
+                        {version.is_current && <Badge tone="success">当前</Badge>}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {new Date(version.created_at).toLocaleString()}
+                        {version.created_by ? ` · ${version.created_by}` : ''}
+                        {version.source_job_id ? ` · 来源岗位 ${version.source_job_id.slice(0, 8)}` : ''}
+                      </div>
+                      {version.change_details?.length ? (
+                        <div className="mt-1 text-xs text-slate-500">改动 {version.change_details.length} 处</div>
+                      ) : null}
+                      <div className="mt-2 flex gap-2">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRollback(version.id)}>
+                          回滚
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleExportResume(version.version_type, version.id)}>
+                          导出
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {versions.length === 0 && <EmptyState title="暂无版本" description="上传或执行 JD 优化后会自动生成版本。" />}
+                </div>
               </div>
             </Card>
 
@@ -353,11 +673,9 @@ export default function ResumeDetailPage() {
               <ResumeStructuredEditor value={editorData} onChange={setEditorData} />
             ) : (
               <div className="space-y-4">
+                {atsReport && <AtsReportPanel report={atsReport} />}
+                {activeTab === 'optimized' && <ChangeDetailsPanel changes={changeDetails} />}
                 <ResumeStructuredPreview value={normalizeResumeData(displayData || {})} />
-                <details className="rounded-lg border border-slate-200 bg-white p-4">
-                  <summary className="cursor-pointer text-sm font-semibold text-slate-700">查看原始结构化 JSON</summary>
-                  <pre className="data-panel mt-4">{JSON.stringify(displayData || {}, null, 2)}</pre>
-                </details>
               </div>
             )}
           </Card>

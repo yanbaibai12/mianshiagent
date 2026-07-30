@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from typing import Any
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,6 +9,7 @@ from app.models import KnowledgeChunk, KnowledgeDocument, User
 from app.schemas import KnowledgeSearchRequest, KnowledgeSearchResponse, KnowledgeStatsResponse
 from app.services.auth_service import get_current_user
 from app.services.knowledge_base import retrieve_knowledge
+from app.services.vector_store import sync_knowledge_to_vector_store, vector_store_status
 
 router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 
@@ -24,6 +27,7 @@ async def stats(
         document_count=document_count or 0,
         chunk_count=chunk_count or 0,
         categories=categories,
+        vector_store=await vector_store_status(db),
     )
 
 
@@ -40,3 +44,12 @@ async def search(
         limit=req.limit,
     )
     return KnowledgeSearchResponse(results=[snippet.to_dict() for snippet in snippets])
+
+
+@router.post("/sync")
+async def sync_vector_index(
+    recreate: bool = Query(default=False),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    return await sync_knowledge_to_vector_store(db, recreate=recreate)

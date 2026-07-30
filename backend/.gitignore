@@ -7,7 +7,12 @@ __pycache__/
 venv/
 env/
 .venv/
+.venv-codex/
 uploads/
+models/
+qdrant_storage*/
+qdrant_*/
+*dry_run.json
 *.log
 *.err
 *.db

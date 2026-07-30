@@ -1,6 +1,23 @@
 # 已知问题记录
 
-更新时间：2026-07-24
+更新时间：2026-07-29
+
+## 2026-07-29 面试题生成专项修复记录
+
+1. 问题：旧版后端把 `experience` 和 `projects` 合并成一个平铺列表生成题目，无法稳定覆盖实习、项目、技术栈/Agent 八股三个模块。
+   处理：已改为 `项目`、`实习`、`Agent 八股` 三类 batch 生成；项目按单个项目最多 5 题，实习整体最多 5 题，Agent 八股最多 5 题。
+2. 问题：本地 LLM fallback 和部分模型输出容易变成“背景、做了什么、困难、结果”的模板五连问。
+   处理：已加入技术点识别和规则补题，围绕 RAG、RRF、BM25、Qdrant、BGE-M3、FastAPI、Redis、SQL、React、Agent 工具调用、Prompt Injection 等具体点生成追问。
+3. 问题：前端题目导航是平铺列表，用户看不出题目覆盖了哪些简历模块。
+   处理：已按项目深挖、实习经历、Agent 八股、简历要点分组展示，并隐藏内部 `resume_point_id`。
+4. 问题：旧会话中已生成的平铺题不会自动变化，容易误以为新逻辑没有生效。
+   处理：新增 `force=true` 重新生成能力；前端提供“重建题库”按钮，仅允许未作答题库被覆盖，避免删除用户答案。
+5. 问题：`npm audit` 默认 registry 指向 npmmirror 时会失败，原因是 npmmirror 未实现 `/-/npm/v1/security/*` 审计接口。
+   处理：验收时临时使用 `--registry=https://registry.npmjs.org` 获取真实审计结果，不改全局 npm 配置。
+6. 问题：官方 npm audit 曾报告 React Router high advisory。
+   处理：已升级到 `react@19.2.8`、`react-dom@19.2.8`、`react-router@8.3.0`，移除 `react-router-dom`，全站路由导入统一从 `react-router` 获取；`npm audit --audit-level=high --registry=https://registry.npmjs.org` 已清零。
+7. 问题：模块信息曾复用 `resume_point_id` / `point_title` 表达，不利于统计、筛选和报告归因。
+   处理：已新增 `interview_questions.module`、`source_section`、`question_type` 三个正式字段，并通过 Alembic `0004_interview_question_module_fields.py` 回填历史数据；后端生成、重生成、schema、面试页和报告页均已切到正式字段。
 
 ## 环境问题
 

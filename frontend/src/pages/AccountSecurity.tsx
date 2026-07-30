@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { ArrowLeft, Download, FileText, ShieldCheck, Trash2, UserRound } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { Badge, Button, Card, Field, StatTile } from '../components/ui'

@@ -123,6 +123,85 @@ class ResumeAdaptJDResponse(BaseModel):
     weak_points: list[str]
     optimized_resume: dict[str, Any]
     rag_references: list[dict[str, Any]] = Field(default_factory=list)
+    ats_report: dict[str, Any] = Field(default_factory=dict)
+    resume_evidence: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ResumeChunkResponse(BaseModel):
+    id: UUID
+    resume_id: UUID
+    section: str
+    item_title: str
+    chunk_index: int
+    content: str
+    keywords: list[str] | None = None
+    embedding_status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ResumeReindexResponse(BaseModel):
+    status: str
+    chunk_count: int
+    collection: str
+    vector: dict[str, Any] = Field(default_factory=dict)
+
+
+class ResumeVersionResponse(BaseModel):
+    id: UUID
+    resume_id: UUID
+    version_number: int
+    version_type: str
+    title: str
+    jd_text: str | None = None
+    data: dict[str, Any]
+    ats_report: dict[str, Any] | None = None
+    change_details: list[Any] | None = None
+    parent_version_id: UUID | None = None
+    source_task_id: UUID | None = None
+    source_job_id: UUID | None = None
+    is_current: bool = False
+    status: str = "active"
+    created_by: str = "system"
+    notes: str | None = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AsyncTaskResponse(BaseModel):
+    id: UUID
+    task_type: str
+    status: str
+    progress: int
+    stage: str
+    resource_type: str | None = None
+    resource_id: str | None = None
+    result_payload: dict[str, Any] | None = None
+    error_type: str | None = None
+    error_message: str | None = None
+    retry_count: int
+    max_retries: int
+    queue_backend: str = "local"
+    queue_name: str = "local"
+    external_job_id: str | None = None
+    cancel_requested: bool = False
+    enqueued_at: datetime | None = None
+    last_heartbeat_at: datetime | None = None
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ResumeAdaptJDTaskResponse(BaseModel):
+    task: AsyncTaskResponse
 
 
 # ==================== Template ====================
@@ -167,6 +246,9 @@ class InterviewQuestionResponse(BaseModel):
     id: UUID
     resume_point_id: str | None = None
     point_title: str | None = None
+    module: str = "resume"
+    source_section: str | None = None
+    question_type: str = "resume_core"
     sequence: int
     question: str
     user_answer: str | None = None
@@ -214,6 +296,43 @@ class KnowledgeStatsResponse(BaseModel):
     document_count: int
     chunk_count: int
     categories: list[str]
+    vector_store: dict[str, Any] = Field(default_factory=dict)
+
+
+# ==================== Job Workbench ====================
+
+class JobApplicationCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    company: str | None = Field(default="", max_length=160)
+    jd_text: str = Field(min_length=1, max_length=40_000)
+    resume_id: UUID | None = None
+
+
+class JobApplicationUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    company: str | None = Field(default=None, max_length=160)
+    jd_text: str | None = Field(default=None, max_length=40_000)
+    resume_id: UUID | None = None
+    status: str | None = Field(default=None, pattern=r"^(draft|matching|optimized|interviewing|reported|archived)$")
+
+
+class JobApplicationResponse(BaseModel):
+    id: UUID
+    organization_id: UUID | None = None
+    resume_id: UUID | None = None
+    current_resume_version_id: UUID | None = None
+    company: str
+    title: str
+    jd_text: str
+    status: str
+    match_score: float | None = None
+    ats_report: dict[str, Any] | None = None
+    interview_id: UUID | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 # ==================== Payment ====================

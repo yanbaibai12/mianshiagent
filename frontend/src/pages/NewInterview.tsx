@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router'
 import { ArrowLeft, BriefcaseBusiness, MessageSquareText, Play } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { Badge, Button, Card, EmptyState, Field, LoadingState } from '../components/ui'
 import { interviewApi } from '../services/interview'
 import { resumeApi, ResumeSummary } from '../services/resume'
 import { businessApi, BusinessEntitlements } from '../services/business'
+import { SAMPLE_JD_TEXT } from '../data/examples'
 
 export default function NewInterviewPage() {
   const [searchParams] = useSearchParams()
@@ -143,6 +144,10 @@ export default function NewInterviewPage() {
                   maxLength={40000}
                 />
               </Field>
+
+              <Button type="button" variant="secondary" className="w-full" onClick={() => setJdText(SAMPLE_JD_TEXT)}>
+                填入示例 JD
+              </Button>
 
               <Button type="button" size="lg" className="w-full" onClick={handleStart} disabled={loading || !resumeId || interviewPaywallBlocked}>
                 {loading ? <MessageSquareText size={16} /> : <Play size={16} />}

@@ -25,6 +25,56 @@ class Settings(BaseSettings):
     LLM_INPUT_PRICE_PER_1K_TOKENS_CNY: float = 0
     LLM_OUTPUT_PRICE_PER_1K_TOKENS_CNY: float = 0
 
+    # Embedding / vector knowledge base
+    VECTOR_STORE_BACKEND: str = "qdrant"  # qdrant / keyword
+    QDRANT_URL: str = ""
+    QDRANT_LOCAL_PATH: str = "qdrant_storage"
+    QDRANT_API_KEY: str = ""
+    QDRANT_COLLECTION: str = "mianshiagent_knowledge_bge_m3"
+    QDRANT_RESUME_COLLECTION: str = "mianshiagent_resume_bge_m3"
+    QDRANT_VECTOR_SIZE: int = 1024
+    QDRANT_TIMEOUT_SECONDS: float = 5.0
+    QDRANT_SYNC_ON_STARTUP: bool = True
+    RESUME_CHUNK_SIZE: int = 700
+    RESUME_CHUNK_OVERLAP: int = 100
+
+    EMBEDDING_PROVIDER: str = "bge_m3"  # bge_m3 / openai_compatible / hash
+    EMBEDDING_MODEL: str = "BAAI/bge-m3"
+    EMBEDDING_BASE_URL: str | None = None
+    EMBEDDING_API_KEY: str = ""
+    EMBEDDING_TIMEOUT_SECONDS: int = 60
+    EMBEDDING_BATCH_SIZE: int = 8
+    EMBEDDING_MAX_LENGTH: int = 8192
+    EMBEDDING_DEVICE: str = "cpu"
+    EMBEDDING_CACHE_DIR: str = "models"
+    EMBEDDING_HF_ENDPOINT: str = "https://hf-mirror.com"
+    EMBEDDING_USE_FP16: bool = False
+    EMBEDDING_ALLOW_FALLBACK: bool = False
+
+    # Reranker. Disabled by default; set RERANK_PROVIDER=bge_reranker for local BGE rerank.
+    RERANK_PROVIDER: str = "none"  # none / bge_reranker / remote
+    RERANK_MODEL: str = "BAAI/bge-reranker-v2-m3"
+    RERANK_BASE_URL: str | None = None
+    RERANK_API_KEY: str = ""
+    RERANK_TOP_K: int = 20
+    RERANK_BATCH_SIZE: int = 8
+    RERANK_MAX_LENGTH: int = 1024
+    RERANK_TIMEOUT_SECONDS: int = 60
+    RERANK_DEVICE: str = "cpu"
+    RERANK_USE_FP16: bool = False
+    RERANK_ALLOW_FALLBACK: bool = True
+
+    # Async tasks
+    TASK_QUEUE_BACKEND: str = "local"  # local / redis_rq
+    TASK_REDIS_URL: str = "redis://127.0.0.1:6379/0"
+    TASK_QUEUE_NAME: str = "mianshiagent"
+    TASK_JOB_TIMEOUT_SECONDS: int = 900
+    TASK_RESULT_TTL_SECONDS: int = 86400
+    TASK_FAILURE_TTL_SECONDS: int = 604800
+    TASK_ALLOW_LOCAL_FALLBACK: bool = True
+    TASK_MAX_RETRIES: int = 1
+    TASK_PROGRESS_POLL_SECONDS: float = 1.5
+
     # 应用
     APP_NAME: str = "面试简历 Agent"
     APP_VERSION: str = "0.1.0"
@@ -91,7 +141,7 @@ class Settings(BaseSettings):
     def admin_email_list(self) -> list[str]:
         return [email.strip().lower() for email in self.ADMIN_EMAILS.split(",") if email.strip()]
 
-    @field_validator("DEBUG", "ENFORCE_RELEASE_CHECKS", "AUTO_CREATE_DB", "ENABLE_DOCS", "BILLING_ENABLED", "LLM_ALLOW_FALLBACK", "METRICS_ENABLED", "BACKUP_ENABLED", mode="before")
+    @field_validator("DEBUG", "ENFORCE_RELEASE_CHECKS", "AUTO_CREATE_DB", "ENABLE_DOCS", "BILLING_ENABLED", "LLM_ALLOW_FALLBACK", "METRICS_ENABLED", "BACKUP_ENABLED", "QDRANT_SYNC_ON_STARTUP", "EMBEDDING_USE_FP16", "EMBEDDING_ALLOW_FALLBACK", "RERANK_USE_FP16", "RERANK_ALLOW_FALLBACK", "TASK_ALLOW_LOCAL_FALLBACK", mode="before")
     @classmethod
     def parse_bool_like(cls, value: Any) -> Any:
         if isinstance(value, str):

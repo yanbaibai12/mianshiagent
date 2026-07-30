@@ -24,6 +24,9 @@ class User(Base):
     audit_logs = relationship("AuditLog", foreign_keys="AuditLog.actor_user_id", back_populates="actor")
     organization_memberships = relationship("OrganizationMember", back_populates="user", cascade="all, delete-orphan")
     payment_orders = relationship("PaymentOrder", back_populates="user", cascade="all, delete-orphan")
+    async_tasks = relationship("AsyncTask", back_populates="user", cascade="all, delete-orphan")
+    resume_versions = relationship("ResumeVersion", back_populates="user", cascade="all, delete-orphan")
+    job_applications = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
 
 
 class Organization(Base):
@@ -42,6 +45,9 @@ class Organization(Base):
     interviews = relationship("Interview", back_populates="organization")
     usage_records = relationship("UsageRecord", back_populates="organization")
     payment_orders = relationship("PaymentOrder", back_populates="organization")
+    async_tasks = relationship("AsyncTask", back_populates="organization")
+    resume_versions = relationship("ResumeVersion", back_populates="organization")
+    job_applications = relationship("JobApplication", back_populates="organization")
 
 
 class OrganizationMember(Base):
@@ -97,6 +103,115 @@ class Resume(Base):
     user = relationship("User", back_populates="resumes")
     organization = relationship("Organization", back_populates="resumes")
     interviews = relationship("Interview", back_populates="resume")
+    chunks = relationship("ResumeChunk", back_populates="resume", cascade="all, delete-orphan")
+    versions = relationship("ResumeVersion", back_populates="resume", cascade="all, delete-orphan")
+    job_applications = relationship("JobApplication", back_populates="resume")
+
+
+class ResumeChunk(Base):
+    __tablename__ = "resume_chunks"
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    resume_id = Column(Uuid(as_uuid=True), ForeignKey("resumes.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"))
+    section = Column(String(40), nullable=False)
+    item_title = Column(String(200), nullable=False, default="")
+    chunk_index = Column(Integer, nullable=False, default=1)
+    content = Column(Text, nullable=False)
+    keywords = Column(JSON, default=list)
+    token_estimate = Column(Integer, default=0)
+    source_hash = Column(String(64), nullable=False)
+    embedding_status = Column(String(30), nullable=False, default="pending")
+    vector_point_id = Column(String(80))
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    resume = relationship("Resume", back_populates="chunks")
+
+
+class ResumeVersion(Base):
+    __tablename__ = "resume_versions"
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    resume_id = Column(Uuid(as_uuid=True), ForeignKey("resumes.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"))
+    version_number = Column(Integer, nullable=False, default=1)
+    version_type = Column(String(40), nullable=False, default="original")
+    title = Column(String(200), nullable=False)
+    jd_text = Column(Text)
+    data = Column(JSON, nullable=False)
+    ats_report = Column(JSON, default=dict)
+    change_details = Column(JSON, default=list)
+    source_task_id = Column(Uuid(as_uuid=True), ForeignKey("async_tasks.id", ondelete="SET NULL"))
+    parent_version_id = Column(Uuid(as_uuid=True), ForeignKey("resume_versions.id", ondelete="SET NULL"))
+    source_job_id = Column(Uuid(as_uuid=True), ForeignKey("job_applications.id", ondelete="SET NULL"))
+    is_current = Column(Boolean, nullable=False, default=False)
+    status = Column(String(30), nullable=False, default="active")
+    created_by = Column(String(40), nullable=False, default="system")
+    notes = Column(Text)
+    created_at = Column(DateTime, default=utc_now)
+
+    resume = relationship("Resume", back_populates="versions")
+    user = relationship("User", back_populates="resume_versions")
+    organization = relationship("Organization", back_populates="resume_versions")
+
+
+class AsyncTask(Base):
+    __tablename__ = "async_tasks"
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"))
+    task_type = Column(String(80), nullable=False)
+    status = Column(String(30), nullable=False, default="queued")
+    progress = Column(Integer, nullable=False, default=0)
+    stage = Column(String(200), nullable=False, default="已排队")
+    resource_type = Column(String(80))
+    resource_id = Column(String(120))
+    input_payload = Column(JSON, default=dict)
+    result_payload = Column(JSON, default=dict)
+    error_type = Column(String(120))
+    error_message = Column(Text)
+    retry_count = Column(Integer, nullable=False, default=0)
+    max_retries = Column(Integer, nullable=False, default=1)
+    queue_backend = Column(String(40), nullable=False, default="local")
+    queue_name = Column(String(80), nullable=False, default="local")
+    external_job_id = Column(String(120))
+    cancel_requested = Column(Boolean, nullable=False, default=False)
+    enqueued_at = Column(DateTime)
+    last_heartbeat_at = Column(DateTime)
+    started_at = Column(DateTime)
+    ended_at = Column(DateTime)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    user = relationship("User", back_populates="async_tasks")
+    organization = relationship("Organization", back_populates="async_tasks")
+
+
+class JobApplication(Base):
+    __tablename__ = "job_applications"
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"))
+    resume_id = Column(Uuid(as_uuid=True), ForeignKey("resumes.id", ondelete="SET NULL"))
+    current_resume_version_id = Column(Uuid(as_uuid=True), ForeignKey("resume_versions.id", ondelete="SET NULL"))
+    company = Column(String(160), nullable=False, default="")
+    title = Column(String(200), nullable=False)
+    jd_text = Column(Text, nullable=False)
+    status = Column(String(40), nullable=False, default="draft")
+    match_score = Column(Numeric(5, 2))
+    ats_report = Column(JSON, default=dict)
+    interview_id = Column(Uuid(as_uuid=True), ForeignKey("interviews.id", ondelete="SET NULL"))
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    user = relationship("User", back_populates="job_applications")
+    organization = relationship("Organization", back_populates="job_applications")
+    resume = relationship("Resume", back_populates="job_applications")
 
 
 class ResumeTemplate(Base):
@@ -141,6 +256,9 @@ class InterviewQuestion(Base):
     interview_id = Column(Uuid(as_uuid=True), ForeignKey("interviews.id", ondelete="CASCADE"), nullable=False)
     resume_point_id = Column(String(50))
     point_title = Column(String(200))
+    module = Column(String(40), nullable=False, default="resume")
+    source_section = Column(String(200), default="")
+    question_type = Column(String(60), nullable=False, default="resume_core")
     sequence = Column(Integer, nullable=False)
     question = Column(Text, nullable=False)
     user_answer = Column(Text)

@@ -2,6 +2,7 @@ import json
 import hashlib
 import hmac
 import os
+import time
 import tempfile
 import unittest
 import uuid
@@ -23,6 +24,10 @@ os.environ["ADMIN_EMAILS"] = "admin@example.com"
 os.environ["PAYMENT_WEBHOOK_SECRET"] = "unit-test-webhook-secret"
 os.environ["BACKUP_ENABLED"] = "true"
 os.environ["BACKUP_DIR"] = str(_BACKUP_DIR)
+os.environ["VECTOR_STORE_BACKEND"] = "keyword"
+os.environ["QDRANT_SYNC_ON_STARTUP"] = "false"
+os.environ["EMBEDDING_PROVIDER"] = "hash"
+os.environ["RERANK_PROVIDER"] = "none"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -209,6 +214,36 @@ class MainFlowTest(unittest.TestCase):
         )
         self.assertIn("parsed_data", resume)
 
+        chunks = self.assert_ok(self.client.get(f"/api/resumes/{resume['id']}/chunks", headers=headers))
+        self.assertGreaterEqual(len(chunks), 3)
+        sections = {chunk["section"] for chunk in chunks}
+        self.assertIn("project", sections)
+        self.assertIn("experience", sections)
+        self.assertIn("skills", sections)
+
+        admin_headers = self.auth_headers("admin@example.com")
+        reindex_all = self.assert_ok(
+            self.client.post(
+                "/api/system/admin/reindex-resumes",
+                headers=admin_headers,
+                json={"only_missing": False, "limit": 20},
+            )
+        )
+        self.assertIn(reindex_all["status"], {"success", "partial_failed"})
+        self.assertGreaterEqual(reindex_all["processed_count"], 1)
+        self.assertGreaterEqual(reindex_all["chunk_count"], 3)
+
+        evidence = self.assert_ok(
+            self.client.post(
+                f"/api/resumes/{resume['id']}/retrieve-evidence",
+                headers=headers,
+                json={"jd_text": "FastAPI Redis RAG Qdrant 接口优化"},
+            )
+        )
+        self.assertIn("results", evidence)
+        self.assertGreaterEqual(len(evidence["results"]), 1)
+        self.assertEqual(evidence["pipeline"]["fusion"], "rrf")
+
         templates = self.assert_ok(self.client.get("/api/templates", headers=headers))
         self.assertGreaterEqual(len(templates), 1)
 
@@ -221,14 +256,78 @@ class MainFlowTest(unittest.TestCase):
         )
         self.assertEqual(optimized["template_id"], templates[0]["id"])
 
-        adapted = self.assert_ok(
+        adapted_task_payload = self.assert_ok(
             self.client.post(
                 f"/api/resumes/{resume['id']}/adapt-jd",
                 headers=headers,
                 json={"jd_text": "岗位要求：熟悉 Python、FastAPI、Redis、PostgreSQL，具备接口设计经验。"},
+            ),
+            expected_status=202,
+        )
+        adapted_task_id = adapted_task_payload["task"]["id"]
+        adapted_task = adapted_task_payload["task"]
+        for _ in range(10):
+            adapted_task = self.assert_ok(self.client.get(f"/api/tasks/{adapted_task_id}", headers=headers))
+            if adapted_task["status"] in {"success", "failed", "cancelled"}:
+                break
+            time.sleep(0.2)
+        self.assertEqual(adapted_task["status"], "success", adapted_task)
+        adapted_resume = self.assert_ok(self.client.get(f"/api/resumes/{resume['id']}", headers=headers))
+        adapted = adapted_resume["optimized_data"]
+        self.assertIn("ats_report", adapted)
+        self.assertGreater(adapted["ats_report"]["total_score"], 0)
+        self.assertGreaterEqual(len(adapted["ats_report"]["dimensions"]), 6)
+        self.assertIn("resume_evidence", adapted)
+        self.assertNotIn("面向该 JD", json.dumps(adapted, ensure_ascii=False))
+
+        versions = self.assert_ok(self.client.get(f"/api/resumes/{resume['id']}/versions", headers=headers))
+        self.assertGreaterEqual(len(versions), 2)
+        delivery = self.assert_ok(self.client.post(f"/api/resumes/{resume['id']}/versions/delivery", headers=headers))
+        self.assertEqual(delivery["version_type"], "delivery")
+        exported_resume = self.client.get(f"/api/resumes/{resume['id']}/export", headers=headers, params={"variant": "delivery"})
+        self.assertEqual(exported_resume.status_code, 200, exported_resume.text)
+        self.assertGreater(len(exported_resume.content), 1000)
+
+        task_payload = self.assert_ok(
+            self.client.post(
+                f"/api/resumes/{resume['id']}/adapt-jd-task",
+                headers=headers,
+                json={"jd_text": "岗位要求：Python FastAPI Redis RAG Agent 接口优化"},
             )
         )
-        self.assertIn("match_score", adapted)
+        task_id = task_payload["task"]["id"]
+        task = task_payload["task"]
+        for _ in range(10):
+            task = self.assert_ok(self.client.get(f"/api/tasks/{task_id}", headers=headers))
+            if task["status"] in {"success", "failed", "cancelled"}:
+                break
+            time.sleep(0.2)
+        self.assertEqual(task["status"], "success", task)
+
+        job = self.assert_ok(
+            self.client.post(
+                "/api/jobs",
+                headers=headers,
+                json={
+                    "title": "Agent 应用开发实习生",
+                    "company": "示例科技",
+                    "jd_text": "岗位要求：熟悉 Python、FastAPI、Redis、RAG、Agent，具备接口联调和优化经验。",
+                    "resume_id": resume["id"],
+                },
+            )
+        )
+        job_task_payload = self.assert_ok(self.client.post(f"/api/jobs/{job['id']}/adapt-resume-task", headers=headers))
+        job_task_id = job_task_payload["task"]["id"]
+        job_task = job_task_payload["task"]
+        for _ in range(10):
+            job_task = self.assert_ok(self.client.get(f"/api/tasks/{job_task_id}", headers=headers))
+            if job_task["status"] in {"success", "failed", "cancelled"}:
+                break
+            time.sleep(0.2)
+        self.assertEqual(job_task["status"], "success", job_task)
+        job_after = self.assert_ok(self.client.get(f"/api/jobs/{job['id']}", headers=headers))
+        self.assertEqual(job_after["status"], "optimized")
+        self.assertIsNotNone(job_after["current_resume_version_id"])
 
         interview = self.assert_ok(
             self.client.post(
@@ -247,6 +346,20 @@ class MainFlowTest(unittest.TestCase):
             self.client.get(f"/api/interviews/{interview['id']}/questions", headers=headers)
         )
         self.assertGreaterEqual(len(questions), 3)
+        point_titles = [question.get("point_title") or "" for question in questions]
+        modules = {question.get("module") for question in questions}
+        question_types = {question.get("question_type") for question in questions}
+        question_text = "\n".join(question.get("question") or "" for question in questions)
+        self.assertTrue(any(title.startswith("项目：") for title in point_titles), point_titles)
+        self.assertTrue(any(title.startswith("实习：") for title in point_titles), point_titles)
+        self.assertTrue(any(title.startswith("Agent 八股：") for title in point_titles), point_titles)
+        self.assertIn("project", modules)
+        self.assertIn("internship", modules)
+        self.assertIn("agent_fundamentals", modules)
+        self.assertTrue(all(question.get("source_section") is not None for question in questions))
+        self.assertIn("agent_fundamentals", question_types)
+        self.assertRegex(question_text, r"RAG|FastAPI|Redis|PostgreSQL|Agent|Qdrant|BGE-M3")
+        self.assertNotIn("面向该 JD", question_text)
 
         regenerated = self.assert_ok(
             self.client.post(
@@ -282,6 +395,12 @@ class MainFlowTest(unittest.TestCase):
         )
         self.assertTrue(exported["filename"].endswith(".md"))
         self.assertIn("面试总结报告", exported["content"])
+        exported_docx = self.client.get(f"/api/interviews/{interview['id']}/report/export", headers=headers, params={"format": "docx"})
+        self.assertEqual(exported_docx.status_code, 200, exported_docx.text)
+        self.assertGreater(len(exported_docx.content), 1000)
+        exported_pdf = self.client.get(f"/api/interviews/{interview['id']}/report/export", headers=headers, params={"format": "pdf"})
+        self.assertEqual(exported_pdf.status_code, 200, exported_pdf.text)
+        self.assertGreater(len(exported_pdf.content), 500)
 
         deleted = self.assert_ok(
             self.client.delete(f"/api/interviews/{interview['id']}", headers=headers)

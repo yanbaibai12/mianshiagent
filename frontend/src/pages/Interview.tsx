@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router'
 import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck, MessageSquarePlus, RefreshCcw, Send } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { Badge, Button, Card, EmptyState, LoadingState, ProgressBar } from '../components/ui'
@@ -11,6 +11,42 @@ const scoreLabels: Record<string, string> = {
   consistency: '一致性',
   conciseness: '精炼度',
   depth: '深度',
+}
+
+const moduleLabels = {
+  project: '项目深挖',
+  internship: '实习经历',
+  agent: 'Agent 八股',
+  resume: '简历要点',
+  other: '其他题目',
+} as const
+
+const moduleTones = {
+  project: 'info',
+  internship: 'success',
+  agent: 'warning',
+  resume: 'neutral',
+  other: 'neutral',
+} as const
+
+type QuestionModule = keyof typeof moduleLabels
+
+function getQuestionModule(question: InterviewQuestion): QuestionModule {
+  if (question.module === 'project') return 'project'
+  if (question.module === 'internship') return 'internship'
+  if (question.module === 'agent_fundamentals') return 'agent'
+  if (question.module === 'resume') return 'resume'
+  const pointId = question.resume_point_id || ''
+  const title = question.point_title || ''
+  if (pointId.startsWith('project:') || title.startsWith('项目：')) return 'project'
+  if (pointId.startsWith('internship:') || title.startsWith('实习：')) return 'internship'
+  if (pointId.startsWith('agent:') || title.startsWith('Agent 八股：')) return 'agent'
+  if (pointId.startsWith('resume:') || title.startsWith('简历：')) return 'resume'
+  return 'other'
+}
+
+function cleanPointTitle(question: InterviewQuestion) {
+  return question.source_section || (question.point_title || '简历要点').replace(/^项目：|^实习：|^Agent 八股：|^简历：/, '')
 }
 
 export default function InterviewPage() {
@@ -43,6 +79,21 @@ export default function InterviewPage() {
     [questions],
   )
   const progress = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0
+  const questionGroups = useMemo(() => {
+    const orderedModules: QuestionModule[] = ['project', 'internship', 'agent', 'resume', 'other']
+    return orderedModules
+      .map((module) => {
+        const indexes = questions
+          .map((question, index) => ({ question, index }))
+          .filter(({ question }) => getQuestionModule(question) === module)
+        return {
+          module,
+          indexes,
+          answered: indexes.filter(({ question }) => question.user_answer).length,
+        }
+      })
+      .filter((group) => group.indexes.length > 0)
+  }, [questions])
 
   const loadQuestions = async () => {
     setError('')
@@ -57,11 +108,11 @@ export default function InterviewPage() {
     }
   }
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (force = false) => {
     setGenerating(true)
     setError('')
     try {
-      await interviewApi.generateQuestions(id!)
+      await interviewApi.generateQuestions(id!, force)
       await loadQuestions()
     } catch (err: any) {
       setError(err.response?.data?.detail || '生成题目失败')
@@ -136,7 +187,7 @@ export default function InterviewPage() {
             title="题库尚未生成"
             description="点击后会基于简历可面试要点生成递进式问题。"
             action={
-              <Button type="button" size="lg" onClick={handleGenerate} disabled={generating}>
+              <Button type="button" size="lg" onClick={() => handleGenerate()} disabled={generating}>
                 <MessageSquarePlus size={16} />
                 {generating ? '生成中...' : '生成面试题目'}
               </Button>
@@ -159,9 +210,13 @@ export default function InterviewPage() {
             <ArrowLeft size={16} />
             返回
           </Button>
-          <Button type="button" variant="success" onClick={handleFinish} disabled={answeredCount < 3}>
+                  <Button type="button" variant="success" onClick={handleFinish} disabled={answeredCount < 3} data-testid="finish-interview-button">
             <ClipboardCheck size={16} />
             生成报告
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => handleGenerate(true)} disabled={generating || answeredCount > 0}>
+            <RefreshCcw size={16} />
+            {generating ? '生成中...' : '重建题库'}
           </Button>
         </>
       }
@@ -169,7 +224,7 @@ export default function InterviewPage() {
       <div className="space-y-6">
         {error && <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-        <Card>
+        <Card data-testid="interview-progress-card">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
             <div>
               <div className="flex items-center gap-2">
@@ -185,29 +240,42 @@ export default function InterviewPage() {
         </Card>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-          <Card className="xl:sticky xl:top-7 xl:self-start">
+          <Card className="xl:sticky xl:top-7 xl:self-start" data-testid="question-navigation">
             <div className="mb-4">
               <h2 className="card-title">题目导航</h2>
               <p className="card-subtitle">按顺序作答，也可回看已评分题。</p>
             </div>
-            <div className="grid max-h-[540px] gap-2 overflow-auto pr-1">
-              {questions.map((question, index) => (
-                <button
-                  key={question.id}
-                  type="button"
-                  onClick={() => setCurrentIndex(index)}
-                  className={`rounded-md border px-3 py-2 text-left text-sm transition ${
-                    index === currentIndex
-                      ? 'border-cyan-300 bg-cyan-50 text-cyan-900'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold">Q{index + 1}</span>
-                    {question.user_answer && <CheckCircle2 size={15} className="text-emerald-600" />}
+            <div className="max-h-[540px] space-y-4 overflow-auto pr-1">
+              {questionGroups.map((group) => (
+                <div key={group.module} className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Badge tone={moduleTones[group.module]}>{moduleLabels[group.module]}</Badge>
+                    <span className="text-xs text-slate-500">
+                      {group.answered}/{group.indexes.length}
+                    </span>
                   </div>
-                  <div className="mt-1 line-clamp-2 leading-5">{question.question}</div>
-                </button>
+                  <div className="grid gap-2">
+                    {group.indexes.map(({ question, index }) => (
+                      <button
+                        key={question.id}
+                        type="button"
+                        onClick={() => setCurrentIndex(index)}
+                        className={`rounded-md border px-3 py-2 text-left text-sm transition ${
+                          index === currentIndex
+                            ? 'border-cyan-300 bg-cyan-50 text-cyan-900'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold">Q{index + 1}</span>
+                          {question.user_answer && <CheckCircle2 size={15} className="text-emerald-600" />}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">{cleanPointTitle(question)}</div>
+                        <div className="mt-1 line-clamp-2 leading-5">{question.question}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </Card>
@@ -215,7 +283,10 @@ export default function InterviewPage() {
           <div className="space-y-6">
             <Card>
               <div className="mb-3 flex items-center justify-between gap-3">
-                <Badge tone="neutral">{current.point_title || '简历要点'}</Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={moduleTones[getQuestionModule(current)]}>{moduleLabels[getQuestionModule(current)]}</Badge>
+                  <Badge tone="neutral">{cleanPointTitle(current)}</Badge>
+                </div>
                 {current.total_score !== null && <Badge tone="success">{current.total_score} 分</Badge>}
               </div>
               <h2 className="text-xl font-bold leading-8 text-slate-950">{current.question}</h2>
@@ -225,6 +296,7 @@ export default function InterviewPage() {
                 onChange={(event) => setAnswer(event.target.value)}
                 className="textarea mt-5 min-h-48"
                 maxLength={8000}
+                data-testid="answer-textarea"
               />
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="text-xs text-slate-500">{answer.length}/8000 字符</div>
@@ -238,7 +310,7 @@ export default function InterviewPage() {
                     <ChevronLeft size={16} />
                     上一题
                   </Button>
-                  <Button type="button" onClick={handleSubmit} disabled={loading || !answer.trim()}>
+                  <Button type="button" onClick={handleSubmit} disabled={loading || !answer.trim()} data-testid="submit-answer-button">
                     <Send size={16} />
                     {loading ? '评分中...' : current.user_answer ? '重新评分' : '提交回答'}
                   </Button>
@@ -256,6 +328,7 @@ export default function InterviewPage() {
                     variant="secondary"
                     disabled={currentIndex >= questions.length - 1}
                     onClick={() => setCurrentIndex((index) => Math.min(questions.length - 1, index + 1))}
+                    data-testid="next-question-button"
                   >
                     下一题
                     <ChevronRight size={16} />

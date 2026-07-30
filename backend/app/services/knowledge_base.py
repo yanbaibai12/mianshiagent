@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 from dataclasses import dataclass
@@ -8,6 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import KnowledgeChunk, KnowledgeDocument
+from app.config import get_settings
+from app.services.rerank_service import rerank_documents, rerank_enabled
+from app.services.vector_store import search_vector_knowledge, sync_knowledge_to_vector_store
 
 
 DEFAULT_KNOWLEDGE = [
@@ -153,9 +157,43 @@ def _normalize_terms(text: str) -> list[str]:
     text = (text or "").lower()
     terms = re.findall(r"[a-zA-Z][a-zA-Z0-9+#./-]{1,}|[\u4e00-\u9fa5]{2,8}", text)
     stop_words = {"岗位要求", "项目经历", "工作经历", "负责", "参与", "以及", "通过", "进行", "相关", "能力"}
+    technical_terms = [
+        "agent",
+        "rag",
+        "rrf",
+        "bm25",
+        "rerank",
+        "qdrant",
+        "bge-m3",
+        "bge",
+        "fastapi",
+        "redis",
+        "postgresql",
+        "mysql",
+        "react",
+        "function calling",
+        "tool calling",
+        "prompt injection",
+        "幂等",
+        "项目",
+        "实习",
+        "八股",
+        "切片",
+        "召回",
+        "重排",
+        "向量",
+        "索引",
+        "队列",
+        "重试",
+        "日志",
+        "脱敏",
+        "权限",
+        "评测",
+        "套话",
+    ]
     result = []
     seen = set()
-    for term in terms:
+    for term in [*terms, *[term for term in technical_terms if term in text]]:
         if term in stop_words:
             continue
         if term not in seen:
@@ -196,6 +234,7 @@ async def seed_builtin_knowledge(db: AsyncSession) -> None:
             )
         db.add(document)
     await db.commit()
+    await sync_knowledge_to_vector_store(db, respect_startup_flag=True)
 
 
 def _score_chunk(
@@ -228,16 +267,12 @@ def _score_chunk(
     return score
 
 
-async def retrieve_knowledge(
+async def _retrieve_keyword_knowledge(
     db: AsyncSession,
-    query: str,
-    *,
-    categories: list[str] | None = None,
+    query_terms: list[str],
+    category_set: set[str],
     limit: int = 5,
 ) -> list[KnowledgeSnippet]:
-    query_terms = _normalize_terms(query)
-    category_set = set(categories or [])
-
     result = await db.execute(
         select(KnowledgeDocument)
         .options(selectinload(KnowledgeDocument.chunks))
@@ -269,6 +304,76 @@ async def retrieve_knowledge(
 
     snippets.sort(key=lambda item: item.score, reverse=True)
     return snippets[:limit]
+
+
+def _vector_payload_to_snippet(payload: dict[str, Any]) -> KnowledgeSnippet:
+    return KnowledgeSnippet(
+        document_id=str(payload.get("document_id") or ""),
+        chunk_id=str(payload.get("chunk_id") or ""),
+        title=str(payload.get("title") or ""),
+        category=str(payload.get("category") or ""),
+        source=str(payload.get("source") or "vector"),
+        tags=list(payload.get("tags") or []),
+        keywords=list(payload.get("keywords") or []),
+        content=str(payload.get("content") or ""),
+        score=float(payload.get("score") or 0),
+    )
+
+
+def _merge_ranked_snippets(
+    vector_snippets: list[KnowledgeSnippet],
+    keyword_snippets: list[KnowledgeSnippet],
+    limit: int,
+) -> list[KnowledgeSnippet]:
+    if not vector_snippets:
+        return keyword_snippets[:limit]
+    if not keyword_snippets:
+        return vector_snippets[:limit]
+
+    by_key: dict[str, KnowledgeSnippet] = {}
+    combined_scores: dict[str, float] = {}
+    for weight, snippets in [(1.0, vector_snippets), (0.85, keyword_snippets)]:
+        for rank, snippet in enumerate(snippets, 1):
+            key = snippet.chunk_id or f"{snippet.document_id}:{snippet.title}:{rank}"
+            by_key.setdefault(key, snippet)
+            combined_scores[key] = combined_scores.get(key, 0.0) + weight / (60 + rank)
+
+    merged = list(by_key.items())
+    merged.sort(key=lambda item: combined_scores[item[0]], reverse=True)
+    result: list[KnowledgeSnippet] = []
+    for key, snippet in merged[:limit]:
+        snippet.score = round(combined_scores[key] * 1000, 3)
+        result.append(snippet)
+    return result
+
+
+async def retrieve_knowledge(
+    db: AsyncSession,
+    query: str,
+    *,
+    categories: list[str] | None = None,
+    limit: int = 5,
+) -> list[KnowledgeSnippet]:
+    query_terms = _normalize_terms(query)
+    category_set = set(categories or [])
+    keyword_snippets = await _retrieve_keyword_knowledge(db, query_terms, category_set, limit=max(limit * 2, limit))
+    vector_payloads = await search_vector_knowledge(query, categories=categories, limit=max(limit * 2, limit))
+    vector_snippets = [_vector_payload_to_snippet(payload) for payload in vector_payloads]
+    settings = get_settings()
+    rerank_candidate_limit = max(limit, settings.RERANK_TOP_K)
+    merged = _merge_ranked_snippets(vector_snippets, keyword_snippets, max(limit * 3, rerank_candidate_limit))
+    if not rerank_enabled() or len(merged) <= 1:
+        return merged[:limit]
+    candidates = merged[:rerank_candidate_limit]
+    documents = [f"{snippet.title}\n{snippet.category}\n{snippet.content}" for snippet in candidates]
+    order, observation = await asyncio.to_thread(rerank_documents, query, documents)
+    if observation.get("fallback_used"):
+        return merged[:limit]
+    reranked = [candidates[index] for index in order if index < len(candidates)]
+    for index, snippet in enumerate(reranked, 1):
+        score_boost = max(0, len(reranked) - index + 1) / max(1, len(reranked))
+        snippet.score = round(snippet.score + score_boost, 3)
+    return reranked[:limit]
 
 
 def build_rag_context(snippets: list[KnowledgeSnippet]) -> str:

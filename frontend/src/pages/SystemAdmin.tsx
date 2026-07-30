@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { ArrowLeft, BrainCircuit, CheckCircle2, CreditCard, Database, RefreshCw, ShieldCheck } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { Badge, Button, Card, EmptyState, Field, LoadingState, StatTile } from '../components/ui'
@@ -37,6 +37,8 @@ export default function SystemAdminPage() {
   const [grantMessage, setGrantMessage] = useState('')
   const [granting, setGranting] = useState(false)
   const [backuping, setBackuping] = useState(false)
+  const [reindexing, setReindexing] = useState(false)
+  const [reindexMessage, setReindexMessage] = useState('')
 
   useEffect(() => {
     loadData()
@@ -119,6 +121,24 @@ export default function SystemAdminPage() {
       setAdminError(err.response?.data?.detail || '备份创建失败')
     } finally {
       setBackuping(false)
+    }
+  }
+
+  const handleReindexResumes = async () => {
+    setAdminError('')
+    setReindexMessage('')
+    setReindexing(true)
+    try {
+      const res = await systemApi.adminReindexResumes({ only_missing: true })
+      const statusRes = await systemApi.status()
+      setStatus(statusRes.data)
+      setReindexMessage(
+        `已处理 ${res.data.processed_count} 份简历，写入 ${res.data.indexed_count} 个向量点，跳过 ${res.data.skipped_count} 份。`,
+      )
+    } catch (err: any) {
+      setAdminError(err.response?.data?.detail || '简历向量索引回填失败')
+    } finally {
+      setReindexing(false)
     }
   }
 
@@ -211,6 +231,69 @@ export default function SystemAdminPage() {
                       <span className="text-slate-500">管理员</span>
                       <span className="font-semibold text-slate-900">{status.security.admin_enabled ? '已配置' : '未配置'}</span>
                     </div>
+                  </div>
+                </Card>
+
+                <Card>
+                  <div className="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="card-title">队列与检索</h2>
+                      <p className="card-subtitle">异步任务、Qdrant 和 rerank 的运行摘要。</p>
+                    </div>
+                    <Badge tone={status.operations.task_queue?.runtime.available ? 'success' : 'danger'}>
+                      {status.operations.task_queue?.runtime.backend || 'local'}
+                    </Badge>
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    {reindexMessage && (
+                      <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700">
+                        {reindexMessage}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">排队任务</div>
+                        <div className="mt-1 font-bold text-slate-950">{status.operations.task_queue?.status_counts.queued || 0}</div>
+                      </div>
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">失败任务</div>
+                        <div className="mt-1 font-bold text-slate-950">{status.operations.task_queue?.status_counts.failed || 0}</div>
+                      </div>
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">平均排队</div>
+                        <div className="mt-1 font-bold text-slate-950">{status.operations.task_queue?.avg_queue_wait_ms || 0}ms</div>
+                      </div>
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">平均执行</div>
+                        <div className="mt-1 font-bold text-slate-950">{status.operations.task_queue?.avg_execution_ms || 0}ms</div>
+                      </div>
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">SQL 简历切片</div>
+                        <div className="mt-1 font-bold text-slate-950">{status.rag.resume_chunk_count || 0}</div>
+                      </div>
+                      <div className="rounded-md bg-slate-50 px-3 py-3">
+                        <div className="text-xs text-slate-500">Qdrant 简历点</div>
+                        <div className="mt-1 font-bold text-slate-950">{status.rag.vector_store?.resume_points_count || 0}</div>
+                      </div>
+                    </div>
+                    <div className="rounded-md bg-slate-50 px-3 py-2">
+                      <div className="text-xs text-slate-500">Rerank</div>
+                      <div className="mt-1 font-semibold text-slate-900">
+                        {status.rag.rerank?.enabled ? `${status.rag.rerank.provider} · ${status.rag.rerank.model}` : '未启用'}
+                      </div>
+                    </div>
+                    <div className="rounded-md bg-slate-50 px-3 py-2">
+                      <div className="text-xs text-slate-500">简历向量点</div>
+                      <div className="mt-1 font-semibold text-slate-900">
+                        {status.rag.vector_store?.resume_points_count || 0} / {status.rag.vector_store?.resume_actual_vector_size || '-'} 维
+                      </div>
+                    </div>
+                    {adminSummary && (
+                      <Button type="button" variant="secondary" className="w-full" onClick={handleReindexResumes} disabled={reindexing}>
+                        <RefreshCw size={16} />
+                        {reindexing ? '回填中...' : '回填简历向量索引'}
+                      </Button>
+                    )}
                   </div>
                 </Card>
 

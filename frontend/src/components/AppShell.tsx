@@ -1,8 +1,9 @@
 import { ReactNode } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router'
 import {
   BarChart3,
   BrainCircuit,
+  BriefcaseBusiness,
   Building2,
   FileText,
   LogOut,
@@ -14,7 +15,8 @@ import { useAuthStore } from '../stores/auth'
 import { Button, cn } from './ui'
 
 const navItems = [
-  { to: '/resumes', label: '工作台', icon: BarChart3 },
+  { to: '/jobs', label: '岗位工作台', icon: BriefcaseBusiness },
+  { to: '/resumes', label: '简历资产', icon: BarChart3 },
   { to: '/interviews/new', label: '创建面试', icon: MessageSquareText },
   { to: '/organizations', label: '组织管理', icon: Building2 },
   { to: '/account/security', label: '账号安全', icon: ShieldCheck },

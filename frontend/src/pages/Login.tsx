@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { BrainCircuit, LockKeyhole, Mail, UserPlus } from 'lucide-react'
 import { Button, Card, Field } from '../components/ui'
 import { authApi } from '../services/auth'

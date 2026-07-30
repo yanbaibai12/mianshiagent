@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, ReactNode } from 'react'
+import { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
 
 export function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ')
@@ -33,11 +33,12 @@ export function Button({
 export function Card({
   children,
   className,
-}: {
+  ...props
+}: HTMLAttributes<HTMLElement> & {
   children: ReactNode
   className?: string
 }) {
-  return <section className={cn('card', className)}>{children}</section>
+  return <section {...props} className={cn('card', className)}>{children}</section>
 }
 
 export function Badge({

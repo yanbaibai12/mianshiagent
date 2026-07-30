@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router'
 import { ArrowLeft, Download, FileText, Gauge, Lightbulb, Target } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { Badge, Button, Card, EmptyState, LoadingState, ProgressBar, StatTile } from '../components/ui'
-import { interviewApi, InterviewReport } from '../services/interview'
+import { interviewApi, InterviewQuestion, InterviewReport } from '../services/interview'
 import { businessApi, BusinessEntitlements } from '../services/business'
 
 const scoreLabels: Record<string, string> = {
@@ -12,6 +12,39 @@ const scoreLabels: Record<string, string> = {
   consistency: '简历一致性',
   conciseness: '表达精炼度',
   depth: '技术/业务深度',
+}
+
+const moduleLabels: Record<string, string> = {
+  project: '项目深挖',
+  internship: '实习经历',
+  agent_fundamentals: 'Agent 八股',
+  resume: '简历要点',
+}
+
+const questionTypeLabels: Record<string, string> = {
+  technical_detail: '技术细节',
+  troubleshooting: '排查定位',
+  tradeoff: '方案取舍',
+  metrics_reflection: '结果复盘',
+  project_deep_dive: '项目追问',
+  internship_deep_dive: '实习追问',
+  agent_fundamentals: 'Agent 基础',
+  resume_core: '简历要点',
+}
+
+function questionSource(question: InterviewQuestion) {
+  return question.source_section || (question.point_title || '').replace(/^项目：|^实习：|^Agent 八股：|^简历：/, '')
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
 }
 
 export default function ReportPage() {
@@ -40,16 +73,15 @@ export default function ReportPage() {
     business?.entitlements.paywall_active && !business.entitlements.can_export_report,
   )
 
-  const handleExport = async () => {
+  const handleExport = async (format: 'md' | 'docx' | 'pdf') => {
     try {
-      const res = await interviewApi.exportReport(id!)
-      const blob = new Blob([res.data.content], { type: 'text/markdown' })
-      const url = URL.createObjectURL(blob)
-      const anchor = document.createElement('a')
-      anchor.href = url
-      anchor.download = res.data.filename
-      anchor.click()
-      URL.revokeObjectURL(url)
+      if (format === 'md') {
+        const res = await interviewApi.exportReport(id!)
+        downloadBlob(new Blob([res.data.content], { type: 'text/markdown' }), res.data.filename)
+      } else {
+        const res = await interviewApi.exportReportFile(id!, format)
+        downloadBlob(res.data, `面试报告.${format}`)
+      }
       businessApi.entitlements().then((businessRes) => setBusiness(businessRes.data)).catch(() => undefined)
     } catch (err: any) {
       setError(err.response?.data?.detail || '报告导出失败')
@@ -76,14 +108,22 @@ export default function ReportPage() {
             <ArrowLeft size={16} />
             返回工作台
           </Button>
-          <Button type="button" onClick={handleExport} disabled={exportPaywallBlocked}>
+          <Button type="button" onClick={() => handleExport('md')} disabled={exportPaywallBlocked} data-testid="export-report-md-button">
             <Download size={16} />
             {exportPaywallBlocked ? '需升级后导出' : '导出 Markdown'}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => handleExport('docx')} disabled={exportPaywallBlocked} data-testid="export-report-docx-button">
+            <Download size={16} />
+            Word
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => handleExport('pdf')} disabled={exportPaywallBlocked} data-testid="export-report-pdf-button">
+            <Download size={16} />
+            PDF
           </Button>
         </>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-6" data-testid="report-page">
         {error && <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
         {exportPaywallBlocked && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -176,7 +216,9 @@ export default function ReportPage() {
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <Badge tone="neutral">Q{index + 1}</Badge>
                   {question.total_score !== null && <Badge tone="info">{question.total_score} 分</Badge>}
-                  {question.point_title && <Badge>{question.point_title}</Badge>}
+                  <Badge>{moduleLabels[question.module] || '简历要点'}</Badge>
+                  {question.question_type && <Badge tone="neutral">{questionTypeLabels[question.question_type] || question.question_type}</Badge>}
+                  {questionSource(question) && <Badge tone="neutral">{questionSource(question)}</Badge>}
                 </div>
                 <div className="font-semibold leading-7 text-slate-950">{question.question}</div>
                 <div className="mt-3 rounded-md bg-slate-50 p-3 text-sm leading-6 text-slate-600">
