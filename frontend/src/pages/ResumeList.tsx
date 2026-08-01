@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import {
   CreditCard,
+  ClipboardPaste,
   Crown,
   FileText,
   Gauge,
   MessageSquareText,
   PlusCircle,
   SearchCheck,
-  Sparkles,
+  Route,
   Target,
   Trash2,
   UploadCloud,
@@ -156,7 +157,7 @@ export default function ResumeListPage() {
   return (
     <AppShell
       title="求职训练工作台"
-      description="集中管理简历版本、模拟面试和 RAG 增强报告，先完成一条可复盘的训练链路。"
+      description="集中管理简历版本、面试记录和复盘结果。"
       actions={
         <Button type="button" onClick={() => navigate('/interviews/new')}>
           <PlusCircle size={16} />
@@ -176,7 +177,7 @@ export default function ResumeListPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 lg:gap-4 xl:grid-cols-5">
           <StatTile label="简历资产" value={resumes.length} meta="已保存简历版本" icon={<FileText size={18} />} />
           <StatTile label="面试记录" value={interviews.length} meta={`${completedInterviews} 次已完成`} icon={<MessageSquareText size={18} />} />
           <StatTile label="平均得分" value={averageScore} meta="基于已完成报告" icon={<Gauge size={18} />} />
@@ -201,7 +202,7 @@ export default function ResumeListPage() {
                 <h2 className="card-title">上传简历</h2>
                 <p className="card-subtitle">支持 PDF/DOCX；当前 MVP 推荐粘贴文本，解析结果可在详情页继续编辑。</p>
               </div>
-              <Badge tone="info">解析 + RAG</Badge>
+              <Badge tone="info">结构化解析</Badge>
             </div>
 
             <form onSubmit={handleUpload} className="space-y-4" data-testid="resume-upload-form">
@@ -243,7 +244,7 @@ export default function ResumeListPage() {
                   {uploading ? '解析中...' : resumePaywallBlocked ? '需升级后解析' : '上传并解析'}
                 </Button>
                 <Button type="button" variant="secondary" onClick={fillSampleResume} data-testid="fill-sample-resume-button">
-                  <Sparkles size={16} />
+                  <ClipboardPaste size={16} />
                   填入示例简历
                 </Button>
                 <Button type="button" variant="secondary" onClick={loadData}>
@@ -268,15 +269,15 @@ export default function ResumeListPage() {
 
               {business ? (
                 <div className="space-y-3 text-sm">
-                  <div className="rounded-md border border-cyan-100 bg-cyan-50 px-3 py-3">
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-2 font-semibold text-cyan-900">
+                      <span className="flex items-center gap-2 font-semibold text-slate-900">
                         <Crown size={16} />
                         Pro 月卡
                       </span>
-                      <span className="text-lg font-bold text-cyan-950">¥{business.upgrade.price_cny}/月</span>
+                      <span className="text-lg font-bold text-slate-950">¥{business.upgrade.price_cny}/月</span>
                     </div>
-                    <div className="mt-2 text-xs leading-5 text-cyan-800">
+                    <div className="mt-2 text-xs leading-5 text-slate-600">
                       冲刺包 ¥{business.upgrade.sprint_package_price_cny}，适合投递前 30 天集中训练。
                     </div>
                   </div>
@@ -323,20 +324,20 @@ export default function ResumeListPage() {
                   <h2 className="card-title">下一步行动</h2>
                   <p className="card-subtitle">围绕一条可复盘链路推进：简历、JD、面试、报告。</p>
                 </div>
-                <Sparkles size={18} className="text-cyan-700" />
+                <Route size={18} className="text-slate-600" />
               </div>
 
               <div className="space-y-3">
                 {resumes.length === 0 && (
-                  <div className="rounded-lg border border-cyan-100 bg-cyan-50 p-4">
-                    <div className="font-semibold text-cyan-950">先上传一份简历</div>
-                    <p className="mt-1 text-sm leading-6 text-cyan-800">系统会抽取项目、技能和可面试要点。</p>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <div className="font-semibold text-slate-950">先上传一份简历</div>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">上传后可以检查项目、技能和面试要点。</p>
                   </div>
                 )}
                 {resumes.length > 0 && interviews.length === 0 && (
-                  <div className="rounded-lg border border-cyan-100 bg-cyan-50 p-4">
-                    <div className="font-semibold text-cyan-950">创建第一场模拟面试</div>
-                    <p className="mt-1 text-sm leading-6 text-cyan-800">至少完成 3 道题后，就可以生成复盘报告。</p>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <div className="font-semibold text-slate-950">创建第一场模拟面试</div>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">至少完成 3 道题后，就可以生成复盘报告。</p>
                     <Button type="button" className="mt-3" onClick={() => navigate('/interviews/new')}>
                       <PlusCircle size={16} />
                       创建面试
@@ -376,7 +377,7 @@ export default function ResumeListPage() {
               {interviews.map((interview) => (
                 <div
                   key={interview.id}
-                  className="rounded-lg border border-slate-200 bg-white p-4 transition hover:border-cyan-200 hover:bg-cyan-50"
+                  className="rounded-lg border border-slate-200 bg-white p-4 transition hover:border-slate-400 hover:bg-slate-50"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <button
@@ -433,7 +434,7 @@ export default function ResumeListPage() {
                   key={resume.id}
                   type="button"
                   onClick={() => navigate(`/resumes/${resume.id}`)}
-                  className="rounded-lg border border-slate-200 bg-white p-4 text-left transition hover:border-cyan-200 hover:bg-cyan-50"
+                  className="rounded-lg border border-slate-200 bg-white p-4 text-left transition hover:border-slate-400 hover:bg-slate-50"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>

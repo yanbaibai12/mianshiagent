@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON, Numeric, Boolean, Integer, Uuid, UniqueConstraint
+from sqlalchemy import Column, String, Text, DateTime, Date, ForeignKey, JSON, Numeric, Boolean, Integer, Uuid, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
 import uuid
 
@@ -27,6 +27,10 @@ class User(Base):
     async_tasks = relationship("AsyncTask", back_populates="user", cascade="all, delete-orphan")
     resume_versions = relationship("ResumeVersion", back_populates="user", cascade="all, delete-orphan")
     job_applications = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
+    interview_experience_shares = relationship("InterviewExperienceShare", back_populates="user", cascade="all, delete-orphan")
+    agent_question_practice_states = relationship("AgentQuestionPracticeState", back_populates="user", cascade="all, delete-orphan")
+    training_profile_dimensions = relationship("TrainingProfileDimension", back_populates="user", cascade="all, delete-orphan")
+    training_plans = relationship("TrainingPlan", back_populates="user", cascade="all, delete-orphan")
     quality_annotations = relationship("QualityAnnotation", back_populates="user", cascade="all, delete-orphan")
     quality_eval_candidates = relationship("QualityEvalCandidate", back_populates="user", cascade="all, delete-orphan")
 
@@ -50,6 +54,11 @@ class Organization(Base):
     async_tasks = relationship("AsyncTask", back_populates="organization")
     resume_versions = relationship("ResumeVersion", back_populates="organization")
     job_applications = relationship("JobApplication", back_populates="organization")
+    interview_experience_shares = relationship("InterviewExperienceShare", back_populates="organization")
+    company_interview_profiles = relationship("CompanyInterviewProfile", back_populates="organization")
+    agent_question_practice_states = relationship("AgentQuestionPracticeState", back_populates="organization")
+    training_profile_dimensions = relationship("TrainingProfileDimension", back_populates="organization")
+    training_plans = relationship("TrainingPlan", back_populates="organization", cascade="all, delete-orphan")
     quality_annotations = relationship("QualityAnnotation", back_populates="organization")
     quality_eval_candidates = relationship("QualityEvalCandidate", back_populates="organization")
 
@@ -244,6 +253,14 @@ class Interview(Base):
     summary = Column(Text)
     weak_points = Column(JSON)
     suggestions = Column(JSON)
+    report_details = Column(JSON, default=dict)
+    interview_template_id = Column(String(80), nullable=False, default="comprehensive")
+    interview_template_name = Column(String(120), nullable=False, default="综合面")
+    template_config_snapshot = Column(JSON, default=dict)
+    target_company = Column(String(160))
+    target_position = Column(String(200))
+    company_profile_id = Column(Uuid(as_uuid=True), ForeignKey("company_interview_profiles.id", ondelete="SET NULL"))
+    company_profile_snapshot = Column(JSON, default=dict)
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
@@ -251,6 +268,7 @@ class Interview(Base):
     organization = relationship("Organization", back_populates="interviews")
     resume = relationship("Resume", back_populates="interviews")
     questions = relationship("InterviewQuestion", back_populates="interview", cascade="all, delete-orphan")
+    company_profile = relationship("CompanyInterviewProfile", back_populates="interviews")
 
 
 class InterviewQuestion(Base):
@@ -267,9 +285,12 @@ class InterviewQuestion(Base):
     question = Column(Text, nullable=False)
     user_answer = Column(Text)
     scores = Column(JSON)
+    score_details = Column(JSON, default=dict)
     total_score = Column(Numeric(5, 2))
     feedback = Column(Text)
     refined_answer = Column(Text)
+    evidence = Column(JSON, default=list)
+    question_quality = Column(JSON, default=dict)
     answered_at = Column(DateTime)
     created_at = Column(DateTime, default=utc_now)
 
@@ -320,6 +341,183 @@ class KnowledgeChunk(Base):
     created_at = Column(DateTime, default=utc_now)
 
     document = relationship("KnowledgeDocument", back_populates="chunks")
+
+
+class InterviewExperienceShare(Base):
+    __tablename__ = "interview_experience_shares"
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"))
+    company = Column(String(160), nullable=False)
+    position = Column(String(200), nullable=False)
+    city = Column(String(80))
+    interview_date = Column(Date)
+    rounds = Column(String(200), default="")
+    difficulty = Column(String(30), nullable=False, default="medium")
+    result = Column(String(30), nullable=False, default="unknown")
+    tags = Column(JSON, default=list)
+    questions = Column(JSON, default=list)
+    process = Column(Text)
+    content = Column(Text, nullable=False)
+    visibility = Column(String(30), nullable=False, default="public")
+    is_anonymous = Column(Boolean, nullable=False, default=True)
+    status = Column(String(30), nullable=False, default="published")
+    allow_profile_usage = Column(Boolean, nullable=False, default=True)
+    view_count = Column(Integer, nullable=False, default=0)
+    like_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    user = relationship("User", back_populates="interview_experience_shares")
+    organization = relationship("Organization", back_populates="interview_experience_shares")
+
+
+class CompanyInterviewProfile(Base):
+    __tablename__ = "company_interview_profiles"
+    __table_args__ = (
+        UniqueConstraint(
+            "scope_key",
+            "normalized_company_name",
+            "normalized_position_name",
+            name="uq_company_profile_scope_company_position",
+        ),
+    )
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id = Column(Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"))
+    scope = Column(String(30), nullable=False, default="public")
+    scope_key = Column(String(80), nullable=False, default="public")
+    company_name = Column(String(160), nullable=False)
+    normalized_company_name = Column(String(160), nullable=False)
+    position_name = Column(String(200), nullable=False)
+    normalized_position_name = Column(String(200), nullable=False)
+    common_rounds = Column(JSON, default=list)
+    frequent_questions = Column(JSON, default=list)
+    technical_topics = Column(JSON, default=list)
+    difficulty_distribution = Column(JSON, default=dict)
+    interview_count = Column(Integer, nullable=False, default=0)
+    source_experience_ids = Column(JSON, default=list)
+    first_observed_at = Column(DateTime)
+    last_observed_at = Column(DateTime)
+    generated_at = Column(DateTime, default=utc_now)
+    profile_version = Column(Integer, nullable=False, default=1)
+    profile_metadata = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    organization = relationship("Organization", back_populates="company_interview_profiles")
+    interviews = relationship("Interview", back_populates="company_profile")
+
+
+class AgentQuestionPracticeState(Base):
+    __tablename__ = "agent_question_practice_states"
+    __table_args__ = (UniqueConstraint("user_id", "question_id", name="uq_agent_question_practice_user_question"),)
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"))
+    question_id = Column(String(80), nullable=False)
+    mastery_status = Column(String(30), nullable=False, default="unseen")
+    is_favorite = Column(Boolean, nullable=False, default=False)
+    is_wrong = Column(Boolean, nullable=False, default=False)
+    review_count = Column(Integer, nullable=False, default=0)
+    known_count = Column(Integer, nullable=False, default=0)
+    wrong_count = Column(Integer, nullable=False, default=0)
+    next_review_at = Column(DateTime)
+    last_practiced_at = Column(DateTime)
+    practice_metadata = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    user = relationship("User", back_populates="agent_question_practice_states")
+    organization = relationship("Organization", back_populates="agent_question_practice_states")
+
+
+class TrainingProfileDimension(Base):
+    __tablename__ = "training_profile_dimensions"
+    __table_args__ = (UniqueConstraint("user_id", "dimension_key", name="uq_training_profile_user_dimension"),)
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"))
+    dimension_key = Column(String(60), nullable=False)
+    dimension_label = Column(String(80), nullable=False)
+    mastery_score = Column(Integer, nullable=False, default=60)
+    exposure_count = Column(Integer, nullable=False, default=0)
+    known_count = Column(Integer, nullable=False, default=0)
+    weak_count = Column(Integer, nullable=False, default=0)
+    low_score_count = Column(Integer, nullable=False, default=0)
+    last_signal = Column(String(80))
+    last_source = Column(String(80))
+    last_practiced_at = Column(DateTime)
+    profile_metadata = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    user = relationship("User", back_populates="training_profile_dimensions")
+    organization = relationship("Organization", back_populates="training_profile_dimensions")
+
+
+class TrainingPlan(Base):
+    __tablename__ = "training_plans"
+    __table_args__ = (
+        UniqueConstraint("user_id", "organization_id", "week_start", name="uq_training_plan_user_org_week"),
+    )
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    source_interview_id = Column(Uuid(as_uuid=True), ForeignKey("interviews.id", ondelete="SET NULL"))
+    week_start = Column(Date, nullable=False)
+    week_end = Column(Date, nullable=False)
+    status = Column(String(30), nullable=False, default="active")
+    plan_summary = Column(Text, nullable=False, default="")
+    estimated_minutes = Column(Integer, nullable=False, default=0)
+    completion_rate = Column(Integer, nullable=False, default=0)
+    generation_metadata = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    user = relationship("User", back_populates="training_plans")
+    organization = relationship("Organization", back_populates="training_plans")
+    source_interview = relationship("Interview", foreign_keys=[source_interview_id])
+    tasks = relationship(
+        "TrainingPlanTask",
+        back_populates="plan",
+        cascade="all, delete-orphan",
+        order_by="TrainingPlanTask.scheduled_date, TrainingPlanTask.priority.desc(), TrainingPlanTask.created_at",
+    )
+
+
+class TrainingPlanTask(Base):
+    __tablename__ = "training_plan_tasks"
+    __table_args__ = (
+        UniqueConstraint("plan_id", "dedupe_key", name="uq_training_plan_task_dedupe"),
+    )
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    plan_id = Column(Uuid(as_uuid=True), ForeignKey("training_plans.id", ondelete="CASCADE"), nullable=False)
+    task_type = Column(String(40), nullable=False)
+    title = Column(String(240), nullable=False)
+    description = Column(Text, nullable=False, default="")
+    scheduled_date = Column(Date, nullable=False)
+    estimated_minutes = Column(Integer, nullable=False, default=15)
+    priority = Column(Integer, nullable=False, default=50)
+    status = Column(String(30), nullable=False, default="pending")
+    related_question_id = Column(String(120))
+    related_interview_id = Column(Uuid(as_uuid=True), ForeignKey("interviews.id", ondelete="SET NULL"))
+    related_experience_id = Column(Uuid(as_uuid=True), ForeignKey("interview_experience_shares.id", ondelete="SET NULL"))
+    related_company_profile_id = Column(Uuid(as_uuid=True), ForeignKey("company_interview_profiles.id", ondelete="SET NULL"))
+    target_dimensions = Column(JSON, default=list)
+    recommendation_reason = Column(Text, nullable=False, default="")
+    dedupe_key = Column(String(180), nullable=False)
+    task_metadata = Column("metadata", JSON, default=dict)
+    completed_at = Column(DateTime)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    plan = relationship("TrainingPlan", back_populates="tasks")
 
 
 class QualityAnnotation(Base):

@@ -24,6 +24,18 @@ class Settings(BaseSettings):
     LLM_ALLOW_FALLBACK: bool = False
     LLM_INPUT_PRICE_PER_1K_TOKENS_CNY: float = 0
     LLM_OUTPUT_PRICE_PER_1K_TOKENS_CNY: float = 0
+    LLM_RESUME_PARSE_MODEL: str = ""
+    LLM_RESUME_OPTIMIZE_MODEL: str = ""
+    LLM_JD_ADAPT_MODEL: str = ""
+    LLM_INTERVIEW_QUESTION_MODEL: str = ""
+    LLM_ANSWER_SCORE_MODEL: str = ""
+    LLM_INTERVIEW_REPORT_MODEL: str = ""
+    PROMPT_VERSION_RESUME_PARSE: str = "resume_parse_v1"
+    PROMPT_VERSION_RESUME_OPTIMIZE: str = "resume_optimize_v1"
+    PROMPT_VERSION_JD_ADAPT: str = "jd_adapt_v3"
+    PROMPT_VERSION_INTERVIEW_QUESTION: str = "interview_question_v3"
+    PROMPT_VERSION_ANSWER_SCORE: str = "answer_score_v2"
+    PROMPT_VERSION_INTERVIEW_REPORT: str = "interview_report_v2"
 
     # Embedding / vector knowledge base
     VECTOR_STORE_BACKEND: str = "qdrant"  # qdrant / keyword
@@ -148,6 +160,48 @@ class Settings(BaseSettings):
     @property
     def admin_email_list(self) -> list[str]:
         return [email.strip().lower() for email in self.ADMIN_EMAILS.split(",") if email.strip()]
+
+    def llm_model_for_feature(self, feature: str | None) -> str:
+        mapping = {
+            "resume_parse": self.LLM_RESUME_PARSE_MODEL,
+            "resume_optimize": self.LLM_RESUME_OPTIMIZE_MODEL,
+            "jd_adapt": self.LLM_JD_ADAPT_MODEL,
+            "question_generation": self.LLM_INTERVIEW_QUESTION_MODEL,
+            "question_regeneration": self.LLM_INTERVIEW_QUESTION_MODEL,
+            "answer_score": self.LLM_ANSWER_SCORE_MODEL,
+            "interview_report": self.LLM_INTERVIEW_REPORT_MODEL,
+        }
+        configured = mapping.get(feature or "")
+        return configured.strip() if configured and configured.strip() else self.LLM_MODEL
+
+    def prompt_version_for_feature(self, feature: str | None) -> str:
+        mapping = {
+            "resume_parse": self.PROMPT_VERSION_RESUME_PARSE,
+            "resume_optimize": self.PROMPT_VERSION_RESUME_OPTIMIZE,
+            "jd_adapt": self.PROMPT_VERSION_JD_ADAPT,
+            "question_generation": self.PROMPT_VERSION_INTERVIEW_QUESTION,
+            "question_regeneration": self.PROMPT_VERSION_INTERVIEW_QUESTION,
+            "answer_score": self.PROMPT_VERSION_ANSWER_SCORE,
+            "interview_report": self.PROMPT_VERSION_INTERVIEW_REPORT,
+        }
+        return mapping.get(feature or "", "unversioned")
+
+    def llm_profiles(self) -> dict[str, dict[str, str]]:
+        features = [
+            "resume_parse",
+            "resume_optimize",
+            "jd_adapt",
+            "question_generation",
+            "answer_score",
+            "interview_report",
+        ]
+        return {
+            feature: {
+                "model": self.llm_model_for_feature(feature),
+                "prompt_version": self.prompt_version_for_feature(feature),
+            }
+            for feature in features
+        }
 
     @field_validator("DEBUG", "ENFORCE_RELEASE_CHECKS", "AUTO_CREATE_DB", "ENABLE_DOCS", "BILLING_ENABLED", "LLM_ALLOW_FALLBACK", "METRICS_ENABLED", "BACKUP_ENABLED", "QDRANT_SYNC_ON_STARTUP", "EMBEDDING_USE_FP16", "EMBEDDING_ALLOW_FALLBACK", "RERANK_USE_FP16", "RERANK_ALLOW_FALLBACK", "TASK_ALLOW_LOCAL_FALLBACK", "ALERT_NOTIFY_ENABLED", mode="before")
     @classmethod

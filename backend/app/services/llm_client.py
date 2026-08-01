@@ -365,20 +365,203 @@ class LocalLLMClient:
         line = (line or "").strip()
         if not line:
             return f"{fallback}。"
+        if self._looks_resume_identity_line(line):
+            return self._strip_generated_resume_prefix(line)
         if any(key in line for key in ("背景", "负责", "通过", "实现", "提升", "降低")):
             return line
         return f"{fallback}：{line}"
+
+    def _strip_generated_resume_prefix(self, line: str) -> str:
+        cleaned = (line or "").strip()
+        generated_prefixes = (
+            "围绕业务目标梳理任务、行动与结果：",
+            "使用 STAR 结构呈现项目背景、行动和结果：",
+            "使用 STAR 结构呈现项目背景、个人行动和交付结果：",
+            "补充实习中的任务边界、协作过程和交付结果：",
+        )
+        changed = True
+        while changed:
+            changed = False
+            for prefix in generated_prefixes:
+                if cleaned.startswith(prefix):
+                    cleaned = cleaned[len(prefix):].strip()
+                    changed = True
+        return cleaned
+
+    def _looks_resume_identity_line(self, line: str) -> bool:
+        cleaned = self._strip_generated_resume_prefix(line)
+        if not cleaned:
+            return False
+        if len(cleaned) > 120:
+            return False
+        has_date = bool(re.search(r"(?:20\d{2}|19\d{2}|[1-9])(?:[./年-]\d{1,2})?\s*(?:[-~至]|—)\s*(?:20\d{2}|至今|现在)?(?:[./年-]\d{1,2})?", cleaned))
+        has_org = bool(re.search(r"公司|有限公司|科技|集团|大学|学院|实验室|工作室|团队|部门|中心", cleaned))
+        has_role = bool(re.search(r"实习生|工程师|开发|算法|后端|前端|产品|运营|测试|负责人|助理|专员", cleaned, re.IGNORECASE))
+        action_markers = (
+            "负责",
+            "参与",
+            "完成",
+            "实现",
+            "设计",
+            "搭建",
+            "优化",
+            "联调",
+            "排查",
+            "通过",
+            "使用",
+            "构建",
+            "对接",
+            "维护",
+            "提供",
+            "支持",
+            "交付",
+            "上线",
+        )
+        has_action = any(marker in cleaned for marker in action_markers)
+        return has_date and has_org and has_role and not has_action
+
+    def _resume_clause_for_term(self, term: str, line: str) -> str:
+        lowered = line.lower()
+        if term == "Python":
+            return "使用 Python 完成后端业务逻辑、接口联调和脚本化处理"
+        if term == "Java":
+            return "使用 Java 完成服务端模块开发、接口联调和异常处理"
+        if term in {"JavaScript", "TypeScript"}:
+            return f"使用 {term} 完成前端交互、接口联调和状态处理"
+        if term in {"FastAPI", "API"} or "接口" in line:
+            if "python" in lowered:
+                return "补齐 Python 接口的参数校验、异常分支、联调记录和脚本化验收"
+            if "java" in lowered:
+                return "补齐 Java 服务接口的鉴权联调、异常返回、边界条件和测试验收"
+            if "react" in lowered or "前端" in line:
+                return "处理前端接口 loading/error、空状态、重复提交和结果对比反馈"
+            if any(token in lowered for token in ("rag", "embedding", "qdrant", "agent")):
+                return "补齐检索/Agent 接口的入参校验、召回异常、降级处理和质量验收"
+            return "完成接口设计、参数校验、鉴权联调、异常返回和测试验收"
+        if term == "Redis":
+            if "验证码" in line or "邮件" in line or "celery" in lowered:
+                return "使用 Redis/Celery 承担验证码缓存、邮件发送等异步任务处理"
+            return "使用 Redis 处理缓存、任务状态和高频读写场景"
+        if term in {"PostgreSQL", "MySQL", "SQL"}:
+            return "参与数据表设计、查询优化、接口联调和数据一致性排查"
+        if term == "Docker":
+            return "完成 Docker 本地环境配置、服务联调和测试环境运行"
+        if term == "React":
+            return "实现前端表单状态、接口 loading/error 和优化结果对比展示"
+        if term == "RAG":
+            return "打通文档清洗、智能切片、检索召回、上下文拼接和 RAG 问答链路"
+        if term in {"BM25", "RRF", "Qdrant", "BGE-M3", "Embedding"}:
+            return "完成向量入库、BM25 与向量召回融合、RRF 排序和召回质量验证"
+        if term in {"Agent", "Tool Calling", "Function Calling"}:
+            return "设计 Agent 自主推理、工具调用、失败兜底和任务恢复链路"
+        if term in {"任务队列", "异步"}:
+            return "将耗时处理拆分为异步任务，补齐任务状态、重试和进度反馈"
+        return f"基于 {term} 完成工程实现、联调排查和交付验证"
+
+    def _term_appears_in_line(self, term: str, line: str) -> bool:
+        lowered = line.lower()
+        if re.search(re.escape(term), line, re.IGNORECASE):
+            return True
+        if term in {"FastAPI", "API"}:
+            return any(marker in lowered for marker in ("api", "接口", "联调", "鉴权", "参数校验", "异常返回", "loading/error"))
+        if term == "RAG":
+            return any(marker in lowered for marker in ("rag", "检索", "召回", "切分", "embedding", "向量"))
+        if term in {"BM25", "RRF", "Qdrant", "BGE-M3", "Embedding"}:
+            return any(marker in lowered for marker in ("bm25", "rrf", "qdrant", "bge", "embedding", "向量", "重排"))
+        if term in {"Agent", "Tool Calling", "Function Calling"}:
+            return any(marker in lowered for marker in ("agent", "工具调用", "function calling", "tool calling", "react agent"))
+        if term == "Redis":
+            return any(marker in lowered for marker in ("redis", "缓存", "队列", "celery"))
+        if term in {"任务队列", "异步"}:
+            return any(marker in lowered for marker in ("异步", "任务", "队列", "重试"))
+        return False
+
+    def _line_specific_terms(self, line: str, context_terms: list[str]) -> list[str]:
+        line_terms = [term for term in context_terms if self._term_appears_in_line(term, line)]
+        context_hard_terms = [term for term in context_terms if term in COMMON_SKILLS or term in {"任务队列", "异步"}]
+        if line_terms:
+            line_hard_terms = [term for term in line_terms if term in COMMON_SKILLS or term in {"任务队列", "异步"}]
+            if line_hard_terms:
+                return _dedupe([*line_hard_terms, *line_terms])[:4]
+            return _dedupe([*context_hard_terms[:2], *line_terms])[:4]
+        return _dedupe([*context_hard_terms[:2], *context_terms[:2]])[:4]
+
+    def _change_focus(self, line: str, terms: list[str]) -> str:
+        lowered = line.lower()
+        if "python" in lowered:
+            return "Python 后端逻辑与接口验证"
+        if "java" in lowered:
+            return "Java 服务端模块与异常处理"
+        if "react" in lowered or "前端" in line:
+            return "前端状态流转、接口反馈与结果展示"
+        if any(term in terms for term in ("RAG", "BM25", "RRF", "Qdrant", "BGE-M3", "Embedding")):
+            return "检索、向量化、召回筛选与质量验证"
+        if any(term in terms for term in ("Agent", "Tool Calling", "Function Calling")):
+            return "Agent 规划、工具调用与失败兜底"
+        if any(term in terms for term in ("Redis", "任务队列", "异步")):
+            return "异步任务、状态持久化与失败重试"
+        if any(term in terms for term in ("FastAPI", "API")) or "接口" in line:
+            return "接口设计、联调排查与验收"
+        if any(term in terms for term in ("SQL", "MySQL", "PostgreSQL")):
+            return "数据库读写、索引优化与一致性排查"
+        return "工程实现、交付验证与复盘"
+
+    def _validation_clause_for_line(self, line: str, terms: list[str]) -> str:
+        lowered = line.lower()
+        if "python" in lowered:
+            return "补充 Python 接口的参数边界、异常分支和脚本化验收记录"
+        if "java" in lowered:
+            return "补充 Java 模块的鉴权联调、异常返回和边界条件验证"
+        if "react" in lowered or "前端" in line:
+            return "补充前端 loading/error、空状态、重复提交和对比展示验收"
+        if any(term in terms for term in ("RAG", "BM25", "RRF", "Qdrant", "BGE-M3", "Embedding")):
+            return "补充切片、召回、筛选补全和检索质量验证"
+        if any(term in terms for term in ("Agent", "Tool Calling", "Function Calling")):
+            return "补充 Agent 工具编排、失败兜底和输出质量复盘"
+        if any(term in terms for term in ("Redis", "任务队列", "异步")):
+            return "补充任务状态、失败重试、进度反馈和服务恢复验证"
+        if any(term in terms for term in ("FastAPI", "API")) or "接口" in line:
+            return "补充接口参数校验、鉴权联调、异常返回和测试验收"
+        if any(term in terms for term in ("SQL", "MySQL", "PostgreSQL")):
+            return "补充索引设计、慢查询排查和数据一致性校验"
+        return "补充实现边界、联调排查、结果验收和复盘动作"
+
+    def _change_reason(self, section: str, subject: str, before: str, terms: list[str]) -> str:
+        terms_label = "、".join(terms[:4]) if terms else "原有经历"
+        focus = self._change_focus(before, terms)
+        section_label = "项目" if section == "projects" else "实习"
+        subject_text = subject or section_label
+        return f"针对{subject_text}中已出现的{terms_label}证据，将原句侧重的{focus}补充为可核验的实现、联调、异常处理和验收表达。"
 
     def _rewrite_line_for_jd(self, line: str, terms: list[str], fallback: str) -> str:
         cleaned = (line or "").strip()
         if not cleaned:
             return ""
-        focus_terms = [term for term in terms if not re.search(re.escape(term), cleaned, re.IGNORECASE)] or terms[:4]
-        focus = "、".join(focus_terms[:4])
-        if focus:
-            if any(marker in cleaned for marker in ("优化", "交付", "排查", "联调", "复盘", "提升", "降低")):
-                return f"{cleaned}；进一步明确{focus}相关的实现范围、联调问题和交付结果。"
-            return f"{cleaned}；完成{focus}相关的实现、联调排查和结果复盘。"
+        if self._looks_resume_identity_line(cleaned):
+            return self._strip_generated_resume_prefix(cleaned)
+        clean_sentence = cleaned.rstrip("。；; ")
+        effective_terms = self._line_specific_terms(cleaned, _dedupe([term for term in terms if term]))
+        if effective_terms:
+            clauses = _dedupe(
+                [
+                    self._resume_clause_for_term(term, cleaned)
+                    for term in effective_terms[:6]
+                    if term in COMMON_SKILLS or term in {"任务队列", "异步"}
+                ]
+            )
+            if not clauses:
+                clauses = [f"围绕{'、'.join(effective_terms[:4])}完成工程实现、联调排查、测试验证和结果复盘"]
+            after = clean_sentence
+            for clause in clauses[:3]:
+                if clause and clause not in after:
+                    after = f"{after}；{clause}"
+            if after == clean_sentence:
+                validation_clause = self._validation_clause_for_line(cleaned, effective_terms)
+                if validation_clause and validation_clause not in after:
+                    after = f"{after}；{validation_clause}"
+            if not any(marker in after for marker in ("负责", "参与", "完成", "实现", "设计", "使用", "通过")):
+                after = f"负责{after}"
+            return f"{after}。"
         return self._polish_line(cleaned, fallback)
 
     def _adapt_jd(self, prompt: str) -> dict[str, Any]:
@@ -401,15 +584,20 @@ class LocalLLMClient:
                 project_text = json.dumps(project, ensure_ascii=False)
                 project_terms = [term for term in matched if re.search(re.escape(term), project_text, re.IGNORECASE)]
                 before = str(project.get("description") or "").strip()
+                if self._looks_resume_identity_line(before):
+                    project["description"] = self._strip_generated_resume_prefix(before)
+                    continue
                 after = self._rewrite_line_for_jd(before, project_terms, "使用 STAR 结构呈现项目背景、个人行动和交付结果")
                 if after and after != before:
                     project["description"] = after
+                    changed_terms = self._line_specific_terms(before or project_text, project_terms)
+                    project_subject = str(project.get("name") or project.get("title") or "项目经历")
                     change_details.append(
                         {
                             "section": "projects",
                             "before": before or "原项目描述未单独成句",
                             "after": after,
-                            "reason": "围绕原项目中已出现的技能和交付动作增强表达，不新增经历。",
+                            "reason": self._change_reason("projects", project_subject, before, changed_terms),
                             "evidence": before or project.get("name", ""),
                         }
                     )
@@ -424,26 +612,30 @@ class LocalLLMClient:
                 updated_highlights = []
                 for highlight in highlights:
                     before = str(highlight or "").strip()
+                    if self._looks_resume_identity_line(before):
+                        updated_highlights.append(self._strip_generated_resume_prefix(before))
+                        continue
                     after = self._rewrite_line_for_jd(before, experience_terms, "补充实习中的任务边界、协作过程和交付结果")
                     updated_highlights.append(after or before)
                     if after and after != before:
+                        changed_terms = self._line_specific_terms(before, experience_terms)
+                        experience_subject = str(
+                            experience.get("company")
+                            or experience.get("role")
+                            or experience.get("title")
+                            or "实习经历"
+                        )
                         change_details.append(
                             {
                                 "section": "experience",
                                 "before": before,
                                 "after": after,
-                                "reason": "基于原实习描述补强接口实现、联调排查或交付复盘表达。",
+                                "reason": self._change_reason("experience", experience_subject, before, changed_terms),
                                 "evidence": before,
                             }
                         )
                 if updated_highlights:
                     experience["highlights"] = updated_highlights
-
-            resume_data["jd_alignment"] = {
-                "matched_keywords": matched[:12],
-                "recommended_focus": weak_points,
-                "note": "本地 MVP 仅做表达重点提示，不新增未在简历中出现的经历或技能。",
-            }
 
         return {
             "jd_requirements": {
@@ -550,6 +742,16 @@ class LocalLLMClient:
         return {
             "scores": scores,
             "total_score": total,
+            "score_details": {
+                key: {
+                    "score": value,
+                    "evidence": answer.strip()[:140],
+                    "issue": "回答需要补充更具体的技术链路、项目证据、排查验证和复盘指标。",
+                    "suggestion": "按背景、个人动作、技术方案、验证结果、复盘改进组织答案。",
+                    "risk": "高" if value < 6 else "中" if value < 8 else "低",
+                }
+                for key, value in scores.items()
+            },
             "feedback": feedback,
             "refined_answer": refined[:220],
         }
@@ -559,7 +761,12 @@ class LocalLLMClient:
 
     def _summarize_interview(self, prompt: str) -> dict[str, Any]:
         records_text = _after(prompt, "作答记录：").split("请输出", 1)[0]
-        records = _safe_literal(_first_literal_block(records_text, "[", "]"))
+        bounded_records = _between(
+            prompt,
+            '<UNTRUSTED_DATA source="candidate_answer">',
+            "</UNTRUSTED_DATA>",
+        )
+        records = _safe_literal(_first_literal_block(bounded_records or records_text, "[", "]"))
         records = records if isinstance(records, list) else []
         dimension_values = {key: [] for key in DIMENSION_KEYS}
         for record in records:
@@ -591,6 +798,16 @@ class LocalLLMClient:
             "summary": f"本次完成 {answered_count} 道题，整体能覆盖基本问题，但答案还需要更突出技术准确性、个人贡献、工程交付证据和复盘思考。",
             "weak_points": weak_points,
             "suggestions": suggestions,
+            "report_details": {
+                "hire_signal": "positive" if avg >= 7.5 else "borderline" if avg >= 6 else "weak",
+                "strongest_evidence": [],
+                "repeated_gaps": weak_points[:2],
+                "follow_up_training_plan": suggestions,
+                "next_interview_questions": [
+                    "请补充一个真实联调或线上排查案例，说明定位路径和验证方式。",
+                    "请选择一个项目技术点，说明当时为什么这样设计以及替代方案的取舍。",
+                ],
+            },
         }
 
 
@@ -630,16 +847,18 @@ class LLMClient:
         messages: list[dict],
         temperature: float = 0.3,
         max_tokens: int = 4000,
+        feature: str | None = None,
     ) -> str:
         if self._use_local:
             return await self._local_client.chat_completion(messages, temperature, max_tokens)
 
+        model = self.model_for_feature(feature)
         last_error = None
         for attempt in range(self.max_retries + 1):
             try:
                 if self.provider == "anthropic":
-                    return await self._call_anthropic(messages, temperature, max_tokens)
-                return await self._call_openai_compatible(messages, temperature, max_tokens)
+                    return await self._call_anthropic(messages, temperature, max_tokens, model=model)
+                return await self._call_openai_compatible(messages, temperature, max_tokens, model=model)
             except Exception as exc:
                 last_error = exc
                 if attempt < self.max_retries:
@@ -652,6 +871,8 @@ class LLMClient:
         messages: list[dict],
         temperature: float,
         max_tokens: int,
+        *,
+        model: str,
     ) -> str:
         system = ""
         user_messages = messages
@@ -660,7 +881,7 @@ class LLMClient:
             user_messages = messages[1:]
 
         response = await self._client.messages.create(
-            model=self.model,
+            model=model,
             max_tokens=max_tokens,
             temperature=temperature,
             system=system,
@@ -673,9 +894,11 @@ class LLMClient:
         messages: list[dict],
         temperature: float,
         max_tokens: int,
+        *,
+        model: str,
     ) -> str:
         response = await self._client.chat.completions.create(
-            model=self.model,
+            model=model,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
@@ -687,17 +910,24 @@ class LLMClient:
         messages: list[dict],
         temperature: float = 0.3,
         max_tokens: int = 4000,
+        feature: str | None = None,
     ) -> dict[str, Any] | list[dict[str, Any]]:
         if self._use_local:
             return await self._local_client.chat_completion_json(messages, temperature, max_tokens)
 
         try:
-            text = await self.chat_completion(messages, temperature, max_tokens)
+            text = await self.chat_completion(messages, temperature, max_tokens, feature=feature)
             return extract_json(text)
         except Exception as exc:
             if self.allow_fallback:
                 return await self._local_client.chat_completion_json(messages, temperature, max_tokens)
             raise LLMCallError("LLM 返回结果不可用，请稍后重试或检查模型配置。") from exc
+
+    def model_for_feature(self, feature: str | None) -> str:
+        return self.settings.llm_model_for_feature(feature)
+
+    def prompt_version_for_feature(self, feature: str | None) -> str:
+        return self.settings.prompt_version_for_feature(feature)
 
     def build_usage_metadata(
         self,
@@ -719,7 +949,9 @@ class LLMClient:
             "llm": {
                 "feature": feature,
                 "provider": self.provider,
-                "model": self.model,
+                "model": self.model_for_feature(feature),
+                "default_model": self.model,
+                "prompt_version": self.prompt_version_for_feature(feature),
                 "source": "local" if self._use_local else "provider",
                 "fallback_allowed": self.allow_fallback,
                 "input_chars": len(input_text),

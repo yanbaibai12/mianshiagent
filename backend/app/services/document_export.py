@@ -27,9 +27,39 @@ SCORE_LABELS = {
     "depth": "技术/业务深度",
 }
 
+MODULE_LABELS = {
+    "project": "项目深挖",
+    "internship": "实习经历",
+    "agent_fundamentals": "Agent 八股",
+    "system_design": "系统设计",
+    "behavioral": "HR / 行为面",
+    "resume": "简历要点",
+}
+
+QUESTION_TYPE_LABELS = {
+    "technical_detail": "技术细节",
+    "troubleshooting": "排查定位",
+    "tradeoff": "方案取舍",
+    "metrics_reflection": "结果复盘",
+    "project_deep_dive": "项目追问",
+    "internship_deep_dive": "实习追问",
+    "agent_fundamentals": "Agent 基础",
+    "system_design": "系统设计",
+    "behavioral_star": "STAR 行为题",
+    "resume_core": "简历要点",
+}
+
 
 def _score_label(key: str) -> str:
     return SCORE_LABELS.get(key, key)
+
+
+def _module_label(key: str) -> str:
+    return MODULE_LABELS.get(key, key or "简历要点")
+
+
+def _question_type_label(key: str) -> str:
+    return QUESTION_TYPE_LABELS.get(key, key or "追问")
 
 FIELD_LABELS = {
     "name": "姓名",
@@ -218,16 +248,65 @@ def interview_report_to_markdown(report: Any) -> str:
     lines.append("\n## 改进建议\n")
     for i, suggestion in enumerate(report.suggestions or [], 1):
         lines.append(f"{i}. {suggestion}\n")
+    details = getattr(report, "report_details", None) or {}
+    if details:
+        signal_labels = {
+            "strong": "强推荐",
+            "positive": "正向",
+            "borderline": "边缘通过",
+            "weak": "风险较高",
+        }
+        lines.append("\n## 面试信号与专项训练\n")
+        template = details.get("interview_template") or {}
+        if template.get("name"):
+            lines.append(f"- 当前轮次：{template.get('name')}\n")
+        company_profile = details.get("company_profile") or {}
+        company_match = details.get("company_profile_match") or {}
+        target_company = company_profile.get("matched_company") or company_match.get("target_company")
+        target_position = company_profile.get("matched_position") or company_match.get("target_position")
+        if target_company:
+            lines.append(f"- 目标公司/岗位：{target_company} / {target_position or '未指定'}\n")
+            if company_profile.get("source_count"):
+                lines.append(
+                    f"- 公司画像：参考 {company_profile.get('source_count')} 份面经，"
+                    f"置信度 {company_profile.get('profile_confidence') or 'low'}\n"
+                )
+        for item in details.get("template_focus") or []:
+            lines.append(f"- 本轮重点：{item}\n")
+        for item in details.get("next_round_suggestions") or []:
+            lines.append(f"- 下一轮建议：{item}\n")
+        if details.get("hire_signal"):
+            lines.append(f"- 面试信号：{signal_labels.get(details.get('hire_signal'), details.get('hire_signal'))}\n")
+        for item in details.get("repeated_gaps") or []:
+            lines.append(f"- 重复缺口：{item}\n")
+        for item in details.get("follow_up_training_plan") or []:
+            lines.append(f"- 训练动作：{item}\n")
     lines.append("\n## 答题详情\n")
     for q in report.questions:
         module = getattr(q, "module", "") or "resume"
         source = getattr(q, "source_section", "") or getattr(q, "point_title", "") or ""
         lines.append(f"\n### {q.question}\n")
         if module or source:
-            lines.append(f"**模块**: {module}  \n**来源**: {source}\n")
+            lines.append(f"**模块**: {_module_label(module)}  \n**来源**: {source}\n")
+        question_type = getattr(q, "question_type", "") or ""
+        if question_type:
+            lines.append(f"**题型**: {_question_type_label(question_type)}\n")
+        for evidence in getattr(q, "evidence", None) or []:
+            if evidence.get("source_snippet"):
+                lines.append(
+                    f"**依据**: {evidence.get('source_section')} / {evidence.get('source_title')}："
+                    f"{evidence.get('source_snippet')}\n"
+                )
+                break
         lines.append(f"**你的回答**: {q.user_answer or '未作答'}\n")
         if q.total_score is not None:
             lines.append(f"**评分**: {q.total_score}\n")
+        for key, detail in (getattr(q, "score_details", None) or {}).items():
+            if isinstance(detail, dict):
+                lines.append(
+                    f"- {_score_label(str(key))}：{detail.get('score')}；"
+                    f"扣分点：{detail.get('issue')}；建议：{detail.get('suggestion')}\n"
+                )
         if q.feedback:
             lines.append(f"**评语**: {q.feedback}\n")
         if q.refined_answer:
@@ -252,15 +331,61 @@ def interview_report_to_docx_bytes(report: Any) -> bytes:
     doc.add_heading("改进建议", level=1)
     for suggestion in report.suggestions or []:
         doc.add_paragraph(str(suggestion), style="List Bullet")
+    details = getattr(report, "report_details", None) or {}
+    if details:
+        signal_labels = {
+            "strong": "强推荐",
+            "positive": "正向",
+            "borderline": "边缘通过",
+            "weak": "风险较高",
+        }
+        doc.add_heading("面试信号与专项训练", level=1)
+        template = details.get("interview_template") or {}
+        if template.get("name"):
+            doc.add_paragraph(f"当前轮次：{template.get('name')}")
+        company_profile = details.get("company_profile") or {}
+        company_match = details.get("company_profile_match") or {}
+        target_company = company_profile.get("matched_company") or company_match.get("target_company")
+        target_position = company_profile.get("matched_position") or company_match.get("target_position")
+        if target_company:
+            doc.add_paragraph(f"目标公司/岗位：{target_company} / {target_position or '未指定'}")
+            if company_profile.get("source_count"):
+                doc.add_paragraph(
+                    f"公司画像：参考 {company_profile.get('source_count')} 份面经，"
+                    f"置信度 {company_profile.get('profile_confidence') or 'low'}"
+                )
+        for item in details.get("template_focus") or []:
+            doc.add_paragraph(f"本轮重点：{item}", style="List Bullet")
+        for item in details.get("next_round_suggestions") or []:
+            doc.add_paragraph(f"下一轮建议：{item}", style="List Bullet")
+        if details.get("hire_signal"):
+            doc.add_paragraph(f"面试信号：{signal_labels.get(details.get('hire_signal'), details.get('hire_signal'))}")
+        for item in details.get("repeated_gaps") or []:
+            doc.add_paragraph(f"重复缺口：{item}", style="List Bullet")
+        for item in details.get("follow_up_training_plan") or []:
+            doc.add_paragraph(f"训练动作：{item}", style="List Bullet")
     doc.add_heading("答题详情", level=1)
     for question in report.questions:
         doc.add_heading(question.question, level=2)
         module = getattr(question, "module", "") or "resume"
         source = getattr(question, "source_section", "") or getattr(question, "point_title", "") or ""
-        doc.add_paragraph(f"模块：{module}；来源：{source}")
+        question_type = getattr(question, "question_type", "") or ""
+        doc.add_paragraph(f"模块：{_module_label(module)}；来源：{source}；题型：{_question_type_label(question_type)}")
+        for evidence in getattr(question, "evidence", None) or []:
+            if evidence.get("source_snippet"):
+                doc.add_paragraph(
+                    f"依据：{evidence.get('source_section')} / {evidence.get('source_title')}：{evidence.get('source_snippet')}"
+                )
+                break
         doc.add_paragraph(f"你的回答：{question.user_answer or '未作答'}")
         if question.total_score is not None:
             doc.add_paragraph(f"评分：{question.total_score}")
+        for key, detail in (getattr(question, "score_details", None) or {}).items():
+            if isinstance(detail, dict):
+                doc.add_paragraph(
+                    f"{_score_label(str(key))}：{detail.get('score')}；扣分点：{detail.get('issue')}；建议：{detail.get('suggestion')}",
+                    style="List Bullet",
+                )
         if question.feedback:
             doc.add_paragraph(f"评语：{question.feedback}")
         if question.refined_answer:

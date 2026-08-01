@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import AuditLog, BillingAccount, Interview, InterviewQuestion, Organization, OrganizationMember, PaymentOrder, QualityAnnotation, QualityEvalCandidate, Resume, UsageRecord, User
+from app.models import AgentQuestionPracticeState, AuditLog, BillingAccount, Interview, InterviewExperienceShare, InterviewQuestion, Organization, OrganizationMember, PaymentOrder, QualityAnnotation, QualityEvalCandidate, Resume, TrainingPlan, TrainingPlanTask, TrainingProfileDimension, UsageRecord, User
 from app.services.audit import log_audit_event
 from app.services.auth_service import get_current_user
 from app.services.resume_index import delete_resume_vectors
@@ -37,6 +37,25 @@ async def export_account_data(
     interviews = (await db.execute(select(Interview).where(Interview.user_id == current_user.id))).scalars().all()
     usage_records = (await db.execute(select(UsageRecord).where(UsageRecord.user_id == current_user.id))).scalars().all()
     payment_orders = (await db.execute(select(PaymentOrder).where(PaymentOrder.user_id == current_user.id))).scalars().all()
+    experience_shares = (
+        await db.execute(select(InterviewExperienceShare).where(InterviewExperienceShare.user_id == current_user.id))
+    ).scalars().all()
+    agent_practice_states = (
+        await db.execute(select(AgentQuestionPracticeState).where(AgentQuestionPracticeState.user_id == current_user.id))
+    ).scalars().all()
+    training_profile_dimensions = (
+        await db.execute(select(TrainingProfileDimension).where(TrainingProfileDimension.user_id == current_user.id))
+    ).scalars().all()
+    training_plans = (
+        await db.execute(select(TrainingPlan).where(TrainingPlan.user_id == current_user.id))
+    ).scalars().all()
+    training_plan_tasks = (
+        await db.execute(
+            select(TrainingPlanTask)
+            .join(TrainingPlan, TrainingPlan.id == TrainingPlanTask.plan_id)
+            .where(TrainingPlan.user_id == current_user.id)
+        )
+    ).scalars().all()
     quality_annotations = (
         await db.execute(select(QualityAnnotation).where(QualityAnnotation.user_id == current_user.id))
     ).scalars().all()
@@ -179,6 +198,110 @@ async def export_account_data(
             }
             for order in payment_orders
         ],
+        "interview_experience_shares": [
+            {
+                "id": str(share.id),
+                "organization_id": str(share.organization_id) if share.organization_id else None,
+                "company": share.company,
+                "position": share.position,
+                "city": share.city,
+                "interview_date": _dt(share.interview_date),
+                "rounds": share.rounds,
+                "difficulty": share.difficulty,
+                "result": share.result,
+                "tags": share.tags,
+                "questions": share.questions,
+                "process": share.process,
+                "content": share.content,
+                "visibility": share.visibility,
+                "is_anonymous": share.is_anonymous,
+                "status": share.status,
+                "view_count": share.view_count,
+                "like_count": share.like_count,
+                "created_at": _dt(share.created_at),
+                "updated_at": _dt(share.updated_at),
+            }
+            for share in experience_shares
+        ],
+        "agent_question_practice_states": [
+            {
+                "id": str(state.id),
+                "organization_id": str(state.organization_id) if state.organization_id else None,
+                "question_id": state.question_id,
+                "mastery_status": state.mastery_status,
+                "is_favorite": state.is_favorite,
+                "is_wrong": state.is_wrong,
+                "review_count": state.review_count,
+                "known_count": state.known_count,
+                "wrong_count": state.wrong_count,
+                "next_review_at": _dt(state.next_review_at),
+                "last_practiced_at": _dt(state.last_practiced_at),
+                "metadata": state.practice_metadata,
+                "created_at": _dt(state.created_at),
+                "updated_at": _dt(state.updated_at),
+            }
+            for state in agent_practice_states
+        ],
+        "training_profile_dimensions": [
+            {
+                "id": str(dimension.id),
+                "organization_id": str(dimension.organization_id) if dimension.organization_id else None,
+                "dimension_key": dimension.dimension_key,
+                "dimension_label": dimension.dimension_label,
+                "mastery_score": dimension.mastery_score,
+                "exposure_count": dimension.exposure_count,
+                "known_count": dimension.known_count,
+                "weak_count": dimension.weak_count,
+                "low_score_count": dimension.low_score_count,
+                "last_signal": dimension.last_signal,
+                "last_source": dimension.last_source,
+                "last_practiced_at": _dt(dimension.last_practiced_at),
+                "metadata": dimension.profile_metadata,
+                "created_at": _dt(dimension.created_at),
+                "updated_at": _dt(dimension.updated_at),
+            }
+            for dimension in training_profile_dimensions
+        ],
+        "training_plans": [
+            {
+                "id": str(plan.id),
+                "organization_id": str(plan.organization_id),
+                "source_interview_id": str(plan.source_interview_id) if plan.source_interview_id else None,
+                "week_start": _dt(plan.week_start),
+                "week_end": _dt(plan.week_end),
+                "status": plan.status,
+                "plan_summary": plan.plan_summary,
+                "estimated_minutes": plan.estimated_minutes,
+                "completion_rate": plan.completion_rate,
+                "metadata": plan.generation_metadata,
+                "created_at": _dt(plan.created_at),
+                "updated_at": _dt(plan.updated_at),
+            }
+            for plan in training_plans
+        ],
+        "training_plan_tasks": [
+            {
+                "id": str(task.id),
+                "plan_id": str(task.plan_id),
+                "task_type": task.task_type,
+                "title": task.title,
+                "description": task.description,
+                "scheduled_date": _dt(task.scheduled_date),
+                "estimated_minutes": task.estimated_minutes,
+                "priority": task.priority,
+                "status": task.status,
+                "related_question_id": task.related_question_id,
+                "related_interview_id": str(task.related_interview_id) if task.related_interview_id else None,
+                "related_experience_id": str(task.related_experience_id) if task.related_experience_id else None,
+                "related_company_profile_id": str(task.related_company_profile_id) if task.related_company_profile_id else None,
+                "target_dimensions": task.target_dimensions,
+                "recommendation_reason": task.recommendation_reason,
+                "completed_at": _dt(task.completed_at),
+                "created_at": _dt(task.created_at),
+                "updated_at": _dt(task.updated_at),
+            }
+            for task in training_plan_tasks
+        ],
         "quality_annotations": [
             {
                 "id": str(annotation.id),
@@ -232,7 +355,12 @@ async def export_account_data(
         target_user_id=current_user.id,
         resource_id=str(current_user.id),
         request=request,
-        metadata={"resume_count": len(resumes), "interview_count": len(interviews)},
+        metadata={
+            "resume_count": len(resumes),
+            "interview_count": len(interviews),
+            "experience_share_count": len(experience_shares),
+            "agent_practice_count": len(agent_practice_states),
+        },
     )
     await db.commit()
     return payload

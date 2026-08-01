@@ -16,6 +16,7 @@ from app.schemas import (
 )
 from app.services.audit import log_audit_event
 from app.services.auth_service import get_current_user
+from app.services.ats_scoring import build_ats_report
 from app.services.business import ensure_feature_available, record_usage
 from app.services.document_export import content_disposition, resume_to_docx_bytes, safe_filename
 from app.services.task_queue import TaskCancelled, create_task, enqueue_task, update_task
@@ -25,6 +26,109 @@ from app.utils.time import utc_now
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 settings = get_settings()
+
+
+def _flatten_dimension_items(ats_report: dict, key: str, limit: int = 6) -> list[str]:
+    items: list[str] = []
+    for dimension in ats_report.get("dimensions") or []:
+        values = dimension.get(key) if isinstance(dimension, dict) else None
+        if isinstance(values, list):
+            items.extend(str(item) for item in values if item)
+        elif values:
+            items.append(str(values))
+    seen = []
+    for item in items:
+        cleaned = item.strip()
+        if cleaned and cleaned not in seen:
+            seen.append(cleaned)
+    return seen[:limit]
+
+
+def _application_review_from_ats(ats_report: dict, *, has_optimized_version: bool = False) -> dict:
+    score = float(ats_report.get("total_score") or 0)
+    missing_top = [str(item) for item in ats_report.get("missing_top") or [] if item]
+    covered = _flatten_dimension_items(ats_report, "covered", 8)
+    risks = _flatten_dimension_items(ats_report, "risk", 8)
+    evidence = ats_report.get("requirement_evidence") if isinstance(ats_report.get("requirement_evidence"), list) else []
+    evidence_count = len(evidence)
+
+    if score >= 82 and evidence_count >= 3 and len(missing_top) <= 2:
+        decision = "apply_now"
+        decision_label = "建议投递"
+        priority = "high"
+        summary = "匹配度和简历证据较强，可以进入投递版导出与面试准备。"
+    elif score >= 68:
+        decision = "revise_before_apply"
+        decision_label = "先改再投"
+        priority = "medium"
+        summary = "具备投递基础，但需要先补强缺口和表达证据，再导出投递版。"
+    elif score >= 52:
+        decision = "low_priority"
+        decision_label = "低优先级"
+        priority = "low"
+        summary = "存在明显缺口，建议只在岗位很重要或可补充真实经历时投入优化。"
+    else:
+        decision = "not_recommended"
+        decision_label = "暂不建议"
+        priority = "hold"
+        summary = "当前简历证据与 JD 差距较大，不建议直接投入完整投递材料。"
+
+    blockers = [*missing_top[:4], *risks[:4]]
+    if not blockers and score < 82:
+        blockers = ["缺少足够可验证的项目证据或结果指标"]
+
+    actions = []
+    if missing_top:
+        actions.append(f"补充或改写与 {missing_top[0]} 相关的真实项目/实习证据，不能编造不存在的经历。")
+    if risks:
+        actions.append(f"先处理格式或证据风险：{risks[0]}。")
+    if evidence_count < 3:
+        actions.append("为核心要求补充至少 2-3 条可追溯到原简历的证据片段。")
+    if not has_optimized_version:
+        actions.append("通过岗位简历优化生成 JD 版本后，再导出投递版 Word。")
+    actions.append("导出前检查正文无 JSON 字段、系统话术和无法证明的数据。")
+
+    reviewer_checks = [
+        {
+            "name": "事实边界",
+            "status": "pass" if evidence_count >= 3 else "warning",
+            "detail": "优化内容需要全部来自原简历证据，缺口只能进入建议，不能写入经历正文。",
+        },
+        {
+            "name": "ATS 解析",
+            "status": "pass" if score >= 68 else "warning",
+            "detail": "检查硬技能、关键词和项目证据是否能被机器解析，不只看措辞是否好看。",
+        },
+        {
+            "name": "投递材料",
+            "status": "pass" if has_optimized_version else "todo",
+            "detail": "生成投递版后还需要检查 Word/PDF 可读性、文件名和修改前后对照。",
+        },
+    ]
+
+    return {
+        "decision": decision,
+        "decision_label": decision_label,
+        "priority": priority,
+        "score": round(score, 1),
+        "summary": summary,
+        "strengths": covered[:5],
+        "blockers": blockers[:6],
+        "actions_before_apply": actions[:6],
+        "reviewer_checks": reviewer_checks,
+        "evidence_count": evidence_count,
+        "source": "ats_preflight_reviewer",
+    }
+
+
+async def _preflight_job_application(db: AsyncSession, job: JobApplication, resume: Resume) -> dict:
+    ats_report = await build_ats_report(db, resume, job.jd_text)
+    review = _application_review_from_ats(
+        ats_report,
+        has_optimized_version=bool(job.current_resume_version_id),
+    )
+    ats_report["application_review"] = review
+    return ats_report
 
 
 @router.get("", response_model=list[JobApplicationResponse])
@@ -71,6 +175,57 @@ async def create_job(
         resource_id=str(job.id),
         request=request,
         metadata={"title": job.title, "company": job.company, **tenant_metadata(org)},
+    )
+    await db.commit()
+    await db.refresh(job)
+    return job
+
+
+@router.post("/{job_id}/preflight", response_model=JobApplicationResponse)
+async def preflight_job(
+    job_id: uuid.UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    job = await db.scalar(select(JobApplication).where(JobApplication.id == job_id, JobApplication.user_id == current_user.id))
+    if not job:
+        raise HTTPException(status_code=404, detail="岗位任务不存在")
+    if not job.resume_id:
+        raise HTTPException(status_code=400, detail="请先绑定简历")
+    resume = await db.scalar(select(Resume).where(Resume.id == job.resume_id, Resume.user_id == current_user.id))
+    if not resume:
+        raise HTTPException(status_code=404, detail="绑定简历不存在")
+    await ensure_feature_available("jd_adapt", db, current_user.id, settings)
+    ats_report = await _preflight_job_application(db, job, resume)
+    job.match_score = float(ats_report.get("total_score") or 0)
+    job.ats_report = ats_report
+    log_audit_event(
+        db,
+        event_type="job.preflight",
+        resource_type="job",
+        actor_user_id=current_user.id,
+        target_user_id=current_user.id,
+        organization_id=job.organization_id,
+        resource_id=str(job.id),
+        request=request,
+        metadata={
+            "resume_id": str(resume.id),
+            "match_score": job.match_score,
+            "decision": (ats_report.get("application_review") or {}).get("decision"),
+        },
+    )
+    record_usage(
+        db,
+        current_user.id,
+        "job_preflight",
+        organization_id=job.organization_id,
+        metadata={
+            "job_id": str(job.id),
+            "resume_id": str(resume.id),
+            "match_score": job.match_score,
+            "decision": (ats_report.get("application_review") or {}).get("decision"),
+        },
     )
     await db.commit()
     await db.refresh(job)
@@ -285,7 +440,12 @@ async def _run_job_adapt_task(task_id: str) -> None:
             result_payload = await _adapt_resume_to_jd(db, resume, job.jd_text, source_task_id=task.id, source_job_id=job.id)
             job.status = "optimized"
             job.match_score = float(resume.match_score or 0)
-            job.ats_report = result_payload["ats_report"]
+            ats_report = result_payload["ats_report"]
+            ats_report["application_review"] = _application_review_from_ats(
+                ats_report,
+                has_optimized_version=bool(result_payload.get("version_id")),
+            )
+            job.ats_report = ats_report
             if result_payload.get("version_id"):
                 job.current_resume_version_id = uuid.UUID(result_payload["version_id"])
             await update_task(
@@ -299,7 +459,7 @@ async def _run_job_adapt_task(task_id: str) -> None:
                     "resume_id": str(resume.id),
                     "version_id": result_payload.get("version_id"),
                     "match_score": float(job.match_score or 0),
-                    "ats_report": result_payload["ats_report"],
+                    "ats_report": ats_report,
                 },
             )
             await db.commit()

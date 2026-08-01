@@ -442,6 +442,80 @@ export function ResumeStructuredPreview({ value }: { value: ResumeData }) {
   )
 }
 
+export function ResumePaperPreview({ value }: { value: ResumeData }) {
+  const data = normalizeResumeData(value)
+  const personal = asRecord(data.personal)
+  const education = asRecordArray(data.education)
+  const experience = asRecordArray(data.experience)
+  const projects = asRecordArray(data.projects)
+  const skills = asStringArray(data.skills)
+
+  const renderEntries = (items: Array<Record<string, unknown>>, type: 'education' | 'experience' | 'project') => (
+    <div className="space-y-4">
+      {items.map((item, index) => {
+        const title = type === 'education'
+          ? compactLine([asString(item.school), asString(item.major), asString(item.degree)])
+          : type === 'project'
+            ? compactLine([asString(item.name), asString(item.role)])
+            : compactLine([asString(item.company), asString(item.role)])
+        const highlights = type === 'project'
+          ? [asString(item.description), ...asStringArray(item.highlights)].filter(Boolean)
+          : asStringArray(item.highlights)
+        return (
+          <div key={index}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="font-semibold text-slate-950">{title || '未填写'}</div>
+              {asString(item.time) && <div className="shrink-0 text-xs text-slate-500">{asString(item.time)}</div>}
+            </div>
+            {type === 'project' && asStringArray(item.tech_stack).length > 0 && (
+              <div className="mt-1 text-xs text-slate-500">技术栈：{asStringArray(item.tech_stack).join(' / ')}</div>
+            )}
+            {highlights.length > 0 && (
+              <ul className="mt-2 space-y-1 text-sm leading-6 text-slate-700">
+                {highlights.map((highlight) => <li key={highlight} className="flex gap-2"><span className="text-slate-400">•</span><span>{highlight}</span></li>)}
+              </ul>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+
+  return (
+    <article className="mx-auto min-h-[680px] w-full max-w-[760px] bg-white px-6 py-8 text-slate-800 shadow-[0_10px_35px_rgba(15,23,42,0.12)] sm:min-h-[920px] sm:px-12 sm:py-9">
+      <header className="border-b-2 border-slate-900 pb-4 text-center">
+        <h2 className="text-2xl font-bold text-slate-950">{asString(personal.name) || '未命名候选人'}</h2>
+        <div className="mt-2 text-sm font-medium text-slate-600">{asString(personal.job_intent) || '求职意向待补充'}</div>
+        <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-slate-500">
+          {asString(personal.email) && <span>{asString(personal.email)}</span>}
+          {asString(personal.phone) && <span>{asString(personal.phone)}</span>}
+        </div>
+      </header>
+
+      <div className="mt-6 space-y-6">
+        {asString(data.summary) && <PaperSection title="个人总结"><p className="text-sm leading-6 text-slate-700">{asString(data.summary)}</p></PaperSection>}
+        {education.length > 0 && <PaperSection title="教育背景">{renderEntries(education, 'education')}</PaperSection>}
+        {experience.length > 0 && <PaperSection title="工作 / 实习经历">{renderEntries(experience, 'experience')}</PaperSection>}
+        {projects.length > 0 && <PaperSection title="项目经历">{renderEntries(projects, 'project')}</PaperSection>}
+        {skills.length > 0 && (
+          <PaperSection title="专业技能">
+            <div className="text-sm leading-6 text-slate-700">{skills.join(' · ')}</div>
+          </PaperSection>
+        )}
+      </div>
+    </article>
+  )
+}
+
+function PaperSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section>
+      <h3 className="mb-3 border-b border-slate-300 pb-1.5 text-sm font-bold text-slate-950">{title}</h3>
+      {children}
+    </section>
+  )
+}
+
 function PreviewSection({
   title,
   emptyTitle,

@@ -49,6 +49,7 @@ test('free user can complete resume to report delivery flow', async ({ page }) =
   })
 
   await test.step('verify before and after diff and export delivery resume', async () => {
+    await page.getByRole('tab', { name: /投递准备/ }).click()
     const resumeDownload = page.waitForEvent('download')
     await page.getByTestId('export-delivery-resume-button').click()
     const resumeFile = await resumeDownload
@@ -59,12 +60,14 @@ test('free user can complete resume to report delivery flow', async ({ page }) =
     await expect(page.getByTestId('change-details-panel')).toBeVisible()
     await expect(page.getByTestId('change-details-panel')).toContainText('修改后')
     await page.goto(jobUrl)
+    await page.getByRole('tab', { name: /投递准备/ }).click()
     await page.getByTestId('submit-quality-feedback-button').click()
     await expect(page.getByText('质量反馈已记录')).toBeVisible()
   })
 
   await test.step('generate interview questions, answer three, and finish report', async () => {
     await page.goto(jobUrl)
+    await page.getByRole('tab', { name: /投递准备/ }).click()
     await page.getByTestId('start-job-interview-button').click()
     await expect(page.getByRole('heading', { name: '模拟面试' })).toBeVisible({ timeout: 90_000 })
     if (await page.getByText('题库尚未生成').isVisible()) {
@@ -74,6 +77,7 @@ test('free user can complete resume to report delivery flow', async ({ page }) =
     await expect(page.getByTestId('question-navigation')).toContainText('项目深挖')
     await expect(page.getByTestId('question-navigation')).toContainText('实习经历')
     await expect(page.getByTestId('question-navigation')).toContainText('Agent 八股')
+    await expect(page.getByTestId('question-evidence-panel')).toBeVisible()
 
     for (let index = 0; index < 3; index += 1) {
       await page.getByTestId('answer-textarea').fill(`${answer} 当前回答序号 ${index + 1}。`)
@@ -87,6 +91,7 @@ test('free user can complete resume to report delivery flow', async ({ page }) =
     await page.getByTestId('finish-interview-button').click()
     await expect(page.getByTestId('report-page')).toBeVisible({ timeout: 90_000 })
     await expect(page.getByRole('heading', { name: '面试总结报告' })).toBeVisible()
+    await expect(page.getByTestId('report-details-panel')).toBeVisible()
   })
 
   await test.step('export interview report Word and PDF', async () => {

@@ -1,20 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import {
   ArrowLeft,
-  BrainCircuit,
   BriefcaseBusiness,
   Download,
   FileJson,
+  FileCheck2,
+  FilePenLine,
   FileText,
   Gauge,
   History,
+  ListChecks,
   Play,
   RefreshCcw,
   Save,
   SearchCheck,
   ShieldCheck,
-  Sparkles,
   Target,
   Trash2,
   Wand2,
@@ -49,6 +50,65 @@ function changeDetailsFrom(data: any): Array<{ section?: string; before?: string
   return Array.isArray(data?.change_details) ? data.change_details.filter((item: any) => item && typeof item === 'object') : []
 }
 
+const changeSectionLabels: Record<string, string> = {
+  personal: '基本信息',
+  education: '教育背景',
+  experience: '实习/工作经历',
+  projects: '项目经历',
+  project: '项目经历',
+  skills: '技能关键词',
+  summary: '自我评价',
+}
+
+function changeSectionLabel(section?: string) {
+  if (!section) return '简历内容'
+  return changeSectionLabels[section] || section
+}
+
+function commonPrefixLength(left: string, right: string) {
+  const limit = Math.min(left.length, right.length)
+  let index = 0
+  while (index < limit && left[index] === right[index]) index += 1
+  return index
+}
+
+function commonSuffixLength(left: string, right: string, prefixLength: number) {
+  const limit = Math.min(left.length, right.length) - prefixLength
+  let index = 0
+  while (
+    index < limit &&
+    left[left.length - 1 - index] === right[right.length - 1 - index]
+  ) {
+    index += 1
+  }
+  return index
+}
+
+function highlightChangedText(before?: string, after?: string): ReactNode {
+  const previous = before || ''
+  const current = after || ''
+  if (!current) return '-'
+  if (!previous || previous === current) return current
+
+  const prefixLength = commonPrefixLength(previous, current)
+  const suffixLength = commonSuffixLength(previous, current, prefixLength)
+  const changedEnd = current.length - suffixLength
+  const prefix = current.slice(0, prefixLength)
+  const changed = current.slice(prefixLength, changedEnd)
+  const suffix = current.slice(changedEnd)
+
+  if (!changed) return current
+  return (
+    <>
+      {prefix}
+      <mark className="rounded-sm bg-amber-100 px-0.5 text-amber-950 ring-1 ring-amber-200">
+        {changed}
+      </mark>
+      {suffix}
+    </>
+  )
+}
+
 function scoreTone(score: number): 'success' | 'warning' | 'danger' {
   if (score >= 80) return 'success'
   if (score >= 65) return 'warning'
@@ -76,7 +136,7 @@ function AtsReportPanel({ report }: { report: AtsReport }) {
           <p className="mt-1 text-sm leading-6 text-slate-500">基于简历片段检索、RRF 融合和规则评分生成。</p>
         </div>
         <div className="flex items-center gap-2">
-          <Gauge size={18} className="text-cyan-700" />
+          <Gauge size={18} className="text-slate-600" />
           <span className="text-2xl font-bold text-slate-950">{report.total_score}</span>
           <span className="text-sm text-slate-500">/ 100</span>
         </div>
@@ -118,7 +178,7 @@ function AtsReportPanel({ report }: { report: AtsReport }) {
         </div>
         <div className="rounded-md border border-slate-200 bg-white p-3">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <Target size={16} className="text-cyan-700" />
+            <Target size={16} className="text-slate-600" />
             命中证据
           </div>
           <div className="space-y-2">
@@ -150,7 +210,7 @@ function ChangeDetailsPanel({ changes }: { changes: ReturnType<typeof changeDeta
           <div key={`${item.section}-${index}`} className="grid gap-3 p-4 lg:grid-cols-[0.7fr_1fr_1fr_1fr]">
             <div>
               <div className="text-xs text-slate-500">模块</div>
-              <div className="mt-1 font-semibold text-slate-900">{item.section || '简历内容'}</div>
+              <div className="mt-1 font-semibold text-slate-900">{changeSectionLabel(item.section)}</div>
             </div>
             <div>
               <div className="text-xs text-slate-500">修改前</div>
@@ -158,7 +218,7 @@ function ChangeDetailsPanel({ changes }: { changes: ReturnType<typeof changeDeta
             </div>
             <div>
               <div className="text-xs text-slate-500">修改后</div>
-              <div className="mt-1 text-sm leading-6 text-slate-900">{item.after || '-'}</div>
+              <div className="mt-1 text-sm leading-6 text-slate-900">{highlightChangedText(item.before, item.after)}</div>
             </div>
             <div>
               <div className="text-xs text-slate-500">改动说明</div>
@@ -429,8 +489,8 @@ export default function ResumeDetailPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <StatTile label="项目经历" value={stats.projects} meta="结构化项目数量" icon={<BriefcaseBusiness size={18} />} />
           <StatTile label="工作/实习" value={stats.experience} meta="可复盘经历数量" icon={<FileText size={18} />} />
-          <StatTile label="技能关键词" value={stats.skills} meta="用于 JD 匹配" icon={<Sparkles size={18} />} />
-          <StatTile label="面试要点" value={stats.points} meta="用于自动出题" icon={<BrainCircuit size={18} />} />
+          <StatTile label="技能关键词" value={stats.skills} meta="用于 JD 匹配" icon={<FileCheck2 size={18} />} />
+          <StatTile label="面试要点" value={stats.points} meta="用于准备问题" icon={<ListChecks size={18} />} />
           <StatTile label="证据片段" value={stats.chunks} meta="用于 JD 相似度检索" icon={<SearchCheck size={18} />} />
         </div>
 
@@ -489,14 +549,14 @@ export default function ResumeDetailPage() {
                   </div>
                 )}
                 <Button type="button" className="w-full" onClick={handleAdaptJD} disabled={loading || !jdText.trim() || jdAdaptPaywallBlocked} data-testid="resume-adapt-jd-button">
-                  <Sparkles size={16} />
+                  <FilePenLine size={16} />
                   {loading ? '任务执行中...' : jdAdaptPaywallBlocked ? '需升级后适配' : '根据 JD 完善'}
                 </Button>
                 {activeTask && (
-                  <div className="rounded-md border border-cyan-100 bg-cyan-50 px-3 py-3" data-testid="resume-task-progress">
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3" data-testid="resume-task-progress">
                     <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-                      <span className="font-semibold text-cyan-900">{activeTask.stage}</span>
-                      <span className="text-cyan-700">{activeTask.progress}%</span>
+                      <span className="font-semibold text-slate-900">{activeTask.stage}</span>
+                      <span className="text-slate-600">{activeTask.progress}%</span>
                     </div>
                     <ProgressBar value={activeTask.progress} />
                   </div>

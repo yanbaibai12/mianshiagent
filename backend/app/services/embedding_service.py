@@ -213,3 +213,32 @@ def embedding_status() -> dict[str, Any]:
         "model_loaded": _local_model is not None,
         "last_call": dict(_last_observation),
     }
+
+
+def embedding_probe(sample_text: str = "BGE-M3 embedding health probe") -> dict[str, Any]:
+    settings = _settings()
+    started_at = time.perf_counter()
+    try:
+        vector = embed_query(sample_text)
+        actual_size = len(vector)
+        return {
+            "ok": actual_size == settings.QDRANT_VECTOR_SIZE,
+            "provider": embedding_status()["provider"],
+            "model": settings.EMBEDDING_MODEL,
+            "expected_vector_size": settings.QDRANT_VECTOR_SIZE,
+            "actual_vector_size": actual_size,
+            "duration_ms": round((time.perf_counter() - started_at) * 1000, 2),
+            "fallback_used": bool((embedding_status().get("last_call") or {}).get("fallback_used")),
+            "failure_reason": (embedding_status().get("last_call") or {}).get("failure_reason"),
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "provider": embedding_status()["provider"],
+            "model": settings.EMBEDDING_MODEL,
+            "expected_vector_size": settings.QDRANT_VECTOR_SIZE,
+            "actual_vector_size": 0,
+            "duration_ms": round((time.perf_counter() - started_at) * 1000, 2),
+            "fallback_used": False,
+            "failure_reason": f"{type(exc).__name__}: {exc}",
+        }

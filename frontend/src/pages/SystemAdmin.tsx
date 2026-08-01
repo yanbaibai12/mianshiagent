@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { AlertTriangle, ArrowLeft, BellRing, BrainCircuit, CheckCircle2, CreditCard, Database, MessageSquare, RefreshCw, Send, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, BellRing, CheckCircle2, Cpu, CreditCard, Database, MessageSquare, RefreshCw, Send, ShieldCheck } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { Badge, Button, Card, EmptyState, Field, LoadingState, StatTile } from '../components/ui'
 import { auditApi, AuditLog } from '../services/audit'
@@ -231,7 +231,7 @@ export default function SystemAdminPage() {
           <>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <StatTile label="数据库" value={status.database.driver} meta={status.database.ok ? '连接正常' : status.database.error} icon={<Database size={18} />} />
-              <StatTile label="模型" value={status.llm.provider} meta={status.llm.local_fallback ? '本地兜底/未配置真实 Key' : status.llm.model} icon={<BrainCircuit size={18} />} />
+              <StatTile label="模型" value={status.llm.provider} meta={status.llm.local_fallback ? '本地兜底/未配置真实 Key' : status.llm.model} icon={<Cpu size={18} />} />
               <StatTile label="RAG 知识" value={status.rag.chunk_count} meta={`${status.rag.document_count} 个知识文档`} icon={<ShieldCheck size={18} />} />
               <StatTile
                 label="发布检查"
@@ -285,7 +285,7 @@ export default function SystemAdminPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <StatTile label="注册用户" value={adminSummary.totals.users} meta={`${adminSummary.totals.billing_accounts} 个权益账号`} icon={<CreditCard size={18} />} />
                 <StatTile label="简历/面试" value={`${adminSummary.totals.resumes}/${adminSummary.totals.interviews}`} meta={`${adminSummary.window_days} 天窗口`} icon={<Database size={18} />} />
-                <StatTile label="LLM 调用" value={adminSummary.totals.llm_call_count} meta={`${adminSummary.totals.estimated_input_tokens + adminSummary.totals.estimated_output_tokens} 估算 tokens`} icon={<BrainCircuit size={18} />} />
+                <StatTile label="LLM 调用" value={adminSummary.totals.llm_call_count} meta={`${adminSummary.totals.estimated_input_tokens + adminSummary.totals.estimated_output_tokens} 估算 tokens`} icon={<Cpu size={18} />} />
                 <StatTile label="估算成本" value={`¥${adminSummary.totals.estimated_cost_cny}`} meta={`${adminSummary.totals.usage_records} 条用量记录`} icon={<ShieldCheck size={18} />} />
               </div>
             )}
@@ -459,7 +459,7 @@ export default function SystemAdminPage() {
                     <div className="rounded-md bg-slate-50 px-3 py-2">
                       <div className="text-xs text-slate-500">告警策略</div>
                       <div className="mt-1 flex items-center gap-2 font-semibold text-slate-900">
-                        <BellRing size={14} className="text-cyan-700" />
+                        <BellRing size={14} className="text-slate-600" />
                         {status.operations.alerting?.enabled ? status.operations.alerting.min_severity : '未开启'} · 去重 {status.operations.alerting?.dedupe_minutes || 0} 分钟
                       </div>
                     </div>
@@ -484,7 +484,7 @@ export default function SystemAdminPage() {
                       <h2 className="card-title">商业配置</h2>
                       <p className="card-subtitle">收费入口、额度和升级方式。</p>
                     </div>
-                    <CreditCard size={18} className="text-cyan-700" />
+                    <CreditCard size={18} className="text-slate-600" />
                   </div>
                   {business ? (
                     <div className="space-y-3 text-sm">
@@ -583,7 +583,7 @@ export default function SystemAdminPage() {
                         <h2 className="card-title">人工质量标注</h2>
                         <p className="card-subtitle">用户对优化结果、ATS 报告和面试内容的反馈闭环。</p>
                       </div>
-                      <MessageSquare size={18} className="text-cyan-700" />
+                      <MessageSquare size={18} className="text-slate-600" />
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="rounded-md bg-slate-50 px-3 py-3">

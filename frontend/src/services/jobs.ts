@@ -16,6 +16,20 @@ export interface JobApplication {
   updated_at: string
 }
 
+export interface ApplicationReview {
+  decision: 'apply_now' | 'revise_before_apply' | 'low_priority' | 'not_recommended'
+  decision_label: string
+  priority: 'high' | 'medium' | 'low' | 'hold'
+  score: number
+  summary: string
+  strengths: string[]
+  blockers: string[]
+  actions_before_apply: string[]
+  reviewer_checks: Array<{ name: string; status: 'pass' | 'warning' | 'todo'; detail: string }>
+  evidence_count: number
+  source: string
+}
+
 export interface JobCreatePayload {
   title: string
   company?: string
@@ -27,6 +41,7 @@ export const jobsApi = {
   list: () => api.get<JobApplication[]>('/api/jobs'),
   get: (id: string) => api.get<JobApplication>(`/api/jobs/${id}`),
   create: (payload: JobCreatePayload) => api.post<JobApplication>('/api/jobs', payload),
+  preflight: (id: string) => api.post<JobApplication>(`/api/jobs/${id}/preflight`),
   update: (id: string, payload: Partial<JobCreatePayload> & { status?: string }) =>
     api.put<JobApplication>(`/api/jobs/${id}`, payload),
   delete: (id: string) => api.delete(`/api/jobs/${id}`),

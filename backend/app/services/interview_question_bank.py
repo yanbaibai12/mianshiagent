@@ -212,6 +212,88 @@ def normalize_question_bank(payload: dict[str, Any]) -> tuple[dict[str, Any], di
     return normalized, stats
 
 
+def load_agent_question_cards(path: Path = DEFAULT_INTERVIEW_BANK) -> list[dict[str, Any]]:
+    payload, _stats = normalize_question_bank(_load_payload(path))
+    cards: list[dict[str, Any]] = []
+    for document in payload["documents"]:
+        for question in document["questions"]:
+            cards.append(
+                {
+                    **question,
+                    "source_title": document["title"],
+                    "category": document["category"],
+                    "tags": document["tags"],
+                    "source": document.get("source") or payload["source"],
+                    "source_version": payload["version"],
+                }
+            )
+    return cards
+
+
+def question_bank_filter_options(cards: list[dict[str, Any]]) -> dict[str, list[str]]:
+    def unique(values: list[str]) -> list[str]:
+        seen: set[str] = set()
+        result: list[str] = []
+        for value in values:
+            text = _clean_text(value, max_chars=80)
+            key = text.lower()
+            if text and key not in seen:
+                seen.add(key)
+                result.append(text)
+        return sorted(result)
+
+    roles: list[str] = []
+    skills: list[str] = []
+    sections: list[str] = []
+    difficulties: list[str] = []
+    for card in cards:
+        sections.append(str(card.get("section") or ""))
+        difficulties.append(str(card.get("difficulty") or ""))
+        roles.extend(str(item) for item in card.get("roles") or [])
+        skills.extend(str(item) for item in card.get("skills") or [])
+    return {
+        "sections": unique(sections),
+        "difficulties": unique(difficulties),
+        "roles": unique(roles),
+        "skills": unique(skills),
+    }
+
+
+def filter_agent_question_cards(
+    cards: list[dict[str, Any]],
+    *,
+    query: str | None = None,
+    section: str | None = None,
+    difficulty: str | None = None,
+    role: str | None = None,
+    skill: str | None = None,
+) -> list[dict[str, Any]]:
+    query_text = _clean_text(query, max_chars=200).lower()
+    section_text = _clean_text(section, max_chars=80).lower()
+    difficulty_text = _clean_text(difficulty, max_chars=40).lower()
+    role_text = _clean_text(role, max_chars=80).lower()
+    skill_text = _clean_text(skill, max_chars=80).lower()
+
+    result: list[dict[str, Any]] = []
+    for card in cards:
+        roles = [str(item).lower() for item in card.get("roles") or []]
+        skills = [str(item).lower() for item in card.get("skills") or []]
+        if section_text and str(card.get("section") or "").lower() != section_text:
+            continue
+        if difficulty_text and str(card.get("difficulty") or "").lower() != difficulty_text:
+            continue
+        if role_text and role_text not in roles:
+            continue
+        if skill_text and skill_text not in skills:
+            continue
+        if query_text:
+            search_text = json.dumps(card, ensure_ascii=False).lower()
+            if query_text not in search_text:
+                continue
+        result.append(card)
+    return result
+
+
 def _question_to_content(question: dict[str, Any]) -> str:
     answer_points = "\n".join(f"- {item}" for item in question["answer_points"])
     followups = "\n".join(f"- {item}" for item in question["followups"])

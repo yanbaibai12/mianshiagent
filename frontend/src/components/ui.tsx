@@ -1,8 +1,25 @@
 import { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
+import { Inbox } from 'lucide-react'
 
 export function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ')
 }
+
+const buttonVariantClasses = {
+  primary: 'btn-primary',
+  secondary: 'btn-secondary',
+  ghost: 'btn-ghost',
+  danger: 'btn-danger',
+  success: 'btn-success',
+} as const
+
+const badgeToneClasses = {
+  neutral: 'badge-neutral',
+  success: 'badge-success',
+  warning: 'badge-warning',
+  danger: 'badge-danger',
+  info: 'badge-info',
+} as const
 
 export function Button({
   children,
@@ -19,7 +36,7 @@ export function Button({
       {...props}
       className={cn(
         'btn',
-        `btn-${variant}`,
+        buttonVariantClasses[variant],
         size === 'sm' && 'btn-sm',
         size === 'lg' && 'btn-lg',
         className,
@@ -44,11 +61,13 @@ export function Card({
 export function Badge({
   children,
   tone = 'neutral',
+  className,
 }: {
   children: ReactNode
   tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'info'
+  className?: string
 }) {
-  return <span className={cn('badge', `badge-${tone}`)}>{children}</span>
+  return <span className={cn('badge', badgeToneClasses[tone], className)}>{children}</span>
 }
 
 export function Field({
@@ -98,13 +117,16 @@ export function EmptyState({
   title,
   description,
   action,
+  icon,
 }: {
   title: string
   description?: string
   action?: ReactNode
+  icon?: ReactNode
 }) {
   return (
     <div className="empty-state">
+      <div className="empty-icon">{icon || <Inbox size={20} />}</div>
       <div className="empty-title">{title}</div>
       {description && <div className="empty-description">{description}</div>}
       {action && <div className="mt-4">{action}</div>}

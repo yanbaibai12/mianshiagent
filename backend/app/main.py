@@ -6,10 +6,10 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import JSONResponse
 
 from app.config import get_settings
-from app.database import init_db, async_session_maker
+from app.database import assert_database_revision_current, init_db, async_session_maker
 from app.middleware import InMemoryRateLimitMiddleware, RequestMetricsMiddleware, SecurityHeadersMiddleware
 from app.models import ResumeTemplate
-from app.routers import account, audit, auth, resumes, templates, interviews, system, knowledge, business, organizations, payments, tasks, jobs, quality
+from app.routers import account, audit, auth, resumes, templates, interviews, system, knowledge, business, organizations, payments, tasks, jobs, quality, community, company_profiles, training_plans
 from app.services.knowledge_base import seed_builtin_knowledge
 from app.services.llm_client import LLMCallError
 from app.services.release_checks import assert_release_ready
@@ -130,6 +130,8 @@ async def lifespan(app: FastAPI):
     assert_release_ready(settings)
     if settings.AUTO_CREATE_DB:
         await init_db()
+    else:
+        await assert_database_revision_current()
     await init_templates()
     await init_knowledge()
     yield
@@ -171,6 +173,9 @@ app.include_router(system.router)
 app.include_router(knowledge.router)
 app.include_router(business.router)
 app.include_router(quality.router)
+app.include_router(community.router)
+app.include_router(company_profiles.router)
+app.include_router(training_plans.router)
 
 
 @app.exception_handler(LLMCallError)

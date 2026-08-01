@@ -147,7 +147,7 @@ export default function OrganizationSettingsPage() {
                   type="button"
                   key={org.id}
                   onClick={() => loadMembers(org.id)}
-                  className={`w-full rounded-lg border p-4 text-left transition ${selectedOrg?.id === org.id ? 'border-cyan-200 bg-cyan-50' : 'border-slate-200 bg-white hover:border-cyan-200'}`}
+                  className={`w-full rounded-lg border p-4 text-left transition ${selectedOrg?.id === org.id ? 'border-slate-700 bg-slate-50' : 'border-slate-200 bg-white hover:border-slate-400'}`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">

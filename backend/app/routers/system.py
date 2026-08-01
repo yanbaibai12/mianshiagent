@@ -12,6 +12,7 @@ from app.models import KnowledgeChunk, KnowledgeDocument, ResumeChunk, User
 from app.services.auth_service import get_current_user, require_admin_user
 from app.services.audit import log_audit_event
 from app.services.alerting import build_alerting_status, dispatch_system_alerts
+from app.services.embedding_service import embedding_probe
 from app.services.monitoring import build_system_alerts
 from app.services.operations import build_backup_status, create_sqlite_backup, request_metrics
 from app.services.resume_index import reindex_all_resume_chunks
@@ -36,6 +37,32 @@ class ResumeReindexAllRequest(BaseModel):
 class AlertNotifyRequest(BaseModel):
     include_warnings: bool = False
     force: bool = False
+
+
+def _rag_index_consistency(vector_status: dict[str, Any]) -> dict[str, Any]:
+    chunk_count = int(vector_status.get("chunk_count") or 0)
+    points_count = int(vector_status.get("points_count") or 0)
+    resume_chunk_count = int(vector_status.get("resume_chunk_count") or 0)
+    resume_points_count = int(vector_status.get("resume_points_count") or 0)
+    configured_size = int(vector_status.get("configured_vector_size") or 0)
+    actual_size = vector_status.get("actual_vector_size")
+    resume_actual_size = vector_status.get("resume_actual_vector_size")
+    knowledge_ratio = 1.0 if chunk_count == 0 else min(1.0, points_count / max(1, chunk_count))
+    resume_ratio = 1.0 if resume_chunk_count == 0 else min(1.0, resume_points_count / max(1, resume_chunk_count))
+    return {
+        "knowledge_sql_chunks": chunk_count,
+        "knowledge_vector_points": points_count,
+        "knowledge_index_ratio": round(knowledge_ratio, 3),
+        "resume_sql_chunks": resume_chunk_count,
+        "resume_vector_points": resume_points_count,
+        "resume_index_ratio": round(resume_ratio, 3),
+        "knowledge_vector_size_ok": actual_size in {None, configured_size},
+        "resume_vector_size_ok": resume_actual_size in {None, configured_size},
+        "overall_ok": knowledge_ratio >= 0.95
+        and resume_ratio >= 0.95
+        and actual_size in {None, configured_size}
+        and resume_actual_size in {None, configured_size},
+    }
 
 
 @router.get("/status")
@@ -88,6 +115,7 @@ async def status(
         "llm": {
             "provider": llm_provider,
             "model": settings.LLM_MODEL,
+            "profiles": settings.llm_profiles(),
             "configured": llm_provider == "local" or bool(settings.LLM_API_KEY),
             "local_fallback": llm_provider == "local" or not bool(settings.LLM_API_KEY),
             "fallback_allowed": settings.LLM_ALLOW_FALLBACK,
@@ -99,6 +127,7 @@ async def status(
             "chunk_count": chunk_count,
             "resume_chunk_count": resume_chunk_count,
             "vector_store": vector_status,
+            "index_consistency": _rag_index_consistency(vector_status),
             "rerank": rerank_snapshot,
         },
         "limits": {
@@ -168,6 +197,48 @@ async def system_alerts(
         vector_status=vector_status,
         rerank_status=rerank_status(),
     )
+
+
+@router.get("/rag/health")
+async def rag_health(
+    active: bool = False,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    vector_status = await vector_store_status(db)
+    rerank_snapshot = rerank_status()
+    payload: dict[str, Any] = {
+        "active_probe": active,
+        "vector_store": vector_status,
+        "index_consistency": _rag_index_consistency(vector_status),
+        "embedding": vector_status.get("embedding") or {},
+        "rerank": rerank_snapshot,
+        "recommendations": [],
+    }
+    if active:
+        payload["embedding_probe"] = await asyncio.to_thread(embedding_probe)
+        if rerank_snapshot.get("enabled"):
+            order, observation = await asyncio.to_thread(
+                rerank_documents,
+                "RAG RRF Qdrant Redis Agent 面试题",
+                [
+                    "RAG 系统需要切片、embedding、召回、RRF 融合和重排。",
+                    "普通登录接口主要关注密码校验、Token 和权限。",
+                    "Redis 队列需要处理重试、幂等、进度和服务重启恢复。",
+                ],
+            )
+            payload["rerank_probe"] = {"order": order, "observation": observation}
+
+    if not payload["index_consistency"]["overall_ok"]:
+        payload["recommendations"].append("执行 /api/system/admin/reindex-resumes 或重建 Qdrant collection，确保 SQL chunk 与向量点数一致。")
+    embedding_last = payload.get("embedding_probe") or (payload.get("embedding") or {}).get("last_call") or {}
+    if embedding_last.get("fallback_used"):
+        payload["recommendations"].append("Embedding 发生 fallback，生产环境应检查 BGE-M3 服务和 1024 维向量配置。")
+    rerank_last = (payload.get("rerank_probe") or {}).get("observation") or (rerank_snapshot.get("last_call") or {})
+    if rerank_last.get("fallback_used"):
+        payload["recommendations"].append("Reranker 发生 fallback，检查 bge-reranker-v2-m3 权重、远程服务或超时配置。")
+    payload["health"] = "ok" if payload["index_consistency"]["overall_ok"] and not payload["recommendations"] else "warning"
+    return payload
 
 
 @router.post("/admin/alerts/notify")

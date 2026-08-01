@@ -104,6 +104,22 @@ def run_release_checks(settings: Settings) -> dict:
         )
     )
 
+    explicit_core_models = [
+        settings.LLM_JD_ADAPT_MODEL,
+        settings.LLM_INTERVIEW_QUESTION_MODEL,
+        settings.LLM_ANSWER_SCORE_MODEL,
+        settings.LLM_INTERVIEW_REPORT_MODEL,
+    ]
+    llm_profiles_missing = any(not str(model or "").strip() for model in explicit_core_models)
+    checks.append(
+        ReleaseCheck(
+            key="llm_profiles",
+            severity="warning" if llm_profiles_missing else "pass",
+            message="核心 AI 功能存在未显式配置的模型 profile" if llm_profiles_missing else "核心 AI 功能模型 profile 已显式配置",
+            recommendation="为 JD 优化、面试出题、答案评分、报告生成分别配置 LLM_*_MODEL，并在 /api/system/status 查看 prompt_version 和 model。",
+        )
+    )
+
     cors_unsafe = "*" in settings.CORS_ALLOW_ORIGINS or (is_production and _has_local_origin(settings.CORS_ALLOW_ORIGINS))
     checks.append(
         ReleaseCheck(

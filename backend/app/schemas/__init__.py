@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 from pydantic import BaseModel, Field
@@ -222,6 +222,25 @@ class TemplateResponse(BaseModel):
 class InterviewCreateRequest(BaseModel):
     resume_id: UUID
     jd_text: str | None = Field(default=None, max_length=40_000)
+    template_id: str | None = Field(default=None, max_length=80)
+    target_company: str | None = Field(default=None, max_length=160)
+    target_position: str | None = Field(default=None, max_length=200)
+
+
+class InterviewTemplateResponse(BaseModel):
+    template_id: str
+    name: str
+    scenario: str
+    module_ratios: dict[str, float]
+    module_question_limits: dict[str, int]
+    question_count: int
+    module_order: list[str]
+    question_focus: list[str]
+    scoring_dimensions: list[dict[str, Any]]
+    report_focus: list[str]
+    use_training_profile: bool
+    use_company_profile: bool
+    next_round_suggestions: list[str] = Field(default_factory=list)
 
 
 class InterviewResponse(BaseModel):
@@ -235,6 +254,14 @@ class InterviewResponse(BaseModel):
     summary: str | None = None
     weak_points: list[str] | None = None
     suggestions: list[str] | None = None
+    report_details: dict[str, Any] | None = None
+    interview_template_id: str = "comprehensive"
+    interview_template_name: str = "综合面"
+    template_config_snapshot: dict[str, Any] | None = None
+    target_company: str | None = None
+    target_position: str | None = None
+    company_profile_id: UUID | None = None
+    company_profile_snapshot: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -253,9 +280,12 @@ class InterviewQuestionResponse(BaseModel):
     question: str
     user_answer: str | None = None
     scores: dict[str, Any] | None = None
+    score_details: dict[str, Any] | None = None
     total_score: float | None = None
     feedback: str | None = None
     refined_answer: str | None = None
+    evidence: list[dict[str, Any]] | None = None
+    question_quality: dict[str, Any] | None = None
     answered_at: datetime | None = None
 
     class Config:
@@ -272,11 +302,19 @@ class AnswerSubmitResponse(InterviewQuestionResponse):
 
 class InterviewReportResponse(BaseModel):
     id: UUID
+    interview_template_id: str = "comprehensive"
+    interview_template_name: str = "综合面"
+    template_config_snapshot: dict[str, Any] | None = None
+    target_company: str | None = None
+    target_position: str | None = None
+    company_profile_id: UUID | None = None
+    company_profile_snapshot: dict[str, Any] | None = None
     total_score: float
     dimension_scores: dict[str, Any]
     summary: str
     weak_points: list[str]
     suggestions: list[str]
+    report_details: dict[str, Any] | None = None
     questions: list[InterviewQuestionResponse]
 
 
@@ -297,6 +335,239 @@ class KnowledgeStatsResponse(BaseModel):
     chunk_count: int
     categories: list[str]
     vector_store: dict[str, Any] = Field(default_factory=dict)
+
+
+# ==================== Community / Question bank ====================
+
+class AgentQuestionPracticeUpdateRequest(BaseModel):
+    mastery_status: str | None = Field(default=None, pattern=r"^(unseen|known|unknown|review)$")
+    is_favorite: bool | None = None
+    is_wrong: bool | None = None
+    next_review_at: datetime | None = None
+
+
+class AgentQuestionPracticeStateResponse(BaseModel):
+    question_id: str
+    mastery_status: str
+    is_favorite: bool
+    is_wrong: bool
+    review_count: int
+    known_count: int
+    wrong_count: int
+    next_review_at: datetime | None = None
+    last_practiced_at: datetime | None = None
+    updated_at: datetime
+
+
+class AgentQuestionBankItemResponse(BaseModel):
+    id: str
+    section: str
+    difficulty: str
+    roles: list[str]
+    skills: list[str]
+    question: str
+    concise_answer: str
+    deep_dive_answer: str | None = None
+    focus: str
+    scenario: str
+    answer_points: list[str]
+    followups: list[str]
+    scoring: list[str]
+    red_flags: list[str]
+    keywords: list[str]
+    tags: list[str] = Field(default_factory=list)
+    source_title: str
+    source_version: str
+    practice_state: AgentQuestionPracticeStateResponse | None = None
+
+
+class AgentQuestionBankListResponse(BaseModel):
+    items: list[AgentQuestionBankItemResponse]
+    total: int
+    limit: int
+    offset: int
+    filters: dict[str, list[str]]
+
+
+class TrainingProfileDimensionResponse(BaseModel):
+    dimension_key: str
+    dimension_label: str
+    mastery_score: int
+    exposure_count: int
+    known_count: int
+    weak_count: int
+    low_score_count: int
+    last_signal: str | None = None
+    last_source: str | None = None
+    last_practiced_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class TrainingProfileResponse(BaseModel):
+    dimensions: list[TrainingProfileDimensionResponse]
+    weakest_dimensions: list[TrainingProfileDimensionResponse]
+    stats: dict[str, Any] = Field(default_factory=dict)
+
+
+# ==================== Training plans ====================
+
+class TrainingPlanGenerateRequest(BaseModel):
+    source_interview_id: UUID | None = None
+    week_start: date | None = None
+
+
+class TrainingPlanTaskUpdateRequest(BaseModel):
+    status: str | None = Field(default=None, pattern=r"^(pending|completed|skipped)$")
+    scheduled_date: date | None = None
+
+
+class TrainingPlanTaskResponse(BaseModel):
+    id: UUID
+    task_type: str
+    title: str
+    description: str
+    scheduled_date: date
+    estimated_minutes: int
+    priority: int
+    status: str
+    related_question_id: str | None = None
+    related_interview_id: UUID | None = None
+    related_experience_id: UUID | None = None
+    related_company_profile_id: UUID | None = None
+    target_dimensions: list[str] = Field(default_factory=list)
+    recommendation_reason: str
+    completed_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TrainingPlanResponse(BaseModel):
+    id: UUID
+    organization_id: UUID
+    source_interview_id: UUID | None = None
+    week_start: date
+    week_end: date
+    status: str
+    plan_summary: str
+    estimated_minutes: int
+    completion_rate: int
+    generation_metadata: dict[str, Any] = Field(default_factory=dict)
+    tasks: list[TrainingPlanTaskResponse] = Field(default_factory=list)
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class InterviewExperienceCreateRequest(BaseModel):
+    company: str = Field(min_length=1, max_length=160)
+    position: str = Field(min_length=1, max_length=200)
+    city: str | None = Field(default=None, max_length=80)
+    interview_date: date | None = None
+    rounds: str | None = Field(default=None, max_length=200)
+    difficulty: str = Field(default="medium", pattern=r"^(easy|medium|hard|unknown)$")
+    result: str = Field(default="unknown", pattern=r"^(offer|passed|failed|pending|unknown)$")
+    tags: list[str] = Field(default_factory=list, max_length=12)
+    questions: list[str] = Field(default_factory=list, max_length=20)
+    process: str | None = Field(default=None, max_length=4_000)
+    content: str = Field(min_length=10, max_length=12_000)
+    visibility: str = Field(default="public", pattern=r"^(public|organization|private)$")
+    is_anonymous: bool = True
+    allow_profile_usage: bool = True
+
+
+class InterviewExperienceUpdateRequest(BaseModel):
+    company: str | None = Field(default=None, max_length=160)
+    position: str | None = Field(default=None, max_length=200)
+    city: str | None = Field(default=None, max_length=80)
+    interview_date: date | None = None
+    rounds: str | None = Field(default=None, max_length=200)
+    difficulty: str | None = Field(default=None, pattern=r"^(easy|medium|hard|unknown)$")
+    result: str | None = Field(default=None, pattern=r"^(offer|passed|failed|pending|unknown)$")
+    tags: list[str] | None = Field(default=None, max_length=12)
+    questions: list[str] | None = Field(default=None, max_length=20)
+    process: str | None = Field(default=None, max_length=4_000)
+    content: str | None = Field(default=None, min_length=10, max_length=12_000)
+    visibility: str | None = Field(default=None, pattern=r"^(public|organization|private)$")
+    is_anonymous: bool | None = None
+    allow_profile_usage: bool | None = None
+
+
+class InterviewExperienceResponse(BaseModel):
+    id: UUID
+    organization_id: UUID | None = None
+    company: str
+    position: str
+    city: str | None = None
+    interview_date: date | None = None
+    rounds: str | None = None
+    difficulty: str
+    result: str
+    tags: list[str] | None = None
+    questions: list[str] | None = None
+    process: str | None = None
+    content: str
+    visibility: str
+    is_anonymous: bool
+    allow_profile_usage: bool
+    status: str
+    view_count: int
+    like_count: int
+    author_label: str
+    can_edit: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class InterviewExperienceListResponse(BaseModel):
+    items: list[InterviewExperienceResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+class CompanyProfileRebuildRequest(BaseModel):
+    company: str | None = Field(default=None, max_length=160)
+    position: str | None = Field(default=None, max_length=200)
+    scope: str | None = Field(default=None, pattern=r"^(public|organization)$")
+
+
+class CompanyInterviewProfileResponse(BaseModel):
+    id: UUID
+    organization_id: UUID | None = None
+    scope: str
+    company_name: str
+    normalized_company_name: str
+    position_name: str
+    normalized_position_name: str
+    common_rounds: list[dict[str, Any]] = Field(default_factory=list)
+    frequent_questions: list[dict[str, Any]] = Field(default_factory=list)
+    technical_topics: list[dict[str, Any]] = Field(default_factory=list)
+    difficulty_distribution: dict[str, int] = Field(default_factory=dict)
+    interview_count: int
+    source_experience_ids: list[UUID] | None = None
+    profile_confidence: str
+    first_observed_at: datetime | None = None
+    last_observed_at: datetime | None = None
+    generated_at: datetime | None = None
+    updated_at: datetime | None = None
+    profile_version: int
+
+
+class CompanyInterviewProfileListResponse(BaseModel):
+    items: list[CompanyInterviewProfileResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+class CompanyProfileRebuildResponse(BaseModel):
+    rebuilt_count: int
+    profile_ids: list[UUID] = Field(default_factory=list)
 
 
 # ==================== Job Workbench ====================

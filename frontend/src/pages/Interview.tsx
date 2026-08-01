@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
-import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck, MessageSquarePlus, RefreshCcw, Send } from 'lucide-react'
+import { ArrowLeft, Building2, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck, MessageSquarePlus, RefreshCcw, Send } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { Badge, Button, Card, EmptyState, LoadingState, ProgressBar } from '../components/ui'
-import { interviewApi, InterviewQuestion } from '../services/interview'
+import { interviewApi, type Interview, type InterviewQuestion } from '../services/interview'
 
 const scoreLabels: Record<string, string> = {
+  technical_accuracy: '技术准确性',
+  project_understanding: '项目理解',
+  structure_clarity: '表达结构',
+  troubleshooting: '问题定位',
+  engineering_delivery: '工程落地',
+  reflection: '复盘能力',
   completeness: '完整性',
   logic: '逻辑',
   consistency: '一致性',
@@ -13,10 +19,25 @@ const scoreLabels: Record<string, string> = {
   depth: '深度',
 }
 
+const questionTypeLabels: Record<string, string> = {
+  technical_detail: '技术细节',
+  troubleshooting: '排查定位',
+  tradeoff: '方案取舍',
+  metrics_reflection: '结果复盘',
+  project_deep_dive: '项目追问',
+  internship_deep_dive: '实习追问',
+  agent_fundamentals: 'Agent 基础',
+  system_design: '系统设计',
+  behavioral_star: 'STAR 行为题',
+  resume_core: '简历要点',
+}
+
 const moduleLabels = {
   project: '项目深挖',
   internship: '实习经历',
   agent: 'Agent 八股',
+  system_design: '系统设计',
+  behavioral: 'HR / 行为面',
   resume: '简历要点',
   other: '其他题目',
 } as const
@@ -25,6 +46,8 @@ const moduleTones = {
   project: 'info',
   internship: 'success',
   agent: 'warning',
+  system_design: 'info',
+  behavioral: 'success',
   resume: 'neutral',
   other: 'neutral',
 } as const
@@ -35,6 +58,8 @@ function getQuestionModule(question: InterviewQuestion): QuestionModule {
   if (question.module === 'project') return 'project'
   if (question.module === 'internship') return 'internship'
   if (question.module === 'agent_fundamentals') return 'agent'
+  if (question.module === 'system_design') return 'system_design'
+  if (question.module === 'behavioral') return 'behavioral'
   if (question.module === 'resume') return 'resume'
   const pointId = question.resume_point_id || ''
   const title = question.point_title || ''
@@ -52,6 +77,7 @@ function cleanPointTitle(question: InterviewQuestion) {
 export default function InterviewPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [interview, setInterview] = useState<Interview | null>(null)
   const [questions, setQuestions] = useState<InterviewQuestion[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answer, setAnswer] = useState('')
@@ -80,7 +106,7 @@ export default function InterviewPage() {
   )
   const progress = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0
   const questionGroups = useMemo(() => {
-    const orderedModules: QuestionModule[] = ['project', 'internship', 'agent', 'resume', 'other']
+    const orderedModules: QuestionModule[] = ['project', 'internship', 'agent', 'system_design', 'behavioral', 'resume', 'other']
     return orderedModules
       .map((module) => {
         const indexes = questions
@@ -98,7 +124,11 @@ export default function InterviewPage() {
   const loadQuestions = async () => {
     setError('')
     try {
-      const res = await interviewApi.listQuestions(id!)
+      const [interviewRes, res] = await Promise.all([
+        interviewApi.get(id!),
+        interviewApi.listQuestions(id!),
+      ])
+      setInterview(interviewRes.data)
       setQuestions(res.data)
       setCurrentIndex((index) => Math.min(index, Math.max(res.data.length - 1, 0)))
     } catch (err: any) {
@@ -185,7 +215,7 @@ export default function InterviewPage() {
           {error && <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
           <EmptyState
             title="题库尚未生成"
-            description="点击后会基于简历可面试要点生成递进式问题。"
+            description={`点击后会基于 ${interview?.interview_template_name || '综合面'} 轮次和简历可面试要点生成递进式问题。`}
             action={
               <Button type="button" size="lg" onClick={() => handleGenerate()} disabled={generating}>
                 <MessageSquarePlus size={16} />
@@ -199,6 +229,7 @@ export default function InterviewPage() {
   }
 
   const current = questions[currentIndex]
+  const companyProfile = interview?.company_profile_snapshot || null
 
   return (
     <AppShell
@@ -230,14 +261,39 @@ export default function InterviewPage() {
               <div className="flex items-center gap-2">
                 <Badge tone="info">第 {currentIndex + 1} / {questions.length} 题</Badge>
                 <Badge tone={answeredCount >= 3 ? 'success' : 'warning'}>已完成 {answeredCount} 题</Badge>
+                <Badge tone="neutral">{interview?.interview_template_name || '综合面'}</Badge>
               </div>
-              <p className="mt-3 text-sm text-slate-500">当前进度 {progress}%</p>
+              <p className="mt-3 text-sm text-slate-500">
+                当前进度 {progress}%
+                {interview?.template_config_snapshot?.question_focus?.length
+                  ? ` · 本轮重点：${interview.template_config_snapshot.question_focus.slice(0, 4).join(' / ')}`
+                  : ''}
+              </p>
             </div>
             <div className="min-w-64 flex-1 lg:max-w-md">
               <ProgressBar value={progress} />
             </div>
           </div>
         </Card>
+
+        {companyProfile?.matched_company && (
+          <div className="border-y border-slate-200 bg-slate-50 px-4 py-4">
+            <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+              <div className="flex min-w-0 items-start gap-3">
+                <Building2 size={18} className="mt-0.5 shrink-0 text-slate-600" />
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-950">本轮参考：{companyProfile.matched_company} · {companyProfile.matched_position}</div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    {companyProfile.source_count} 份面经 · {companyProfile.profile_confidence === 'low' ? '样本较少' : companyProfile.profile_confidence === 'high' ? '样本充分' : '样本一般'}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 lg:justify-end">
+                {(companyProfile.matched_topics || []).slice(0, 5).map((item: any) => <Badge key={item.topic_key || item.name}>{item.name}</Badge>)}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
           <Card className="xl:sticky xl:top-7 xl:self-start" data-testid="question-navigation">
@@ -262,7 +318,7 @@ export default function InterviewPage() {
                         onClick={() => setCurrentIndex(index)}
                         className={`rounded-md border px-3 py-2 text-left text-sm transition ${
                           index === currentIndex
-                            ? 'border-cyan-300 bg-cyan-50 text-cyan-900'
+                            ? 'border-slate-700 bg-slate-50 text-slate-950'
                             : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                       >
@@ -290,6 +346,39 @@ export default function InterviewPage() {
                 {current.total_score !== null && <Badge tone="success">{current.total_score} 分</Badge>}
               </div>
               <h2 className="text-xl font-bold leading-8 text-slate-950">{current.question}</h2>
+              <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs text-slate-500">题型</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                    {questionTypeLabels[current.question_type] || '追问'}
+                  </div>
+                </div>
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs text-slate-500">难度</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                    {current.question_quality?.difficulty || '中'}
+                  </div>
+                </div>
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <div className="text-xs text-slate-500">考察点</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                    {current.question_quality?.reason || '基于简历经历追问'}
+                  </div>
+                </div>
+              </div>
+              {Boolean(current.evidence?.length) && (
+                <div className="mt-4 rounded-md border border-slate-200 border-l-4 bg-slate-50 p-4" data-testid="question-evidence-panel" style={{ borderLeftColor: '#436052' }}>
+                  <div className="text-sm font-semibold text-slate-950">来源依据</div>
+                  <div className="mt-2 space-y-2">
+                    {current.evidence?.slice(0, 2).map((item, index) => (
+                      <div key={`${item.source_title}-${index}`} className="text-sm leading-6 text-slate-700">
+                        <span className="font-semibold">{item.source_section} / {item.source_title}：</span>
+                        {item.source_snippet}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <textarea
                 placeholder="请输入你的回答..."
                 value={answer}
@@ -345,7 +434,7 @@ export default function InterviewPage() {
                     <p className="card-subtitle">评分会结合简历上下文、岗位知识和回答结构。</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-cyan-700">{submitted.total_score}</div>
+                    <div className="text-3xl font-bold text-slate-900">{submitted.total_score}</div>
                     <div className="text-xs text-slate-500">总分</div>
                   </div>
                 </div>
@@ -356,6 +445,23 @@ export default function InterviewPage() {
                       <div key={key} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <div className="text-xs text-slate-500">{scoreLabels[key] || key}</div>
                         <div className="mt-1 text-xl font-bold text-slate-950">{String(score)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {submitted.score_details && (
+                  <div className="mb-5 grid gap-3 lg:grid-cols-2" data-testid="score-details-panel">
+                    {Object.entries(submitted.score_details).map(([key, detail]: [string, any]) => (
+                      <div key={key} className="rounded-lg border border-slate-200 bg-white p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <h4 className="font-semibold text-slate-950">{scoreLabels[key] || detail.label || key}</h4>
+                          <Badge tone={detail.risk === '高' ? 'danger' : detail.risk === '中' ? 'warning' : 'success'}>
+                            风险 {detail.risk || '低'}
+                          </Badge>
+                        </div>
+                        {detail.issue && <p className="mt-2 text-sm leading-6 text-slate-600">扣分点：{detail.issue}</p>}
+                        {detail.suggestion && <p className="mt-2 text-sm leading-6 text-slate-700">建议：{detail.suggestion}</p>}
                       </div>
                     ))}
                   </div>

@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT))
 
 from app.database import async_session_maker, init_db  # noqa: E402
 from app.services.resume_index import reindex_all_resume_chunks  # noqa: E402
+from app.services.vector_store import vector_store_status  # noqa: E402
 
 
 async def run(*, only_missing: bool, limit: int | None) -> dict:
@@ -17,6 +18,15 @@ async def run(*, only_missing: bool, limit: int | None) -> dict:
     async with async_session_maker() as db:
         result = await reindex_all_resume_chunks(db, only_missing=only_missing, limit=limit)
         await db.commit()
+        status = await vector_store_status(db)
+        resume_chunk_count = int(status.get("resume_chunk_count") or 0)
+        resume_points_count = int(status.get("resume_points_count") or 0)
+        result["validation"] = {
+            "resume_point_count_ok": resume_chunk_count == 0 or resume_points_count >= resume_chunk_count,
+            "resume_vector_size_ok": status.get("resume_actual_vector_size") in {None, status.get("configured_vector_size")},
+            "resume_sql_chunks": resume_chunk_count,
+            "resume_vector_points": resume_points_count,
+        }
         return result
 
 
@@ -28,7 +38,10 @@ def main() -> int:
 
     result = asyncio.run(run(only_missing=not args.force, limit=args.limit))
     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
-    return 0 if result.get("status") in {"success", "partial_failed"} else 1
+    validation = result.get("validation") or {}
+    return 0 if result.get("status") in {"success", "partial_failed"} and all(
+        validation.get(key, False) for key in ["resume_point_count_ok", "resume_vector_size_ok"]
+    ) else 1
 
 
 if __name__ == "__main__":

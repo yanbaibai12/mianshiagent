@@ -54,6 +54,15 @@ router = APIRouter(prefix="/api/resumes", tags=["resumes"])
 settings = get_settings()
 
 FORBIDDEN_RESUME_PHRASES = ("面向该 JD", "可重点呈现", "岗位要求")
+NON_RESUME_OUTPUT_KEYS = {
+    "jd_alignment",
+    "recommended_focus",
+    "advice",
+    "suggestions",
+    "analysis",
+    "optimization_advice",
+    "recommended_changes",
+}
 
 
 def _sanitize_resume_output(value):
@@ -66,6 +75,18 @@ def _sanitize_resume_output(value):
         return [_sanitize_resume_output(item) for item in value]
     if isinstance(value, dict):
         return {key: _sanitize_resume_output(item) for key, item in value.items()}
+    return value
+
+
+def _strip_non_resume_fields(value):
+    if isinstance(value, list):
+        return [_strip_non_resume_fields(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _strip_non_resume_fields(item)
+            for key, item in value.items()
+            if str(key).lower() not in NON_RESUME_OUTPUT_KEYS
+        }
     return value
 
 
@@ -114,10 +135,12 @@ async def _adapt_resume_to_jd(
     )
     messages = [{"role": "user", "content": prompt}]
     started_at = time.monotonic()
-    response = await llm.chat_completion_json(messages)
+    response = await llm.chat_completion_json(messages, feature="jd_adapt")
     if not isinstance(response, dict):
         raise HTTPException(status_code=502, detail="JD 适配结果不可用，请稍后重试")
     response = _sanitize_resume_output(response)
+    if isinstance(response.get("optimized_resume"), dict):
+        response["optimized_resume"] = _strip_non_resume_fields(response["optimized_resume"])
     response["rag_references"] = serialize_rag_references(rag_snippets)
     response["ats_report"] = ats_report
     response["resume_evidence"] = ats_report.get("requirement_evidence", [])
@@ -238,7 +261,7 @@ async def upload_resume(
     messages = [{"role": "user", "content": prompt}]
     started_at = time.monotonic()
     try:
-        parsed_data = await llm.chat_completion_json(messages)
+        parsed_data = await llm.chat_completion_json(messages, feature="resume_parse")
         if not isinstance(parsed_data, dict):
             raise HTTPException(status_code=502, detail="简历结构化结果不可用，请稍后重试")
         llm_metadata = llm.build_usage_metadata(
@@ -777,7 +800,7 @@ async def optimize_resume(
     )
     messages = [{"role": "user", "content": prompt}]
     started_at = time.monotonic()
-    optimized_data = await llm.chat_completion_json(messages)
+    optimized_data = await llm.chat_completion_json(messages, feature="resume_optimize")
     if not isinstance(optimized_data, dict):
         raise HTTPException(status_code=502, detail="简历优化结果不可用，请稍后重试")
     optimized_data["rag_references"] = serialize_rag_references(rag_snippets)

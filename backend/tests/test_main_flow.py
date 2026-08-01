@@ -4,8 +4,11 @@ import hmac
 import os
 import time
 import tempfile
+import threading
 import unittest
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from datetime import date, timedelta
 from pathlib import Path
 
 
@@ -28,10 +31,18 @@ os.environ["VECTOR_STORE_BACKEND"] = "keyword"
 os.environ["QDRANT_SYNC_ON_STARTUP"] = "false"
 os.environ["EMBEDDING_PROVIDER"] = "hash"
 os.environ["RERANK_PROVIDER"] = "none"
+os.environ["RATE_LIMIT_AUTH_REQUESTS"] = "1000"
+os.environ["RATE_LIMIT_API_REQUESTS"] = "5000"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402
+from app.services.company_profiles import (  # noqa: E402
+    canonicalize_question,
+    normalize_company_name,
+    normalize_position_name,
+    normalize_rounds,
+)
 
 
 SAMPLE_RESUME = """姓名：张三
@@ -258,6 +269,472 @@ class MainFlowTest(unittest.TestCase):
         self.assertRegex(recall_text, r"RRF|混合检索|召回")
         self.assertIn("metadata", recall["results"][0])
 
+    def test_community_question_bank_and_experience_shares(self):
+        headers = self.auth_headers()
+
+        bank = self.assert_ok(
+            self.client.get(
+                "/api/community/agent-questions",
+                headers=headers,
+                params={"q": "RRF", "limit": 5},
+            )
+        )
+        self.assertGreaterEqual(bank["total"], 1)
+        self.assertGreaterEqual(len(bank["items"]), 1)
+        self.assertIn("concise_answer", bank["items"][0])
+        self.assertIn("核心回答", bank["items"][0]["concise_answer"])
+        self.assertIn("answer_points", bank["items"][0])
+        self.assertIn("followups", bank["items"][0])
+        self.assertIn("skills", bank["filters"])
+
+        card = self.assert_ok(
+            self.client.get(f"/api/community/agent-questions/{bank['items'][0]['id']}", headers=headers)
+        )
+        self.assertEqual(card["id"], bank["items"][0]["id"])
+        self.assertRegex(json.dumps(card, ensure_ascii=False), r"RRF|召回|RAG")
+        self.assertIsNone(card["practice_state"])
+
+        profile = self.assert_ok(self.client.get("/api/community/training-profile", headers=headers))
+        self.assertEqual(len(profile["dimensions"]), 5)
+        self.assertIn("rag", {item["dimension_key"] for item in profile["dimensions"]})
+
+        unknown_state = self.assert_ok(
+            self.client.put(
+                f"/api/community/agent-questions/{card['id']}/practice",
+                headers=headers,
+                json={"mastery_status": "unknown"},
+            )
+        )
+        self.assertEqual(unknown_state["mastery_status"], "unknown")
+        self.assertTrue(unknown_state["is_wrong"])
+        self.assertGreaterEqual(unknown_state["wrong_count"], 1)
+        self.assertIsNotNone(unknown_state["next_review_at"])
+
+        wrong_book = self.assert_ok(
+            self.client.get(
+                "/api/community/agent-questions",
+                headers=headers,
+                params={"practice_filter": "wrong", "limit": 10},
+            )
+        )
+        self.assertIn(card["id"], {item["id"] for item in wrong_book["items"]})
+
+        favorite_state = self.assert_ok(
+            self.client.put(
+                f"/api/community/agent-questions/{card['id']}/practice",
+                headers=headers,
+                json={"is_favorite": True},
+            )
+        )
+        self.assertTrue(favorite_state["is_favorite"])
+        favorite_list = self.assert_ok(
+            self.client.get(
+                "/api/community/agent-questions",
+                headers=headers,
+                params={"practice_filter": "favorite", "limit": 10},
+            )
+        )
+        self.assertIn(card["id"], {item["id"] for item in favorite_list["items"]})
+
+        known_state = self.assert_ok(
+            self.client.put(
+                f"/api/community/agent-questions/{card['id']}/practice",
+                headers=headers,
+                json={"mastery_status": "known"},
+            )
+        )
+        self.assertEqual(known_state["mastery_status"], "known")
+        self.assertFalse(known_state["is_wrong"])
+        self.assertGreaterEqual(known_state["known_count"], 1)
+
+        profile_after = self.assert_ok(self.client.get("/api/community/training-profile", headers=headers))
+        rag_profile = next(item for item in profile_after["dimensions"] if item["dimension_key"] == "rag")
+        self.assertGreaterEqual(rag_profile["exposure_count"], 2)
+        self.assertGreaterEqual(profile_after["stats"]["practice_count"], 1)
+
+        created = self.assert_ok(
+            self.client.post(
+                "/api/community/experiences",
+                headers=headers,
+                json={
+                    "company": "示例科技",
+                    "position": "AI Agent 应用开发实习生",
+                    "city": "上海",
+                    "interview_date": "2026-07-20",
+                    "rounds": "一面 / 二面 / HR 面",
+                    "difficulty": "hard",
+                    "result": "offer",
+                    "tags": ["RAG", "Agent", "RAG"],
+                    "questions": [
+                        "如果用户问 RRF 倒数排序，但召回结果偏离，你会怎么排查？",
+                        "联系我 13800138000 / test@example.com 不应原样保存。",
+                    ],
+                    "process": "一面技术深挖，二面项目复盘，HR 面确认到岗时间。",
+                    "content": "重点追问 RAG、RRF、工具调用失败降级。联系方式 test@example.com，手机号 13800138000，key sk-test-secret-1234567890。",
+                    "visibility": "public",
+                    "is_anonymous": True,
+                },
+            )
+        )
+        self.assertEqual(created["company"], "示例科技")
+        self.assertEqual(created["result"], "offer")
+        self.assertEqual(created["tags"], ["RAG", "Agent"])
+        self.assertIn("[email_redacted]", created["content"])
+        self.assertIn("[phone_redacted]", created["content"])
+        self.assertIn("[key_redacted]", created["content"])
+        self.assertIn("[phone_redacted]", " ".join(created["questions"]))
+        self.assertEqual(created["author_label"], "我（匿名展示）")
+
+        listed = self.assert_ok(
+            self.client.get(
+                "/api/community/experiences",
+                headers=headers,
+                params={"q": "RRF", "result": "offer"},
+            )
+        )
+        self.assertGreaterEqual(listed["total"], 1)
+        self.assertEqual(listed["items"][0]["id"], created["id"])
+
+        detail = self.assert_ok(self.client.get(f"/api/community/experiences/{created['id']}", headers=headers))
+        self.assertEqual(detail["view_count"], created["view_count"] + 1)
+        liked = self.assert_ok(self.client.post(f"/api/community/experiences/{created['id']}/like", headers=headers))
+        self.assertEqual(liked["like_count"], detail["like_count"] + 1)
+
+        exported = self.assert_ok(self.client.get("/api/account/export", headers=headers))
+        self.assertTrue(
+            any(item["id"] == created["id"] for item in exported["interview_experience_shares"])
+        )
+        self.assertTrue(any(item["question_id"] == card["id"] for item in exported["agent_question_practice_states"]))
+        self.assertTrue(any(item["dimension_key"] == "rag" for item in exported["training_profile_dimensions"]))
+
+        deleted = self.assert_ok(self.client.delete(f"/api/community/experiences/{created['id']}", headers=headers))
+        self.assertEqual(deleted["message"], "删除成功")
+        missing = self.client.get(f"/api/community/experiences/{created['id']}", headers=headers)
+        self.assertEqual(missing.status_code, 404)
+
+    def test_interview_round_templates(self):
+        headers = self.auth_headers()
+
+        resume = self.assert_ok(
+            self.client.post(
+                "/api/resumes/upload",
+                headers=headers,
+                json={"title": "多轮模板测试简历", "text": SAMPLE_RESUME},
+            )
+        )
+
+        templates = self.assert_ok(self.client.get("/api/interviews/templates", headers=headers))
+        self.assertEqual(len(templates), 5)
+        template_ids = {template["template_id"] for template in templates}
+        self.assertEqual(
+            template_ids,
+            {"technical_first", "project_deep_dive", "system_design", "hr_behavior", "comprehensive"},
+        )
+
+        default_interview = self.assert_ok(
+            self.client.post(
+                "/api/interviews",
+                headers=headers,
+                json={"resume_id": resume["id"]},
+            )
+        )
+        self.assertEqual(default_interview["interview_template_id"], "comprehensive")
+        self.assertEqual(default_interview["interview_template_name"], "综合面")
+        self.assertEqual(default_interview["template_config_snapshot"]["template_id"], "comprehensive")
+
+        bank = self.assert_ok(
+            self.client.get(
+                "/api/community/agent-questions",
+                headers=headers,
+                params={"q": "RAG", "limit": 1},
+            )
+        )
+        self.assertGreaterEqual(len(bank["items"]), 1)
+        self.assert_ok(
+            self.client.put(
+                f"/api/community/agent-questions/{bank['items'][0]['id']}/practice",
+                headers=headers,
+                json={"mastery_status": "unknown"},
+            )
+        )
+
+        technical = self.assert_ok(
+            self.client.post(
+                "/api/interviews",
+                headers=headers,
+                json={"resume_id": resume["id"], "template_id": "technical_first"},
+            )
+        )
+        self.assertEqual(technical["interview_template_id"], "technical_first")
+        technical_generated = self.assert_ok(
+            self.client.post(f"/api/interviews/{technical['id']}/generate-questions", headers=headers)
+        )
+        self.assertEqual(technical_generated["template"]["template_id"], "technical_first")
+        self.assertGreaterEqual(len(technical_generated["training_focus"]), 1)
+        technical_questions = self.assert_ok(
+            self.client.get(f"/api/interviews/{technical['id']}/questions", headers=headers)
+        )
+        technical_modules = [question["module"] for question in technical_questions]
+        self.assertIn("agent_fundamentals", technical_modules)
+        self.assertGreaterEqual(
+            technical_modules.count("agent_fundamentals"),
+            technical_modules.count("project"),
+        )
+
+        hr = self.assert_ok(
+            self.client.post(
+                "/api/interviews",
+                headers=headers,
+                json={"resume_id": resume["id"], "template_id": "hr_behavior"},
+            )
+        )
+        hr_generated = self.assert_ok(
+            self.client.post(f"/api/interviews/{hr['id']}/generate-questions", headers=headers)
+        )
+        self.assertEqual(hr_generated["template"]["template_id"], "hr_behavior")
+        self.assertEqual(hr_generated["training_focus"], [])
+        hr_questions = self.assert_ok(
+            self.client.get(f"/api/interviews/{hr['id']}/questions", headers=headers)
+        )
+        hr_modules = [question["module"] for question in hr_questions]
+        self.assertIn("behavioral", hr_modules)
+        self.assertNotEqual(set(hr_modules), {"agent_fundamentals"})
+        self.assertGreater(hr_modules.count("behavioral"), hr_modules.count("agent_fundamentals"))
+        self.assertNotEqual(technical_modules, hr_modules)
+
+    def test_company_profiles_feed_interview_generation_with_tenant_isolation(self):
+        owner_headers = self.auth_headers()
+        other_headers = self.auth_headers()
+        admin_headers = self.auth_headers("admin@example.com")
+        company_base = f"画像测试{uuid.uuid4().hex[:8]}科技"
+
+        self.assertEqual(normalize_company_name(f"{company_base}有限公司"), normalize_company_name(company_base))
+        self.assertEqual(normalize_position_name("AI Agent 开发工程师"), normalize_position_name("智能体开发工程师"))
+        self.assertEqual(normalize_rounds("技术初面 / 系统设计 / HR 面")[0]["round_type"], "technical_first")
+        self.assertEqual(canonicalize_question("请说一下检索增强生成的召回率如何评估？"), "RAG的召回率如何评估")
+
+        public_one = self.assert_ok(
+            self.client.post(
+                "/api/community/experiences",
+                headers=owner_headers,
+                json={
+                    "company": f"{company_base}有限公司",
+                    "position": "AI Agent 开发工程师",
+                    "rounds": "技术初面 / 系统设计",
+                    "difficulty": "hard",
+                    "result": "passed",
+                    "tags": ["RAG", "工程化"],
+                    "questions": ["请说一下检索增强生成的召回率如何评估？"],
+                    "content": "重点考察 RAG 召回、重排、可观测性和上线后的质量评测。",
+                    "visibility": "public",
+                    "is_anonymous": True,
+                    "allow_profile_usage": True,
+                },
+            )
+        )
+        self.assertTrue(public_one["allow_profile_usage"])
+        public_two = self.assert_ok(
+            self.client.post(
+                "/api/community/experiences",
+                headers=other_headers,
+                json={
+                    "company": company_base,
+                    "position": "智能体开发工程师",
+                    "rounds": "系统设计 / HR 面",
+                    "difficulty": "medium",
+                    "result": "offer",
+                    "tags": ["RAG", "Tool Calling"],
+                    "questions": ["RAG 的召回率应该如何评估？"],
+                    "content": "讨论检索指标、工具调用参数校验和失败降级。",
+                    "visibility": "public",
+                    "is_anonymous": True,
+                    "allow_profile_usage": True,
+                },
+            )
+        )
+        self.assertIn("id", public_two)
+        public_three = self.assert_ok(
+            self.client.post(
+                "/api/community/experiences",
+                headers=owner_headers,
+                json={
+                    "company": company_base,
+                    "position": "AI Agent 开发工程师",
+                    "rounds": "系统设计",
+                    "difficulty": "hard",
+                    "result": "passed",
+                    "tags": ["系统设计", "工程化"],
+                    "questions": ["如何设计可观测、可扩展的 Agent 检索与工具调用链路？"],
+                    "content": "系统设计轮重点讨论数据流、降级、监控、容量和稳定性。",
+                    "visibility": "public",
+                    "is_anonymous": True,
+                    "allow_profile_usage": True,
+                },
+            )
+        )
+
+        self.assert_ok(
+            self.client.post(
+                "/api/community/experiences",
+                headers=owner_headers,
+                json={
+                    "company": company_base,
+                    "position": "AI Agent 开发工程师",
+                    "rounds": "项目深挖",
+                    "difficulty": "hard",
+                    "result": "unknown",
+                    "tags": ["内部"],
+                    "questions": ["内部私有题 private-only-marker，联系 secret@example.com"],
+                    "content": "这条面经仅自己可见，手机号 13800138000。",
+                    "visibility": "private",
+                    "is_anonymous": True,
+                    "allow_profile_usage": True,
+                },
+            )
+        )
+        self.assert_ok(
+            self.client.post(
+                "/api/community/experiences",
+                headers=owner_headers,
+                json={
+                    "company": company_base,
+                    "position": "AI Agent 开发工程师",
+                    "rounds": "主管面",
+                    "difficulty": "hard",
+                    "result": "unknown",
+                    "tags": ["未授权"],
+                    "questions": ["未授权画像题 opt-out-only-marker"],
+                    "content": "用户没有授权将这条公开面经用于公司画像。",
+                    "visibility": "public",
+                    "is_anonymous": True,
+                    "allow_profile_usage": False,
+                },
+            )
+        )
+        organization_share = self.assert_ok(
+            self.client.post(
+                "/api/community/experiences",
+                headers=owner_headers,
+                json={
+                    "company": company_base,
+                    "position": "AI Agent 开发工程师",
+                    "rounds": "项目深挖",
+                    "difficulty": "medium",
+                    "result": "passed",
+                    "tags": ["组织题"],
+                    "questions": ["组织内部链路如何做故障复盘 org-only-marker"],
+                    "content": "组织内可复用的故障排查记录。",
+                    "visibility": "organization",
+                    "is_anonymous": True,
+                    "allow_profile_usage": True,
+                },
+            )
+        )
+
+        owner_profiles = self.assert_ok(
+            self.client.get("/api/company-profiles", headers=owner_headers, params={"company": company_base})
+        )
+        self.assertEqual(owner_profiles["total"], 2)
+        public_profile = next(item for item in owner_profiles["items"] if item["scope"] == "public")
+        organization_profile = next(item for item in owner_profiles["items"] if item["scope"] == "organization")
+        self.assertEqual(public_profile["interview_count"], 3)
+        self.assertEqual(organization_profile["interview_count"], 1)
+        self.assertIsNone(public_profile["source_experience_ids"])
+        public_json = json.dumps(public_profile, ensure_ascii=False)
+        self.assertNotIn("private-only-marker", public_json)
+        self.assertNotIn("opt-out-only-marker", public_json)
+        self.assertNotIn("secret@example.com", public_json)
+        self.assertNotIn("13800138000", public_json)
+
+        other_profiles = self.assert_ok(
+            self.client.get("/api/company-profiles", headers=other_headers, params={"company": company_base})
+        )
+        self.assertEqual(other_profiles["total"], 1)
+        self.assertEqual(other_profiles["items"][0]["scope"], "public")
+        self.assertNotIn("org-only-marker", json.dumps(other_profiles, ensure_ascii=False))
+
+        forbidden = self.client.post(
+            "/api/company-profiles/rebuild",
+            headers=owner_headers,
+            json={"company": company_base, "scope": "public"},
+        )
+        self.assertEqual(forbidden.status_code, 403)
+        first_rebuild = self.assert_ok(
+            self.client.post(
+                "/api/company-profiles/rebuild",
+                headers=admin_headers,
+                json={"company": company_base, "scope": "public"},
+            )
+        )
+        second_rebuild = self.assert_ok(
+            self.client.post(
+                "/api/company-profiles/rebuild",
+                headers=admin_headers,
+                json={"company": company_base, "scope": "public"},
+            )
+        )
+        self.assertEqual(first_rebuild["rebuilt_count"], 1)
+        self.assertEqual(second_rebuild["rebuilt_count"], 1)
+        admin_detail = self.assert_ok(
+            self.client.get(f"/api/company-profiles/{public_profile['id']}", headers=admin_headers)
+        )
+        self.assertEqual(
+            set(admin_detail["source_experience_ids"]),
+            {public_one["id"], public_two["id"], public_three["id"]},
+        )
+
+        resume = self.assert_ok(
+            self.client.post(
+                "/api/resumes/upload",
+                headers=owner_headers,
+                json={"title": "公司画像面试简历", "text": SAMPLE_RESUME},
+            )
+        )
+        interview = self.assert_ok(
+            self.client.post(
+                "/api/interviews",
+                headers=owner_headers,
+                json={
+                    "resume_id": resume["id"],
+                    "template_id": "technical_first",
+                    "target_company": company_base,
+                    "target_position": "AI Agent 开发工程师",
+                },
+            )
+        )
+        self.assertEqual(interview["company_profile_id"], public_profile["id"])
+        self.assertEqual(interview["company_profile_snapshot"]["source_count"], 3)
+        self.assertEqual(interview["company_profile_snapshot"]["matched_company"], public_profile["company_name"])
+
+        generated = self.assert_ok(
+            self.client.post(f"/api/interviews/{interview['id']}/generate-questions", headers=owner_headers)
+        )
+        self.assertEqual(generated["company_profile"]["source_count"], 3)
+        self.assertEqual(generated["company_module_bias"]["target_module"], "system_design")
+        generated_questions = self.assert_ok(
+            self.client.get(f"/api/interviews/{interview['id']}/questions", headers=owner_headers)
+        )
+        self.assertTrue(any(question["question_quality"].get("company_profile") for question in generated_questions))
+        self.assertGreaterEqual(
+            sum(question["module"] == "system_design" for question in generated_questions),
+            2,
+        )
+
+        fallback = self.assert_ok(
+            self.client.post(
+                "/api/interviews",
+                headers=owner_headers,
+                json={
+                    "resume_id": resume["id"],
+                    "target_company": f"不存在公司{uuid.uuid4().hex[:6]}",
+                    "target_position": "后端开发",
+                },
+            )
+        )
+        self.assertIsNone(fallback["company_profile_id"])
+        self.assertEqual(fallback["company_profile_snapshot"], {})
+        self.assertEqual(organization_share["visibility"], "organization")
+
     def test_resume_to_report_flow(self):
         headers = self.auth_headers()
 
@@ -335,6 +812,12 @@ class MainFlowTest(unittest.TestCase):
         self.assertGreaterEqual(len(adapted["ats_report"]["dimensions"]), 6)
         self.assertIn("resume_evidence", adapted)
         self.assertNotIn("面向该 JD", json.dumps(adapted, ensure_ascii=False))
+        self.assertNotIn("jd_alignment", adapted)
+        self.assertGreaterEqual(len(adapted.get("change_details") or []), 1)
+        changed_text = json.dumps(adapted.get("change_details") or [], ensure_ascii=False)
+        self.assertRegex(changed_text, r"负责|参与|完成|实现|使用|联调|交付|验证")
+        self.assertRegex(changed_text, r"FastAPI|Redis|PostgreSQL|接口")
+        self.assertNotRegex(changed_text, r"建议|进一步明确|可重点呈现|面向该 JD|岗位要求|本地 MVP|应该覆盖|基础题型")
 
         versions = self.assert_ok(self.client.get(f"/api/resumes/{resume['id']}/versions", headers=headers))
         self.assertGreaterEqual(len(versions), 2)
@@ -372,6 +855,14 @@ class MainFlowTest(unittest.TestCase):
                 },
             )
         )
+        preflight_job = self.assert_ok(self.client.post(f"/api/jobs/{job['id']}/preflight", headers=headers))
+        self.assertGreater(preflight_job["match_score"], 0)
+        review = (preflight_job["ats_report"] or {}).get("application_review") or {}
+        self.assertIn(review.get("decision"), {"apply_now", "revise_before_apply", "low_priority", "not_recommended"})
+        self.assertIn("actions_before_apply", review)
+        self.assertIn("reviewer_checks", review)
+        self.assertNotIn("jd_text", json.dumps(review, ensure_ascii=False))
+
         job_task_payload = self.assert_ok(self.client.post(f"/api/jobs/{job['id']}/adapt-resume-task", headers=headers))
         job_task_id = job_task_payload["task"]["id"]
         job_task = job_task_payload["task"]
@@ -384,6 +875,9 @@ class MainFlowTest(unittest.TestCase):
         job_after = self.assert_ok(self.client.get(f"/api/jobs/{job['id']}", headers=headers))
         self.assertEqual(job_after["status"], "optimized")
         self.assertIsNotNone(job_after["current_resume_version_id"])
+        optimized_review = (job_after["ats_report"] or {}).get("application_review") or {}
+        self.assertIn(optimized_review.get("decision"), {"apply_now", "revise_before_apply", "low_priority", "not_recommended"})
+        self.assertGreaterEqual(len(optimized_review.get("reviewer_checks") or []), 3)
 
         quality = self.assert_ok(
             self.client.post(
@@ -452,6 +946,8 @@ class MainFlowTest(unittest.TestCase):
                 json={"resume_id": resume["id"]},
             )
         )
+        self.assertIn("Python", interview.get("jd_text") or "")
+        self.assertIn("Redis", interview.get("jd_text") or "")
 
         generated = self.assert_ok(
             self.client.post(f"/api/interviews/{interview['id']}/generate-questions", headers=headers)
@@ -473,10 +969,16 @@ class MainFlowTest(unittest.TestCase):
         self.assertIn("internship", modules)
         self.assertIn("agent_fundamentals", modules)
         self.assertTrue(all(question.get("source_section") is not None for question in questions))
+        self.assertTrue(all(question.get("question_quality") for question in questions))
+        self.assertTrue(any(question.get("evidence") for question in questions))
+        evidence_text = json.dumps([question.get("evidence") for question in questions], ensure_ascii=False)
+        self.assertRegex(evidence_text, r"source_section|source_title|source_snippet")
         self.assertIn("agent_fundamentals", question_types)
         self.assertRegex(question_text, r"RAG|FastAPI|Redis|PostgreSQL|Agent|Qdrant|BGE-M3")
         self.assertRegex(question_text, r"RRF|混合检索|BM25")
         self.assertNotIn("面向该 JD", question_text)
+        self.assertEqual(len({question.get("question") for question in questions}), len(questions))
+        self.assertNotRegex(question_text, r"技术栈模块|模块改成|改成传统|基础题型|应该覆盖哪些|覆盖哪些题型|题库模块")
 
         regenerated = self.assert_ok(
             self.client.post(
@@ -504,6 +1006,9 @@ class MainFlowTest(unittest.TestCase):
             self.assertIn("technical_accuracy", scored["scores"])
             self.assertIn("engineering_delivery", scored["scores"])
             self.assertIn("reflection", scored["scores"])
+            self.assertIn("technical_accuracy", scored["score_details"])
+            self.assertIn("issue", scored["score_details"]["technical_accuracy"])
+            self.assertIn("suggestion", scored["score_details"]["technical_accuracy"])
 
         report = self.assert_ok(
             self.client.post(f"/api/interviews/{interview['id']}/finish", headers=headers)
@@ -512,6 +1017,9 @@ class MainFlowTest(unittest.TestCase):
         self.assertIn("technical_accuracy", report["dimension_scores"])
         self.assertIn("troubleshooting", report["dimension_scores"])
         self.assertIn("engineering_delivery", report["dimension_scores"])
+        self.assertIn(report["report_details"]["hire_signal"], {"strong", "positive", "borderline", "weak"})
+        self.assertIn("module_scores", report["report_details"])
+        self.assertIn("follow_up_training_plan", report["report_details"])
 
         exported = self.assert_ok(
             self.client.get(f"/api/interviews/{interview['id']}/report/export", headers=headers)
@@ -568,6 +1076,163 @@ class MainFlowTest(unittest.TestCase):
         )
         self.assertEqual(enterprise["plan"], "enterprise")
         self.assertIsNone(enterprise["expires_at"])
+
+    def test_training_plan_closed_loop_and_tenant_isolation(self):
+        headers = self.auth_headers()
+        other_headers = self.auth_headers()
+        company = f"训练计划{uuid.uuid4().hex[:8]}科技"
+
+        bank = self.assert_ok(
+            self.client.get(
+                "/api/community/agent-questions",
+                headers=headers,
+                params={"q": "RAG", "limit": 1},
+            )
+        )
+        question_id = bank["items"][0]["id"]
+        self.assert_ok(
+            self.client.put(
+                f"/api/community/agent-questions/{question_id}/practice",
+                headers=headers,
+                json={"mastery_status": "unknown", "is_favorite": True},
+            )
+        )
+        self.assert_ok(
+            self.client.post(
+                "/api/community/experiences",
+                headers=headers,
+                json={
+                    "company": company,
+                    "position": "AI Agent 开发工程师",
+                    "rounds": "技术一面 / 项目深挖",
+                    "difficulty": "medium",
+                    "result": "passed",
+                    "tags": ["RAG", "工程化"],
+                    "questions": ["如何评估 RAG 召回率并定位噪声来源？"],
+                    "content": "技术一面关注 RAG 检索质量，项目轮关注个人贡献与故障复盘。",
+                    "visibility": "public",
+                    "is_anonymous": True,
+                    "allow_profile_usage": True,
+                },
+            )
+        )
+        resume = self.assert_ok(
+            self.client.post(
+                "/api/resumes/upload",
+                headers=headers,
+                json={"title": "训练计划测试简历", "text": SAMPLE_RESUME},
+            )
+        )
+        interview = self.assert_ok(
+            self.client.post(
+                "/api/interviews",
+                headers=headers,
+                json={
+                    "resume_id": resume["id"],
+                    "template_id": "technical_first",
+                    "target_company": company,
+                    "target_position": "AI Agent 开发工程师",
+                },
+            )
+        )
+        self.assertEqual(interview["status"], "ongoing")
+
+        plan = self.assert_ok(
+            self.client.post(
+                "/api/training-plans/generate",
+                headers=headers,
+                json={"source_interview_id": interview["id"]},
+            )
+        )
+        self.assertEqual(
+            date.fromisoformat(plan["week_end"]) - date.fromisoformat(plan["week_start"]),
+            timedelta(days=6),
+        )
+        task_types = {task["task_type"] for task in plan["tasks"]}
+        self.assertTrue(
+            {"wrong_review", "mock_interview", "project_review", "experience_reading"}.issubset(task_types)
+        )
+        daily_minutes = {}
+        for task in plan["tasks"]:
+            if task["status"] != "skipped":
+                daily_minutes[task["scheduled_date"]] = daily_minutes.get(task["scheduled_date"], 0) + task["estimated_minutes"]
+        self.assertTrue(daily_minutes)
+        self.assertLessEqual(max(daily_minutes.values()), 45)
+
+        repeated = self.assert_ok(
+            self.client.post(
+                "/api/training-plans/generate",
+                headers=headers,
+                json={"source_interview_id": interview["id"]},
+            )
+        )
+        self.assertEqual(repeated["id"], plan["id"])
+
+        forbidden = self.client.get(f"/api/training-plans/{plan['id']}", headers=other_headers)
+        self.assertEqual(forbidden.status_code, 404, forbidden.text)
+
+        wrong_task = next(task for task in plan["tasks"] if task["task_type"] == "wrong_review")
+        completed = self.assert_ok(
+            self.client.patch(
+                f"/api/training-plans/{plan['id']}/tasks/{wrong_task['id']}",
+                headers=headers,
+                json={"status": "completed"},
+            )
+        )
+        self.assertGreater(completed["completion_rate"], 0)
+        completed_task = next(task for task in completed["tasks"] if task["id"] == wrong_task["id"])
+        self.assertEqual(completed_task["status"], "completed")
+
+        profile = self.assert_ok(self.client.get("/api/community/training-profile", headers=headers))
+        self.assertTrue(any(item["known_count"] > 0 for item in profile["dimensions"]))
+
+        outside_week = (date.fromisoformat(plan["week_end"]) + timedelta(days=1)).isoformat()
+        invalid_move = self.client.patch(
+            f"/api/training-plans/{plan['id']}/tasks/{wrong_task['id']}",
+            headers=headers,
+            json={"scheduled_date": outside_week},
+        )
+        self.assertEqual(invalid_move.status_code, 400, invalid_move.text)
+
+        regenerated = self.assert_ok(
+            self.client.post(f"/api/training-plans/{plan['id']}/regenerate", headers=headers)
+        )
+        preserved = next(task for task in regenerated["tasks"] if task["id"] == wrong_task["id"])
+        self.assertEqual(preserved["status"], "completed")
+        serialized = json.dumps(regenerated, ensure_ascii=False)
+        for secret in ("13800138000", "zhangsan@example.com", "sk-test-secret"):
+            self.assertNotIn(secret, serialized)
+
+    def test_training_plan_concurrent_generation_is_idempotent(self):
+        headers = self.auth_headers()
+        request_count = 4
+        barrier = threading.Barrier(request_count)
+
+        def generate():
+            barrier.wait(timeout=10)
+            return self.client.post(
+                "/api/training-plans/generate",
+                headers=headers,
+                json={},
+            )
+
+        with ThreadPoolExecutor(max_workers=request_count) as executor:
+            responses = list(executor.map(lambda _index: generate(), range(request_count)))
+
+        for response in responses:
+            self.assertEqual(response.status_code, 200, response.text)
+        payloads = [response.json() for response in responses]
+        self.assertEqual(len({payload["id"] for payload in payloads}), 1)
+        self.assertTrue(all(payload["tasks"] for payload in payloads))
+
+        current = self.assert_ok(self.client.get("/api/training-plans/current", headers=headers))
+        self.assertEqual(current["id"], payloads[0]["id"])
+        exported = self.assert_ok(self.client.get("/api/account/export", headers=headers))
+        self.assertEqual(len(exported["training_plans"]), 1)
+        generation_usage = [
+            record for record in exported["usage_records"] if record["feature"] == "training_plan_generate"
+        ]
+        self.assertEqual(len(generation_usage), 1)
 
 
 if __name__ == "__main__":
