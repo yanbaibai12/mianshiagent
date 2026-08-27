@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import tempfile
@@ -944,6 +945,95 @@ class MainFlowTest(unittest.TestCase):
 
         owned = self.assert_ok(self.client.get(f"/api/agent-shadow/runs/{created['id']}", headers=owner_headers))
         self.assertEqual(owned["id"], created["id"])
+        second_created = self.assert_ok(
+            self.client.post(
+                "/api/agent-shadow/runs",
+                headers={**owner_headers, "Idempotency-Key": f"shadow-{uuid.uuid4().hex}"},
+                json={**payload, "objective": "验证用户隔离的游标分页"},
+            )
+        )
+        listing = self.assert_ok(
+            self.client.get(
+                "/api/agent-shadow/runs?status=completed&current_agent_id=resume-rewriter&limit=1",
+                headers=owner_headers,
+            )
+        )
+        self.assertEqual(len(listing["items"]), 1)
+        self.assertEqual(listing["items"][0]["input_mode"], "resume-rewrite")
+        self.assertIsNotNone(listing["next_cursor"])
+        next_page = self.assert_ok(
+            self.client.get(
+                f"/api/agent-shadow/runs?status=completed&current_agent_id=resume-rewriter&limit=1&cursor={listing['next_cursor']}",
+                headers=owner_headers,
+            )
+        )
+        listed_ids = [listing["items"][0]["id"], next_page["items"][0]["id"]]
+        self.assertEqual(set(listed_ids), {created["id"], second_created["id"]})
+        self.assertEqual(len(listed_ids), len(set(listed_ids)))
+        self.assertIsNone(next_page["next_cursor"])
+        self.assertEqual(
+            self.assert_ok(self.client.get("/api/agent-shadow/runs?status=failed", headers=owner_headers))["items"],
+            [],
+        )
+        self.assertEqual(
+            self.assert_ok(self.client.get("/api/agent-shadow/runs?current_agent_id=missing", headers=owner_headers))[
+                "items"
+            ],
+            [],
+        )
+        self.assertEqual(
+            self.assert_ok(self.client.get("/api/agent-shadow/runs", headers=other_headers))["items"],
+            [],
+        )
+        invalid_cursor_payloads = [
+            "not-a-cursor",
+            base64.urlsafe_b64encode(b"[]").decode("ascii"),
+            base64.urlsafe_b64encode(
+                json.dumps({"updated_at": "2026-08-27T12:00:00", "run_id": str(uuid.uuid4())}).encode("utf-8")
+            ).decode("ascii"),
+            base64.urlsafe_b64encode(
+                json.dumps({"updated_at": "2026-08-27T12:00:00+08:00", "run_id": "not-a-uuid"}).encode("utf-8")
+            ).decode("ascii"),
+            base64.urlsafe_b64encode(
+                json.dumps(
+                    {
+                        "updated_at": "2026-08-27T12:00:00+08:00",
+                        "run_id": str(uuid.uuid4()),
+                        "extra": True,
+                    }
+                ).encode("utf-8")
+            ).decode("ascii"),
+        ]
+        for invalid_cursor in invalid_cursor_payloads:
+            with self.subTest(cursor=invalid_cursor):
+                self.assertEqual(
+                    self.client.get(
+                        f"/api/agent-shadow/runs?cursor={invalid_cursor}", headers=owner_headers
+                    ).status_code,
+                    422,
+                )
+        self.assertEqual(
+            len(self.assert_ok(self.client.get("/api/agent-shadow/runs?limit=100", headers=owner_headers))["items"]),
+            2,
+        )
+        self.assertEqual(self.client.get("/api/agent-shadow/runs?limit=0", headers=owner_headers).status_code, 422)
+        self.assertEqual(self.client.get("/api/agent-shadow/runs?limit=101", headers=owner_headers).status_code, 422)
+
+        class FailingRunStore:
+            async def list_for_user(self, *args, **kwargs):
+                raise agent_shadow_router.RunStoreError("store unavailable")
+
+        class FailingHarness:
+            store = FailingRunStore()
+
+        class FailingRuntime:
+            harness = FailingHarness()
+
+        app.dependency_overrides[agent_shadow_router.get_runtime] = lambda: FailingRuntime()
+        try:
+            self.assertEqual(self.client.get("/api/agent-shadow/runs", headers=owner_headers).status_code, 503)
+        finally:
+            app.dependency_overrides.pop(agent_shadow_router.get_runtime, None)
         self.assertEqual(
             self.client.get(f"/api/agent-shadow/runs/{created['id']}", headers=other_headers).status_code,
             404,

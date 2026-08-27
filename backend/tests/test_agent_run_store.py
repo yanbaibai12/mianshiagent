@@ -4,7 +4,7 @@ import asyncio
 import uuid
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import event, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.agent_platform.contracts import (
@@ -492,4 +492,97 @@ async def test_terminal_checkpoint_clears_persisted_execution_lease(tmp_path):
         assert owner is None
         assert expires_at is None
     finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_in_memory_run_listing_is_owned_filtered_and_cursor_stable():
+    store = InMemoryRunStore()
+    harness = AgentHarness(gateway=MCPGateway(), skills=SkillRegistry(), store=store)
+
+    async def complete(context: AgentContext) -> AgentDecision:
+        return AgentDecision.complete({"ok": True})
+
+    harness.register_agent(AgentDefinition(id="list-agent", version="0.1.0", handler=complete))
+    owner_id = uuid.uuid4()
+    other_id = uuid.uuid4()
+    created = []
+    for index in range(3):
+        created.append(
+            await harness.create_run(
+                user_id=owner_id,
+                idempotency_key=f"listing-{index}",
+                objective=f"run {index}",
+                input={"mode": "resume" if index < 2 else "jd"},
+                start_agent_id="list-agent",
+            )
+        )
+    await harness.create_run(
+        user_id=other_id,
+        idempotency_key="other-listing",
+        objective="other run",
+        input={"mode": "resume"},
+        start_agent_id="list-agent",
+    )
+    completed = await harness.execute(created[0].id)
+
+    remaining = sorted(created[1:], key=lambda run: (run.updated_at, run.id.int), reverse=True)
+    first_page = await store.list_for_user(owner_id, limit=2)
+    assert [item.id for item in first_page] == [completed.id, remaining[0].id]
+    cursor = (first_page[-1].updated_at, first_page[-1].id)
+    second_page = await store.list_for_user(owner_id, before=cursor, limit=2)
+    assert [item.id for item in second_page] == [remaining[1].id]
+    assert [item.id for item in await store.list_for_user(owner_id, status=RunStatus.COMPLETED)] == [completed.id]
+    assert [item.id for item in await store.list_for_user(owner_id, current_agent_id="list-agent")] == [
+        completed.id,
+        remaining[0].id,
+        remaining[1].id,
+    ]
+    assert await store.list_for_user(uuid.uuid4()) == []
+    with pytest.raises(RunStoreError, match="between 1 and 101"):
+        await store.list_for_user(owner_id, limit=102)
+
+
+@pytest.mark.asyncio
+async def test_sqlalchemy_run_listing_uses_summary_query_without_cross_user_leakage(tmp_path):
+    engine, factory, user_id = await _session_factory(tmp_path)
+    store = PostgresRunStore(factory, enforce_postgresql=False)
+    harness = _harness(store)
+    captured_statements: list[str] = []
+
+    def capture_statement(connection, cursor, statement, parameters, context, executemany):
+        captured_statements.append(statement.lower())
+
+    event.listen(engine.sync_engine, "before_cursor_execute", capture_statement)
+    try:
+        run = await harness.create_run(
+            user_id=user_id,
+            idempotency_key="summary-listing",
+            objective="list persisted run",
+            input={"mode": "contract"},
+            start_agent_id="persistent-agent",
+        )
+        await harness.execute(run.id)
+        captured_statements.clear()
+        items = await store.list_for_user(user_id, status=RunStatus.COMPLETED, limit=2)
+        assert len(items) == 1
+        assert items[0].id == run.id
+        assert items[0].input_mode == "contract"
+        assert items[0].status == RunStatus.COMPLETED
+        listing_sql = captured_statements[-1]
+        assert "agent_run_steps" not in listing_sql
+        assert "agent_run_trace_events" not in listing_sql
+        for excluded_column in (
+            "output",
+            "state",
+            "checkpoint",
+            "error",
+            "budget",
+            "idempotency_key",
+            "request_fingerprint",
+        ):
+            assert f"agent_runs.{excluded_column}" not in listing_sql
+        assert await store.list_for_user(uuid.uuid4()) == []
+    finally:
+        event.remove(engine.sync_engine, "before_cursor_execute", capture_statement)
         await engine.dispose()

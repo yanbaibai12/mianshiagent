@@ -4,12 +4,13 @@ import asyncio
 import copy
 import math
 import uuid
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Mapping
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Protocol
+from typing import Any, Protocol
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -105,10 +106,56 @@ class InvalidRunTransitionError(RunStoreError):
     """Raised when retry or persistence lifecycle rules are violated."""
 
 
+@dataclass(frozen=True)
+class AgentRunSummary:
+    id: uuid.UUID
+    objective: str
+    input_mode: str
+    current_agent_id: str
+    status: RunStatus
+    tokens_used: int
+    tool_calls: int
+    attempts: int
+    cancel_requested: bool
+    error_code: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+RunListCursor = tuple[datetime, uuid.UUID]
+
+
+def _summary_from_run(run: AgentRun) -> AgentRunSummary:
+    return AgentRunSummary(
+        id=run.id,
+        objective=run.objective,
+        input_mode=str(run.input.get("mode") or "unknown"),
+        current_agent_id=run.current_agent_id,
+        status=run.status,
+        tokens_used=run.tokens_used,
+        tool_calls=run.tool_calls,
+        attempts=run.attempts,
+        cancel_requested=run.cancel_requested,
+        error_code="execution_failed" if run.status == RunStatus.FAILED else None,
+        created_at=run.created_at,
+        updated_at=run.updated_at,
+    )
+
+
 class RunStore(Protocol):
     async def create(self, run: AgentRun) -> AgentRun: ...
 
     async def get(self, run_id: uuid.UUID) -> AgentRun: ...
+
+    async def list_for_user(
+        self,
+        user_id: uuid.UUID,
+        *,
+        status: RunStatus | None = None,
+        current_agent_id: str | None = None,
+        before: RunListCursor | None = None,
+        limit: int = 20,
+    ) -> list[AgentRunSummary]: ...
 
     async def request_cancel(self, run_id: uuid.UUID) -> AgentRun: ...
 
@@ -149,6 +196,33 @@ class InMemoryRunStore:
                 return copy.deepcopy(self._runs[run_id])
             except KeyError as exc:
                 raise RunNotFoundError("run not found") from exc
+
+    async def list_for_user(
+        self,
+        user_id: uuid.UUID,
+        *,
+        status: RunStatus | None = None,
+        current_agent_id: str | None = None,
+        before: RunListCursor | None = None,
+        limit: int = 20,
+    ) -> list[AgentRunSummary]:
+        if limit < 1 or limit > 101:
+            raise RunStoreError("list limit must be between 1 and 101")
+        async with self._lock:
+            runs = [
+                run
+                for run in self._runs.values()
+                if run.user_id == user_id
+                and (status is None or run.status == status)
+                and (current_agent_id is None or run.current_agent_id == current_agent_id)
+                and (
+                    before is None
+                    or run.updated_at < before[0]
+                    or (run.updated_at == before[0] and run.id.int < before[1].int)
+                )
+            ]
+            runs.sort(key=lambda run: (run.updated_at, run.id.int), reverse=True)
+            return [_summary_from_run(run) for run in runs[:limit]]
 
     async def request_cancel(self, run_id: uuid.UUID) -> AgentRun:
         async with self._lock:
@@ -300,6 +374,47 @@ class PostgresRunStore:
         async with self._session() as session:
             return self._domain_from_record(await self._get_record(session, run_id))
 
+    async def list_for_user(
+        self,
+        user_id: uuid.UUID,
+        *,
+        status: RunStatus | None = None,
+        current_agent_id: str | None = None,
+        before: RunListCursor | None = None,
+        limit: int = 20,
+    ) -> list[AgentRunSummary]:
+        if limit < 1 or limit > 101:
+            raise RunStoreError("list limit must be between 1 and 101")
+        async with self._session() as session:
+            statement = select(
+                AgentRunRecord.id,
+                AgentRunRecord.objective,
+                AgentRunRecord.input_payload,
+                AgentRunRecord.current_agent_id,
+                AgentRunRecord.status,
+                AgentRunRecord.tokens_used,
+                AgentRunRecord.tool_calls,
+                AgentRunRecord.attempts,
+                AgentRunRecord.cancel_requested,
+                AgentRunRecord.created_at,
+                AgentRunRecord.updated_at,
+            ).where(AgentRunRecord.user_id == user_id)
+            if status is not None:
+                statement = statement.where(AgentRunRecord.status == status.value)
+            if current_agent_id is not None:
+                statement = statement.where(AgentRunRecord.current_agent_id == current_agent_id)
+            if before is not None:
+                statement = statement.where(
+                    or_(
+                        AgentRunRecord.updated_at < before[0],
+                        and_(AgentRunRecord.updated_at == before[0], AgentRunRecord.id < before[1]),
+                    )
+                )
+            result = await session.execute(
+                statement.order_by(AgentRunRecord.updated_at.desc(), AgentRunRecord.id.desc()).limit(limit)
+            )
+            return [self._summary_from_mapping(record) for record in result.mappings().all()]
+
     async def request_cancel(self, run_id: uuid.UUID) -> AgentRun:
         async with self._session() as session:
             record = await session.scalar(select(AgentRunRecord).where(AgentRunRecord.id == run_id).with_for_update())
@@ -409,6 +524,24 @@ class PostgresRunStore:
                 .values(execution_owner=None, lease_expires_at=None, updated_at=utc_now())
             )
             await session.commit()
+
+    @staticmethod
+    def _summary_from_mapping(record: Mapping[str, Any]) -> AgentRunSummary:
+        record_status = RunStatus(str(record["status"]))
+        return AgentRunSummary(
+            id=record["id"],
+            objective=str(record["objective"]),
+            input_mode=str((record["input_payload"] or {}).get("mode") or "unknown"),
+            current_agent_id=str(record["current_agent_id"]),
+            status=record_status,
+            tokens_used=int(record["tokens_used"]),
+            tool_calls=int(record["tool_calls"]),
+            attempts=int(record["attempts"]),
+            cancel_requested=bool(record["cancel_requested"]),
+            error_code="execution_failed" if record_status == RunStatus.FAILED else None,
+            created_at=record["created_at"],
+            updated_at=record["updated_at"],
+        )
 
     @staticmethod
     def _record_from_domain(run: AgentRun) -> AgentRunRecord:

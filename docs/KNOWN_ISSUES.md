@@ -1,6 +1,6 @@
 # 已知问题与风险登记
 
-> 文档版本：1.2.0
+> 文档版本：1.3.0
 > 状态：Active
 > 更新日期：2026-08-27
 > Owner：项目维护者、Agent Platform Team、安全负责人
@@ -25,7 +25,7 @@
 1. 认证仍为 MVP 级 HMAC/PBKDF2 方案；生产建议迁移到成熟 session/JWT 方案和 Argon2id，并完成 token rotation/revocation。
 2. 限流为单进程内存级；多实例生产必须使用 Redis 或 API Gateway。
 3. local LLM 仅用于可重复测试，不代表模型质量；真实 Provider 需要版本冻结、成本门和回归评测。
-4. 已有认证且功能开关保护的 Shadow API，也可把 Trace 持久化到 PostgreSQL Store；但仍缺分页/检索型 Trace Inspector、durable worker 和面向最终用户的 Agent API/UI。
+4. 已有认证、功能开关保护和用户隔离的 Shadow API，并提供按状态/Agent 筛选的游标分页 Run Inspector API；但仍缺 Inspector UI、durable worker 和面向最终用户的生产 Agent API/UI。
 5. 同步 MCP handler 超时后底层线程不能被 Python 强制终止；生产 adapter 必须使用可取消 I/O 或进程隔离，并设置下游超时。
 6. 全量后端仍有存量格式和类型债务；当前 mypy/format 是受控范围通过，不得表述为全仓严格模式完成。
 7. Shadow API 在生产环境被 Release Check 和启动检查强制阻断；在完成 ADR-0004 的晋级门前不得绕过该保护。
@@ -34,7 +34,7 @@
 
 1. 前端单测和 Chromium E2E 仍偏少；需增加异常、取消、重试、授权、跨浏览器和生产拓扑场景。
 2. `resumes.py`、`jobs.py`、`vector_store.py` 等存量模块覆盖率低于项目平均值，后续按风险继续提升。
-3. 需要把质量证据绑定最终 commit；当前工作区尚未提交，报告只能证明当前 worktree 内容。
+3. 已通过 GitHub Actions 将 Phase 0 质量证据绑定合并提交；后续每个发布候选仍必须保持 commit 级证据绑定。
 4. 需要定义 Agent SLO：成功率、P95 时延、平均步骤、工具失败率、取消延迟、恢复成功率和单 Run 成本。
 
 ## 已解决并有证据

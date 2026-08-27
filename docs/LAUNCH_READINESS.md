@@ -1,6 +1,6 @@
 # 发布就绪清单
 
-> 文档版本：2.1.0
+> 文档版本：2.2.0
 > 更新日期：2026-08-27
 > 当前结论：工程 Release Gate 已通过；商业生产发布仍未获批准。
 
@@ -15,18 +15,16 @@
 
 ## 2. 已通过的工程门（2026-08-27）
 
-- 后端 Release Gate：116 tests + 19 subtests，覆盖率 `86.03%`；Ruff、受控 format、mypy、pip-audit、Alembic heads 全部通过；
+- 后端 Release Gate：118 tests + 24 subtests，覆盖率 `86.15%`；Ruff、受控 format、mypy、pip-audit、Alembic heads 全部通过；
 - 前端 Release Gate：lint、7 个单测及覆盖率、typecheck、build、npm high audit 全部通过；
 - 契约与安全 Release Gate：文档、部署运行时/生产开关、OpenAPI、Agent、MCP、Skills、Secret Scan、Agent safety eval 全部通过；
 - Chromium E2E：3/3 核心场景通过；
-- Agent shadow runtime：5 Agents、4 Skills、2 个只读 MCP-compatible Tools；
+- Agent shadow runtime：5 Agents、4 Skills、2 个只读 MCP-compatible Tools，并提供用户隔离、筛选和游标分页的 Run Inspector API；
 - Agent fact-safety 自动评测：8/8 通过。
 
 证据：
 
-- `artifacts/quality-gate/2026-08-27-backend-release-agent-platform.json`；
-- `artifacts/quality-gate/2026-08-27-contracts-release-agent-platform.json`；
-- `artifacts/quality-gate/2026-08-27-frontend-release.json`；
+- `artifacts/quality-gate/2026-08-27-agent-run-inspector-release.json`（统一 21 项阻断检查）；
 - `artifacts/evaluation/agent-shadow-safety.json`。
 
 ## 3. 生产发布阻断项

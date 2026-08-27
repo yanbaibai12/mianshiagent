@@ -1,6 +1,6 @@
 # Agent Shadow API 操作与安全契约
 
-> 文档版本：1.1.0
+> 文档版本：1.2.0
 > 状态：Accepted for authenticated shadow evaluation
 > 日期：2026-08-27
 > Owner：Agent Platform Team / Security Owner
@@ -74,6 +74,18 @@ Content-Type: application/json
 
 同一用户使用相同 `Idempotency-Key` 且请求指纹相同，返回同一 Run；objective、input、start Agent 或 budget 任一变化都返回 409。
 
+### 分页检索 Run
+
+```http
+GET /api/agent-shadow/runs?status=completed&current_agent_id=resume-rewriter&limit=20&cursor=<opaque>
+```
+
+- 仅返回当前登录用户的 Run 摘要，数据库查询不加载 Step/Trace 子表，也不读取 output/state/checkpoint 等大字段，避免列表查询放大；
+- 使用 `(updated_at, run_id)` 降序游标分页，`limit` 范围为 1–100；
+- 可按 `status` 和 `current_agent_id` 检索；
+- `next_cursor` 是不透明游标，时间戳统一编码为带时区的 UTC；调用方不得解析或自行构造；
+- 非法、超长或无时区时间戳游标返回 422；Store 不可用返回 503。
+
 ### 查询、取消和重试
 
 ```http
@@ -118,6 +130,7 @@ Tool handler 使用独立 AsyncSession，并同时校验：
 
 - 本地默认 `InMemoryRunStore`，重启会丢失；
 - PostgreSQL Run/Step/Trace/Checkpoint Store、事务幂等唯一约束和跨实例执行租约已实现，但尚未完成真实 PostgreSQL 并发与恢复演练；
+- 已有分页/筛选 Run Inspector API，但尚无面向最终用户的 Inspector UI；
 - 无 durable worker；
 - Gateway 是进程内 MCP-compatible 实现，不是网络 MCP Server；
 - 自动事实安全检查不能证明招聘者偏好或真实投递效果。

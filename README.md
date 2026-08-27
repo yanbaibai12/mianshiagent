@@ -30,10 +30,10 @@ Phase 1A 已退役的产品表面：
 
 | 阶段 | 状态 |
 |---|---|
-| Phase 0：基线与质量门 | 已实施，未提交 |
-| Phase 1A：产品表面退役 | 已实施，未提交 |
+| Phase 0：基线与质量门 | 已合并 `main`（`11bf353`） |
+| Phase 1A：产品表面退役 | 已合并 `main`（`11bf353`） |
 | Phase 1B：历史数据契约 | 只读审计基础已实现；真实数据迁移未开始 |
-| Phase 2：Agent Harness | PostgreSQL Store、事务幂等、Checkpoint/Trace、执行租约和取消竞争代码已实现；durable worker、kill/restart、多实例实测和生产 API 未完成 |
+| Phase 2：Agent Harness | PostgreSQL Store、事务幂等、Checkpoint/Trace、执行租约、取消竞争和用户隔离的 Run Inspector API 已实现；Inspector UI、durable worker、kill/restart、多实例实测和生产 API 未完成 |
 | Phase 3：MCP + Skills | 4 个 Skill、2 个只读 MCP-compatible Tool；注册表和事实安全门已激活 |
 | Phase 4：多 Agent | 5 个 Agent 的 Supervisor/Handoff 隔离闭环已实现，尚未替换生产主链路 |
 | Phase 5：证据化简历改写 | Evidence Hash + source-exact 重排已实现；人工盲评和 120 条基准集尚未完成 |
@@ -108,7 +108,7 @@ backend\.venv-codex\Scripts\python.exe scripts\run_quality_gate.py `
   --mode release
 ```
 
-CI 的 64% 是存量 ratchet，不是发布标准。2026-08-27 最新后端 Release Gate 已以 `86.03%` 总行覆盖率通过，前端、契约、安全和 3 条 Chromium E2E 也已通过；不得降低阈值、删除失败测试或把未运行检查写成通过。
+CI 的 64% 是存量 ratchet，不是发布标准。2026-08-27 最新后端 Release Gate 已以 `86.15%` 总行覆盖率通过，前端、契约、安全和 3 条 Chromium E2E 也已通过；不得降低阈值、删除失败测试或把未运行检查写成通过。
 
 质量标准和当前实测值分别见：
 
@@ -155,4 +155,4 @@ git diff --check
 git status --short --branch
 ```
 
-本工作区当前改动尚未 commit、未 push。
+交付状态以受保护分支上的 Pull Request、GitHub Actions 结果和最终合并提交为准；本地报告不得替代 commit 级 CI 证据。

@@ -1,9 +1,9 @@
 {
-  "schema_version": "1.4",
+  "schema_version": "1.5",
   "baseline_date": "2026-08-26",
   "baseline_source_commit": "d66f712",
-  "capture_state": "agent-platform-postgresql-store-release-gates-passed-worktree-uncommitted",
-  "branch": "feature/agent-platform-phase-0",
+  "capture_state": "agent-run-inspector-release-gate-passed-worktree-candidate",
+  "branch": "feature/agent-run-inspector",
   "api": {
     "historical_router_decorators": 97,
     "historical_openapi_operations": 98,
@@ -80,12 +80,25 @@
       "durable_worker": false,
       "real_postgresql_multi_instance_evidence": false,
       "sqlite_contract_tests_are_production_evidence": false,
-      "postgresql_sql_compilation_is_production_evidence": false
+      "postgresql_sql_compilation_is_production_evidence": false,
+      "run_inspector_api": {
+        "status": "shadow_api_implemented",
+        "owner_isolation": true,
+        "status_filter": true,
+        "current_agent_filter": true,
+        "stable_cursor_fields": [
+          "updated_at",
+          "run_id"
+        ],
+        "summary_query_avoids_step_trace_loading": true,
+        "inspector_ui": false,
+        "summary_query_avoids_large_runtime_payloads": true
+      }
     }
   },
   "tests": {
-    "backend_tests": 116,
-    "backend_line_coverage_percent": 86.03,
+    "backend_tests": 118,
+    "backend_line_coverage_percent": 86.15,
     "backend_ci_ratchet_percent": 64,
     "backend_release_target_percent": 85,
     "ats_eval_cases": 40,
@@ -98,13 +111,14 @@
     "e2e_tests": 3,
     "e2e_status": "passed",
     "phase1b_data_audit_tests": 9,
-    "backend_release_report": "artifacts/quality-gate/2026-08-27-all-release-final-v6.json",
+    "backend_release_report": "artifacts/quality-gate/2026-08-27-agent-run-inspector-release.json",
     "all_ci_report": "artifacts/quality-gate/phase1b-all-ci.json",
     "contracts_release_report": "artifacts/quality-gate/2026-08-27-contracts-release-agent-platform.json",
     "frontend_release_report": "artifacts/quality-gate/2026-08-27-frontend-release.json",
     "agent_fact_safety_cases": 8,
     "agent_fact_safety_status": "passed",
-    "latest_release_gate_status": "passed"
+    "latest_release_gate_status": "passed",
+    "backend_subtests": 24
   },
   "typing": {
     "controlled_modules": 20,
@@ -147,13 +161,15 @@
   },
   "snapshot_date": "2026-08-27",
   "phase_status": {
-    "phase_0": "implemented_uncommitted",
-    "phase_1a_product_surface_retirement": "implemented_uncommitted",
+    "phase_0": "merged_main",
+    "phase_1a_product_surface_retirement": "merged_main",
     "phase_1b_data_contract_migration": "audit_foundation_implemented_migration_not_started",
     "harness": "shadow_runtime_with_postgresql_store_code_not_production",
     "mcp": "in_process_compatible_gateway_not_network_server",
     "multi_agent": "five_agent_shadow_runtime_not_on_production_path",
     "resume_effectiveness": "fact_safety_foundation_passed_blind_eval_pending",
-    "agent_run_store": "postgresql_code_implemented_real_drill_and_durable_worker_pending"
-  }
+    "agent_run_store": "postgresql_code_and_shadow_run_inspector_api_implemented_real_drill_and_durable_worker_pending",
+    "run_inspector": "shadow_api_implemented_ui_pending"
+  },
+  "integration_baseline_commit": "11bf353f8c1730477621daa1ce04ab2866d0ac30"
 }
