@@ -1,111 +1,31 @@
-# 企业化架构路线
+# 历史文档：旧 SaaS 企业化路线（已归档）
 
-## 目标架构
+> 状态：Archived / Superseded
+> 归档日期：2026-08-27
+> 替代文档：[`AGENT_PLATFORM_DEVELOPMENT_SPEC.md`](./AGENT_PLATFORM_DEVELOPMENT_SPEC.md)、[`QUALITY_GATE_STANDARD.md`](./QUALITY_GATE_STANDARD.md)
+> 使用限制：不得据此恢复 Billing、租户后台、套餐或运营后台。
 
-当前 MVP 是单体 FastAPI + React。企业化后仍可先保持单体，但边界要清晰：
+## 归档决策
 
-- Identity：账号、认证、权限、租户。
-- Resume：上传、解析、版本、模板优化、JD 适配。
-- Interview：题库生成、作答、评分、报告。
-- Billing：套餐、订单、权益、用量。
-- Ops：审计、日志、模型成本、内容风控。
+旧路线围绕租户、套餐、订单和机构后台展开。Agent Platform v2 采用模块化单体优先，并把企业级能力定义为可验证的运行治理，而不是 SaaS 功能数量。
 
-## 后端模块
+## 当前企业化主线
 
-### 1. 租户与权限
+1. **Agent Runtime**：Run/Step/Checkpoint/Trace、预算、超时、取消、重试、并发和幂等。
+2. **Tool Governance**：MCP Registry、Agent allowlist、audience、风险分级、审批和工具侧用户归属校验。
+3. **Skill Governance**：Skill SemVer、输入输出契约、事实安全约束、回归评测和回滚。
+4. **Durability**：PostgreSQL Run Store、事务幂等、多实例锁、Redis/RQ durable worker 和恢复演练。
+5. **AI Quality**：分层样本、Claim-level 金标准、独立事实验证器、人工双盲、胜率与 95% CI。
+6. **Operations**：最小化 health/status/release-check/alerts/backup API，不建设业务运营后台。
+7. **Security**：资源归属、数据最小化、审计、敏感输出脱敏、Prompt Injection 与跨用户攻击测试。
 
-- tenants
-- tenant_members
-- roles
-- permissions
-- API 权限中间件
+## 当前非目标
 
-### 2. 计费与权益
+- 支付、订单、套餐、权益和价格管理；
+- 组织/公司管理产品；
+- 运营后台 UI；
+- 通用质量反馈运营闭环；
+- 在缺少真实数据和恢复证据时删除历史表；
+- 将进程内 Shadow Runtime 宣称为生产 Agent 平台。
 
-- plans
-- subscriptions
-- orders
-- usage_records
-- quota_balances
-- 每次 LLM 调用写 usage，按用户和租户聚合。
-
-### 3. 审计与合规
-
-- audit_logs
-- data_export_jobs
-- data_deletion_jobs
-- admin_access_logs
-
-### 4. LLM 编排
-
-- 模型供应商配置表。
-- Prompt 版本管理。
-- 调用成本统计。
-- JSON 输出 schema 校验。
-- 自动降级：主模型失败切备用模型或 local fallback。
-
-### 5. 异步任务
-
-- 简历解析、优化、报告生成可进入任务队列。
-- 返回 job_id，前端轮询或 SSE。
-- 生产优先 Redis Queue / Celery / Dramatiq。
-
-## 前端模块
-
-### 1. 工作台
-
-- 简历数量、面试次数、待完成事项。
-- 系统状态与套餐权益。
-- 最近报告和薄弱点趋势。
-
-### 2. 简历版本
-
-- 原始版、模板优化版、JD 定向版。
-- 修改 diff。
-- 一键复制和导出。
-
-### 3. 面试训练
-
-- 按项目/要点分组。
-- 题目进度。
-- 弱项复练。
-- 报告复盘。
-
-### 4. 机构后台
-
-- 学员列表。
-- 班级/岗位方向。
-- 使用数据。
-- 批量导入导出。
-
-## 数据库从 MVP 到生产
-
-### MVP
-
-- SQLite
-- 本地文件
-- local LLM fallback
-
-### 可收费版本
-
-- PostgreSQL
-- 对象存储
-- Redis
-- 真实 LLM
-- 支付回调
-
-### 企业版
-
-- PostgreSQL 高可用
-- Redis 集群
-- 对象存储加密
-- 审计日志不可变存储
-- 私有化部署脚本
-
-## 质量保障
-
-1. API 冒烟脚本：注册、上传、优化、出题、评分、报告。
-2. Prompt 回归集：固定简历样本检查输出结构和质量。
-3. 安全回归：未登录、越权访问、超长输入、限流、导出权限。
-4. 前端构建：`npm run build`。
-5. 后端导入与健康检查：`import app.main`、`/health`、`/api/system/status`。
+阶段计划和退出标准以当前开发规范为唯一准绳。

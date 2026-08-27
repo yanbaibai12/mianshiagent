@@ -37,7 +37,6 @@ export default defineConfig({
         LLM_PROVIDER: 'local',
         LLM_ALLOW_FALLBACK: 'false',
         ADMIN_EMAILS: 'admin@example.com',
-        PAYMENT_WEBHOOK_SECRET: 'e2e-webhook-secret',
         CORS_ALLOW_ORIGINS: JSON.stringify([webBaseURL, `http://localhost:${webPort}`]),
         VECTOR_STORE_BACKEND: 'keyword',
         QDRANT_SYNC_ON_STARTUP: 'false',

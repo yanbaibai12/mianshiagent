@@ -7,7 +7,6 @@ from app.models import Resume
 from app.services.rerank_service import rerank_status
 from app.services.resume_index import HARD_SKILL_TERMS, retrieve_resume_evidence
 
-
 SOFT_SKILL_TERMS = [
     "沟通",
     "协作",

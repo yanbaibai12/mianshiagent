@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.0",
+  "status": "active",
+  "phase": "phase-2-shadow-runtime",
+  "owner": "agent-platform-team",
+  "skills": [
+    {
+      "id": "resume-evidence-extract",
+      "version": "0.2.0",
+      "owner": "resume-intelligence-team",
+      "path": "skills/resume-evidence-extract",
+      "description": "Extract claim-level resume evidence without inventing facts.",
+      "inputs": [
+        {
+          "name": "resume_text",
+          "type": "string",
+          "required": true,
+          "description": "Source resume text owned by the requesting user."
+        }
+      ],
+      "outputs": [
+        {
+          "name": "claims",
+          "type": "EvidenceClaim[]",
+          "description": "Claims linked to verbatim source evidence and hashes."
+        },
+        {
+          "name": "claim_count",
+          "type": "integer",
+          "description": "Number of direct source-backed claims."
+        },
+        {
+          "name": "fact_safe",
+          "type": "boolean",
+          "description": "Whether at least one source-backed claim was produced."
+        }
+      ],
+      "risk_level": "medium"
+    },
+    {
+      "id": "resume-truthful-rewrite",
+      "version": "0.1.0",
+      "owner": "resume-intelligence-team",
+      "path": "skills/resume-truthful-rewrite",
+      "description": "Select and rank only verified resume claims against explicit JD requirements.",
+      "inputs": [
+        {
+          "name": "claims",
+          "type": "EvidenceClaim[]",
+          "required": true,
+          "description": "Verified claims from resume-evidence-extract."
+        },
+        {
+          "name": "jd_text",
+          "type": "string",
+          "required": true,
+          "description": "Target job description text."
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rewrite_items",
+          "type": "EvidenceLinkedRewrite[]",
+          "description": "Ordered source-exact resume items with claim references."
+        },
+        {
+          "name": "selected_claim_count",
+          "type": "integer",
+          "description": "Number of selected evidence-backed items."
+        },
+        {
+          "name": "fact_safe",
+          "type": "boolean",
+          "description": "Whether the output contains at least one verified item and no unsupported item."
+        },
+        {
+          "name": "requirement_coverage",
+          "type": "number",
+          "description": "Recognized JD requirement coverage from zero to one."
+        }
+      ],
+      "risk_level": "high"
+    },
+    {
+      "id": "jd-requirement-map",
+      "version": "0.1.0",
+      "owner": "job-intelligence-team",
+      "path": "skills/jd-requirement-map",
+      "description": "Map explicit job requirements into a deterministic capability list.",
+      "inputs": [
+        {
+          "name": "jd_text",
+          "type": "string",
+          "required": true,
+          "description": "Target job description text."
+        }
+      ],
+      "outputs": [
+        {
+          "name": "requirements",
+          "type": "string[]",
+          "description": "Explicit recognized requirements."
+        },
+        {
+          "name": "requirement_count",
+          "type": "integer",
+          "description": "Number of recognized requirements."
+        }
+      ],
+      "risk_level": "low"
+    },
+    {
+      "id": "interview-answer-critique",
+      "version": "0.1.0",
+      "owner": "interview-intelligence-team",
+      "path": "skills/interview-answer-critique",
+      "description": "Score interview answer structure and identify missing evidence dimensions.",
+      "inputs": [
+        {
+          "name": "answer",
+          "type": "string",
+          "required": true,
+          "description": "User answer to critique."
+        }
+      ],
+      "outputs": [
+        {
+          "name": "score",
+          "type": "integer",
+          "description": "Deterministic rubric score from zero to one hundred."
+        },
+        {
+          "name": "missing_dimensions",
+          "type": "string[]",
+          "description": "Rubric dimensions not demonstrated by the answer."
+        }
+      ],
+      "risk_level": "medium"
+    }
+  ]
+}

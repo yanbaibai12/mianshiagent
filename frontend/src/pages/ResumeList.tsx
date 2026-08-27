@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import {
-  CreditCard,
   ClipboardPaste,
-  Crown,
   FileText,
   Gauge,
   MessageSquareText,
@@ -18,29 +16,21 @@ import AppShell from '../components/AppShell'
 import { Badge, Button, Card, EmptyState, Field, LoadingState, StatTile } from '../components/ui'
 import { resumeApi, ResumeSummary } from '../services/resume'
 import { interviewApi, Interview } from '../services/interview'
-import { businessApi, BusinessEntitlements } from '../services/business'
-import { paymentApi } from '../services/payments'
 import { SAMPLE_RESUME_TEXT, SAMPLE_RESUME_TITLE } from '../data/examples'
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString()
 }
 
-function formatRemaining(value: number | null | undefined) {
-  return value === null || value === undefined ? '不限' : value
-}
-
 export default function ResumeListPage() {
   const [resumes, setResumes] = useState<ResumeSummary[]>([])
   const [interviews, setInterviews] = useState<Interview[]>([])
-  const [businessEntitlements, setBusinessEntitlements] = useState<BusinessEntitlements | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [title, setTitle] = useState('')
   const [text, setText] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState('')
-  const [upgradeMessage, setUpgradeMessage] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -59,23 +49,16 @@ export default function ResumeListPage() {
     return Math.round(total / scored.length)
   }, [interviews])
 
-  const business = businessEntitlements
-  const resumePaywallBlocked = Boolean(
-    business?.entitlements.paywall_active && !business.entitlements.can_create_resume,
-  )
-
   const loadData = async () => {
     setLoading(true)
     setError('')
     try {
-      const [resumeRes, interviewRes, businessRes] = await Promise.all([
+      const [resumeRes, interviewRes] = await Promise.all([
         resumeApi.list(),
         interviewApi.list(),
-        businessApi.entitlements(),
       ])
       setResumes(resumeRes.data)
       setInterviews(interviewRes.data)
-      setBusinessEntitlements(businessRes.data)
     } catch (err: any) {
       setError(err.response?.data?.detail || '数据加载失败')
     } finally {
@@ -111,25 +94,6 @@ export default function ResumeListPage() {
       setError(err.response?.data?.detail || '上传失败')
     } finally {
       setUploading(false)
-    }
-  }
-
-  const handleUpgradeRequest = async () => {
-    setError('')
-    setUpgradeMessage('')
-    try {
-      if (businessEntitlements?.plan.checkout_available) {
-        const checkout = await paymentApi.checkout({ plan: 'pro', billing_cycle: 'monthly' })
-        setUpgradeMessage(checkout.data.message)
-        if (checkout.data.checkout_url) {
-          window.location.href = checkout.data.checkout_url
-        }
-        return
-      }
-      const res = await businessApi.requestUpgrade()
-      setUpgradeMessage(res.data.message)
-    } catch (err: any) {
-      setError(err.response?.data?.detail || '升级意向提交失败')
     }
   }
 
@@ -171,22 +135,10 @@ export default function ResumeListPage() {
             {error}
           </div>
         )}
-        {upgradeMessage && (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {upgradeMessage}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-3 lg:gap-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
           <StatTile label="简历资产" value={resumes.length} meta="已保存简历版本" icon={<FileText size={18} />} />
           <StatTile label="面试记录" value={interviews.length} meta={`${completedInterviews} 次已完成`} icon={<MessageSquareText size={18} />} />
           <StatTile label="平均得分" value={averageScore} meta="基于已完成报告" icon={<Gauge size={18} />} />
-          <StatTile
-            label="当前权益"
-            value={business?.plan.name || '-'}
-            meta={business ? `JD 适配剩余 ${formatRemaining(business.entitlements.jd_adapt_remaining)}` : '等待加载'}
-            icon={<CreditCard size={18} />}
-          />
           <StatTile
             label="下一步"
             value={resumes.length === 0 ? '上传简历' : interviews.length === 0 ? '创建面试' : '复盘报告'}
@@ -239,9 +191,9 @@ export default function ResumeListPage() {
               </div>
 
             <div className="flex flex-wrap items-center gap-3">
-                <Button type="submit" disabled={uploading || resumePaywallBlocked} data-testid="upload-resume-button">
+                <Button type="submit" disabled={uploading} data-testid="upload-resume-button">
                   <UploadCloud size={16} />
-                  {uploading ? '解析中...' : resumePaywallBlocked ? '需升级后解析' : '上传并解析'}
+                  {uploading ? '解析中...' : '上传并解析'}
                 </Button>
                 <Button type="button" variant="secondary" onClick={fillSampleResume} data-testid="fill-sample-resume-button">
                   <ClipboardPaste size={16} />
@@ -256,68 +208,6 @@ export default function ResumeListPage() {
           </Card>
 
           <div className="space-y-6">
-            <Card>
-              <div className="mb-5 flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="card-title">我的权益</h2>
-                  <p className="card-subtitle">查看当前可用次数，避免在关键环节被额度打断。</p>
-                </div>
-                <Badge tone={business?.entitlements.paywall_active ? 'success' : 'warning'}>
-                  {business?.entitlements.paywall_active ? business?.plan.name : '演示模式'}
-                </Badge>
-              </div>
-
-              {business ? (
-                <div className="space-y-3 text-sm">
-                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-2 font-semibold text-slate-900">
-                        <Crown size={16} />
-                        Pro 月卡
-                      </span>
-                      <span className="text-lg font-bold text-slate-950">¥{business.upgrade.price_cny}/月</span>
-                    </div>
-                    <div className="mt-2 text-xs leading-5 text-slate-600">
-                      冲刺包 ¥{business.upgrade.sprint_package_price_cny}，适合投递前 30 天集中训练。
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-md bg-slate-50 px-3 py-3">
-                      <div className="text-xs text-slate-500">简历剩余</div>
-                      <div className="mt-1 font-bold text-slate-950">{formatRemaining(business.entitlements.resume_remaining)}</div>
-                    </div>
-                    <div className="rounded-md bg-slate-50 px-3 py-3">
-                      <div className="text-xs text-slate-500">面试剩余</div>
-                      <div className="mt-1 font-bold text-slate-950">{formatRemaining(business.entitlements.interview_remaining)}</div>
-                    </div>
-                    <div className="rounded-md bg-slate-50 px-3 py-3">
-                      <div className="text-xs text-slate-500">JD 适配</div>
-                      <div className="mt-1 font-bold text-slate-950">{formatRemaining(business.entitlements.jd_adapt_remaining)}</div>
-                    </div>
-                    <div className="rounded-md bg-slate-50 px-3 py-3">
-                      <div className="text-xs text-slate-500">报告导出</div>
-                      <div className="mt-1 font-bold text-slate-950">{formatRemaining(business.entitlements.report_export_remaining)}</div>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {business.entitlements.locked_features.slice(0, 4).map((feature) => (
-                      <Badge key={feature} tone="neutral">{feature}</Badge>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
-                    <span className="text-slate-500">升级方式</span>
-                    <span className="font-semibold text-slate-900">{business.plan.checkout_available ? business.plan.payment_provider : business.upgrade.cta}</span>
-                  </div>
-                  <Button type="button" variant="secondary" className="w-full" onClick={handleUpgradeRequest}>
-                    <CreditCard size={16} />
-                    记录升级意向
-                  </Button>
-                </div>
-              ) : (
-                <EmptyState title="权益状态不可用" />
-              )}
-            </Card>
-
             <Card>
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>

@@ -10,7 +10,6 @@ import {
   FileText,
   Gauge,
   History,
-  MessageSquare,
   Play,
   RefreshCcw,
   RotateCcw,
@@ -21,10 +20,9 @@ import {
 } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { ResumePaperPreview, type ResumeData } from '../components/ResumeStructuredEditor'
-import { Badge, Button, EmptyState, Field, LoadingState, ProgressBar, cn } from '../components/ui'
+import { Badge, Button, EmptyState, LoadingState, ProgressBar, cn } from '../components/ui'
 import { interviewApi } from '../services/interview'
 import { jobsApi, type ApplicationReview, type JobApplication } from '../services/jobs'
-import { qualityApi } from '../services/quality'
 import { resumeApi, type AtsReport, type Resume, type ResumeVersion } from '../services/resume'
 import { taskApi, type AsyncTask } from '../services/tasks'
 
@@ -58,8 +56,6 @@ const changeSectionLabels: Record<string, string> = {
   skills: '技能关键词',
   summary: '个人总结',
 }
-
-const QUALITY_LABELS = ['改动具体', '内容真实', '对比清晰', '证据不足', '表达套话', '遗漏 JD 要求']
 
 const jobStatusLabels: Record<string, string> = {
   draft: '待优化',
@@ -338,10 +334,6 @@ export default function JobDetailPage() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  const [qualityScore, setQualityScore] = useState(4)
-  const [qualityLabels, setQualityLabels] = useState<string[]>(['改动具体'])
-  const [qualityNotes, setQualityNotes] = useState('')
-  const [qualitySubmitting, setQualitySubmitting] = useState(false)
 
   const atsReport = useMemo(() => {
     const report = job?.ats_report
@@ -498,37 +490,6 @@ export default function JobDetailPage() {
       setError(err.response?.data?.detail || '创建岗位面试失败')
     } finally {
       setBusy(false)
-    }
-  }
-
-  const toggleQualityLabel = (label: string) => {
-    setQualityLabels((current) => current.includes(label) ? current.filter((item) => item !== label) : [...current, label])
-  }
-
-  const submitQualityFeedback = async () => {
-    if (!job) return
-    setQualitySubmitting(true)
-    setError('')
-    setMessage('')
-    try {
-      await qualityApi.createAnnotation({
-        target_type: 'job',
-        target_id: job.id,
-        score: qualityScore,
-        labels: qualityLabels,
-        notes: qualityNotes.trim() || undefined,
-        metadata: {
-          job_status: job.status,
-          has_resume_version: Boolean(job.current_resume_version_id),
-          match_score: job.match_score,
-        },
-      })
-      setQualityNotes('')
-      setMessage('质量反馈已记录，会进入人工标注与后续回归评测。')
-    } catch (err: any) {
-      setError(err.response?.data?.detail || '质量反馈提交失败')
-    } finally {
-      setQualitySubmitting(false)
     }
   }
 
@@ -699,7 +660,7 @@ export default function JobDetailPage() {
         )}
 
         {activeStage === 'delivery' && (
-          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)]">
+          <div className="min-w-0">
             <div className="space-y-5">
               <section className="rounded-lg border border-slate-200 bg-white p-5 sm:p-6">
                 <div className="mb-6 flex items-start justify-between gap-4">
@@ -775,56 +736,6 @@ export default function JobDetailPage() {
               </section>
             </div>
 
-            <section className="rounded-lg border border-slate-200 bg-white p-5 xl:sticky xl:top-6 xl:self-start">
-              <div className="mb-5 flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-base font-semibold text-slate-950">优化质量反馈</h2>
-                  <p className="mt-1 text-sm leading-6 text-slate-500">反馈将用于结果抽检和回归评测。</p>
-                </div>
-                <MessageSquare size={19} className="text-slate-500" />
-              </div>
-              <div className="space-y-5">
-                <Field label="质量评分">
-                  <select className="select" value={qualityScore} onChange={(event) => setQualityScore(Number(event.target.value))}>
-                    <option value={5}>5 分 - 可直接投递</option>
-                    <option value={4}>4 分 - 基本可用</option>
-                    <option value={3}>3 分 - 需要人工修改</option>
-                    <option value={2}>2 分 - 问题较多</option>
-                    <option value={1}>1 分 - 不可用</option>
-                  </select>
-                </Field>
-                <div>
-                  <div className="mb-2 text-sm font-semibold text-slate-700">标签</div>
-                  <div className="flex flex-wrap gap-2">
-                    {QUALITY_LABELS.map((label) => (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => toggleQualityLabel(label)}
-                        className={cn(
-                          'rounded-md border px-3 py-2 text-sm font-semibold transition',
-                          qualityLabels.includes(label) ? 'border-slate-700 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
-                        )}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <Field label="备注">
-                  <textarea
-                    className="textarea min-h-28"
-                    value={qualityNotes}
-                    onChange={(event) => setQualityNotes(event.target.value)}
-                    maxLength={1000}
-                    placeholder="记录需要人工确认的项目指标或表达。"
-                  />
-                </Field>
-                <Button type="button" className="w-full" onClick={submitQualityFeedback} disabled={qualitySubmitting || !job.current_resume_version_id} data-testid="submit-quality-feedback-button">
-                  <MessageSquare size={16} />{qualitySubmitting ? '提交中...' : '提交质量反馈'}
-                </Button>
-              </div>
-            </section>
           </div>
         )}
       </div>

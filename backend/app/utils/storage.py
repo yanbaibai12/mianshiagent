@@ -1,8 +1,9 @@
+import io
 import os
 import uuid
-import io
 import zipfile
 from pathlib import Path
+
 from fastapi import HTTPException, UploadFile
 
 from app.config import get_settings

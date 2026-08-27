@@ -9,7 +9,6 @@ from app.config import get_settings
 from app.models import AsyncTask
 from app.utils.time import utc_now
 
-
 TERMINAL_STATUSES = {"success", "failed", "cancelled"}
 RUNNABLE_STATUSES = {"queued", "retrying"}
 

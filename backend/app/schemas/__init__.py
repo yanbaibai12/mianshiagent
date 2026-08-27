@@ -1,8 +1,8 @@
 from datetime import date, datetime
 from typing import Any
 from uuid import UUID
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, ConfigDict, Field
 
 # ==================== Auth ====================
 
@@ -22,45 +22,13 @@ class UserResponse(BaseModel):
     email: str
     nickname: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
-
-
-# ==================== Organization ====================
-
-class OrganizationCreateRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
-
-
-class OrganizationMemberInviteRequest(BaseModel):
-    email: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", max_length=255)
-    role: str = Field(default="member", pattern=r"^(admin|member)$")
-
-
-class OrganizationResponse(BaseModel):
-    id: UUID
-    name: str
-    slug: str
-    plan: str
-    status: str
-    role: str
-    created_at: datetime
-
-
-class OrganizationMemberResponse(BaseModel):
-    id: UUID
-    user_id: UUID
-    email: str
-    nickname: str | None = None
-    role: str
-    status: str
-    created_at: datetime
 
 
 # ==================== Resume ====================
@@ -91,8 +59,7 @@ class ResumeResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ResumeListItemResponse(BaseModel):
@@ -105,8 +72,7 @@ class ResumeListItemResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ResumeOptimizeRequest(BaseModel):
@@ -138,8 +104,7 @@ class ResumeChunkResponse(BaseModel):
     embedding_status: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ResumeReindexResponse(BaseModel):
@@ -168,8 +133,7 @@ class ResumeVersionResponse(BaseModel):
     notes: str | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AsyncTaskResponse(BaseModel):
@@ -196,8 +160,7 @@ class AsyncTaskResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ResumeAdaptJDTaskResponse(BaseModel):
@@ -213,8 +176,7 @@ class TemplateResponse(BaseModel):
     structure: dict[str, Any]
     is_builtin: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==================== Interview ====================
@@ -265,8 +227,7 @@ class InterviewResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InterviewQuestionResponse(BaseModel):
@@ -288,8 +249,7 @@ class InterviewQuestionResponse(BaseModel):
     question_quality: dict[str, Any] | None = None
     answered_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AnswerSubmitRequest(BaseModel):
@@ -440,8 +400,7 @@ class TrainingPlanTaskResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TrainingPlanResponse(BaseModel):
@@ -459,8 +418,7 @@ class TrainingPlanResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InterviewExperienceCreateRequest(BaseModel):
@@ -602,92 +560,4 @@ class JobApplicationResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
-
-# ==================== Quality annotation ====================
-
-class QualityAnnotationCreateRequest(BaseModel):
-    target_type: str = Field(pattern=r"^(job|resume_version|interview|interview_report|interview_question|ats_report)$")
-    target_id: str = Field(min_length=1, max_length=120)
-    score: int = Field(ge=1, le=5)
-    labels: list[str] = Field(default_factory=list, max_length=12)
-    notes: str | None = Field(default=None, max_length=1000)
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class QualityAnnotationResponse(BaseModel):
-    id: UUID
-    organization_id: UUID | None = None
-    target_type: str
-    target_id: str
-    score: int
-    labels: list[str] | None = None
-    notes: str | None = None
-    status: str
-    reviewer_role: str
-    annotation_metadata: dict[str, Any] | None = None
-    created_at: datetime
-    updated_at: datetime | None = None
-
-    class Config:
-        from_attributes = True
-
-
-class QualityEvalCandidateResponse(BaseModel):
-    id: UUID
-    organization_id: UUID | None = None
-    annotation_id: UUID | None = None
-    target_type: str
-    target_id: str
-    source_score: int
-    priority: int
-    labels: list[str] | None = None
-    issue_summary: str | None = None
-    status: str
-    candidate_metadata: dict[str, Any] | None = None
-    created_at: datetime
-    updated_at: datetime | None = None
-
-    class Config:
-        from_attributes = True
-
-
-class QualityEvalCandidateStatusRequest(BaseModel):
-    status: str = Field(pattern=r"^(open|accepted|added_to_eval|dismissed)$")
-
-
-# ==================== Payment ====================
-
-class CheckoutCreateRequest(BaseModel):
-    plan: str = Field(default="pro", pattern=r"^(pro|enterprise)$")
-    billing_cycle: str = Field(default="monthly", pattern=r"^(monthly|yearly|trial)$")
-
-
-class CheckoutCreateResponse(BaseModel):
-    order_id: UUID
-    provider: str
-    plan: str
-    billing_cycle: str
-    amount_cny: int
-    status: str
-    checkout_url: str | None = None
-    message: str
-
-
-class PaymentOrderResponse(BaseModel):
-    id: UUID
-    provider: str
-    provider_order_id: str | None = None
-    plan: str
-    billing_cycle: str
-    amount_cny: int
-    currency: str
-    status: str
-    checkout_url: str | None = None
-    created_at: datetime
-    paid_at: datetime | None = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

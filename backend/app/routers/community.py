@@ -22,12 +22,13 @@ from app.schemas import (
 )
 from app.services.audit import log_audit_event
 from app.services.auth_service import get_current_user
+from app.services.company_profiles import profile_target, refresh_share_profile
+from app.services.data_sanitization import clean_labels, redact_sensitive_text
 from app.services.interview_question_bank import (
     filter_agent_question_cards,
     load_agent_question_cards,
     question_bank_filter_options,
 )
-from app.services.quality import clean_quality_labels, redact_sensitive_text
 from app.services.tenancy import resolve_request_organization, tenant_metadata
 from app.services.training_profile import (
     apply_training_signal,
@@ -35,7 +36,6 @@ from app.services.training_profile import (
     ensure_training_profile,
     weakest_dimensions,
 )
-from app.services.company_profiles import profile_target, refresh_share_profile
 from app.utils.time import utc_now
 
 router = APIRouter(prefix="/api/community", tags=["community"])
@@ -567,7 +567,7 @@ async def create_experience(
         rounds=_clean_optional_text(req.rounds, 200) or "",
         difficulty=req.difficulty,
         result=req.result,
-        tags=clean_quality_labels(req.tags),
+        tags=clean_labels(req.tags),
         questions=_clean_question_items(req.questions),
         process=_clean_optional_text(req.process, 4000),
         content=_clean_required_text(req.content, 12000, "面经正文"),
@@ -666,7 +666,7 @@ async def update_experience(
     if req.result is not None:
         share.result = req.result
     if req.tags is not None:
-        share.tags = clean_quality_labels(req.tags)
+        share.tags = clean_labels(req.tags)
     if req.questions is not None:
         share.questions = _clean_question_items(req.questions)
     if req.process is not None:

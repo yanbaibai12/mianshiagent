@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, DateTime, Date, ForeignKey, JSON, Numeric, Boolean, Integer, Uuid, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, Integer, JSON, Numeric, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import declarative_base, relationship
 import uuid
 
@@ -623,3 +623,98 @@ class PaymentOrder(Base):
 
     user = relationship("User", back_populates="payment_orders")
     organization = relationship("Organization", back_populates="payment_orders")
+
+class AgentRunRecord(Base):
+    __tablename__ = "agent_runs"
+    __table_args__ = (
+        UniqueConstraint("user_id", "idempotency_key", name="uq_agent_runs_user_idempotency"),
+        CheckConstraint(
+            "status IN ('queued', 'running', 'completed', 'failed', 'cancelled')",
+            name="ck_agent_runs_status",
+        ),
+        CheckConstraint("tokens_used >= 0 AND tool_calls >= 0", name="ck_agent_runs_usage_nonnegative"),
+        CheckConstraint("attempts >= 1", name="ck_agent_runs_attempts_positive"),
+        CheckConstraint(
+            "length(idempotency_key) BETWEEN 1 AND 128 AND length(request_fingerprint) = 64 "
+            "AND length(objective) BETWEEN 1 AND 500",
+            name="ck_agent_runs_request_lengths",
+        ),
+    )
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    idempotency_key = Column(String(128), nullable=False)
+    request_fingerprint = Column(String(64), nullable=False)
+    objective = Column(String(500), nullable=False)
+    input_payload = Column("input", JSON, nullable=False, default=dict)
+    current_agent_id = Column(String(80), nullable=False)
+    budget = Column(JSON, nullable=False, default=dict)
+    status = Column(String(30), nullable=False, default="queued")
+    tokens_used = Column(Integer, nullable=False, default=0)
+    tool_calls = Column(Integer, nullable=False, default=0)
+    attempts = Column(Integer, nullable=False, default=1)
+    cancel_requested = Column(Boolean, nullable=False, default=False)
+    output_payload = Column("output", JSON, nullable=False, default=dict)
+    state_payload = Column("state", JSON, nullable=False, default=dict)
+    checkpoint = Column(JSON, nullable=False, default=dict)
+    error = Column(Text)
+    execution_owner = Column(String(120))
+    lease_expires_at = Column(DateTime)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+    updated_at = Column(DateTime, nullable=False, default=utc_now, onupdate=utc_now)
+
+    steps = relationship(
+        "AgentRunStepRecord",
+        back_populates="run",
+        cascade="all, delete-orphan",
+        order_by="AgentRunStepRecord.sequence",
+    )
+    trace_events = relationship(
+        "AgentRunTraceRecord",
+        back_populates="run",
+        cascade="all, delete-orphan",
+        order_by="AgentRunTraceRecord.sequence",
+    )
+
+
+class AgentRunStepRecord(Base):
+    __tablename__ = "agent_run_steps"
+    __table_args__ = (
+        UniqueConstraint("run_id", "sequence", name="uq_agent_run_steps_run_sequence"),
+        CheckConstraint(
+            "status IN ('running', 'completed', 'failed', 'cancelled')",
+            name="ck_agent_run_steps_status",
+        ),
+        CheckConstraint("sequence >= 1", name="ck_agent_run_steps_sequence_positive"),
+        CheckConstraint("tokens_used >= 0", name="ck_agent_run_steps_tokens_nonnegative"),
+    )
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    run_id = Column(Uuid(as_uuid=True), ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False)
+    sequence = Column(Integer, nullable=False)
+    agent_id = Column(String(80), nullable=False)
+    status = Column(String(30), nullable=False)
+    decision_kind = Column(String(30))
+    tokens_used = Column(Integer, nullable=False, default=0)
+    error = Column(String(160))
+    started_at = Column(DateTime, nullable=False, default=utc_now)
+    finished_at = Column(DateTime)
+
+    run = relationship("AgentRunRecord", back_populates="steps")
+
+
+class AgentRunTraceRecord(Base):
+    __tablename__ = "agent_run_trace_events"
+    __table_args__ = (
+        UniqueConstraint("run_id", "sequence", name="uq_agent_run_trace_run_sequence"),
+        CheckConstraint("sequence >= 1", name="ck_agent_run_trace_sequence_positive"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    run_id = Column(Uuid(as_uuid=True), ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False)
+    sequence = Column(Integer, nullable=False)
+    event = Column(String(80), nullable=False)
+    event_metadata = Column("metadata", JSON, nullable=False, default=dict)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+
+    run = relationship("AgentRunRecord", back_populates="trace_events")

@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import TrainingProfileDimension
 from app.utils.time import utc_now
 
-
 TRAINING_DIMENSIONS: dict[str, dict[str, Any]] = {
     "rag": {
         "label": "RAG",

@@ -1,138 +1,158 @@
-# 面试简历 Agent
+# 面试简历 Agent / Agent Platform v2
 
-面试简历 Agent 是一个面向求职训练场景的 AI 应用，覆盖“简历解析、简历优化、JD 定向适配、模拟面试、回答评分、报告导出、账号治理、组织协作和运营后台”的完整闭环。
+面试简历 Agent 是一个正在向 **Harness + MCP + Skills + 多 Agent** 架构演进的求职训练平台。当前代码仍以 FastAPI 模块化单体和 React 前端为核心，已经完成 Phase 1A 产品表面收缩，并开始建设 Phase 1B 历史数据契约审计。
 
-项目使用 FastAPI + SQLAlchemy + Alembic 构建后端，React + Vite + TailwindCSS 构建前端，并提供本地 RAG 知识库、LLM 多供应商适配、审计日志、权益/支付、组织管理、备份、监控、灰度配置和 CI/E2E 测试等工程化能力。
+> 当前边界必须明确：项目已实现隔离的 **shadow runtime**（5 个 Agent、4 个 Skill、2 个只读 MCP-compatible Tool）以及 PostgreSQL Run Store 代码、事务幂等、持久化 Checkpoint/Trace、执行租约和取消竞争处理。本地默认仍使用 memory Store；真实 PostgreSQL 多实例/恢复演练、durable worker、生产 Agent API 和网络 MCP Server 尚未完成，因此不能描述为生产 Harness/MCP 已完成。
 
-## 核心能力
+## 当前产品能力
 
-- 简历上传：支持粘贴文本、PDF、DOCX，后端校验文件扩展名和真实内容格式。
-- 简历结构化：通过 LLM 将简历转成可编辑结构化数据。
-- 简历优化：按技术岗、产品岗、运营岗、通用模板优化表达。
-- JD 适配：根据岗位 JD 输出匹配分、弱项和优化建议。
-- 模拟面试：基于简历经历和 RAG 知识库生成追问题。
-- 回答评分：按完整性、逻辑性、一致性、简洁性、深度等维度评分。
-- 面试报告：生成总结、薄弱点、改进建议，并支持 Markdown 导出。
-- 账号治理：支持账号数据导出和账号注销，注销后审计记录匿名化。
-- 组织管理：支持组织空间、成员列表、成员角色和组织级数据标识。
-- 商业化闭环：支持权益额度、人工开通、支付订单、签名 webhook 自动开通套餐。
-- 系统后台：提供发布检查、运营摘要、审计日志、成本估算、运行指标和备份入口。
+已保留并持续维护：
+
+- 简历上传、解析、结构化编辑、版本和导出；
+- 基于 JD 的匹配分析和定向改写；
+- 岗位申请跟踪；
+- 模拟面试、动态问题、回答评分和报告导出；
+- 训练计划、题目练习和训练画像；
+- RAG 知识库、任务队列、审计、账号导出与账号删除；
+- health、status、release check、alerts、backup 等受控运维能力。
+
+Phase 1A 已退役的产品表面：
+
+- 支付、订单、套餐、价格、升级和商业 entitlement；
+- 组织/公司管理 UI 与公开 API；
+- 公司画像 CRUD UI 与公开 API；
+- 运营后台 UI；
+- 面向用户的质量反馈 UI/API。
+
+当前 SQLAlchemy 元数据共 29 张表：26 张历史业务表继续保留 personal organization 兼容数据，另有 3 张 Agent Runtime 表。Phase 1B 尚未执行历史业务删表、删列或破坏性迁移。
+
+## 当前阶段
+
+| 阶段 | 状态 |
+|---|---|
+| Phase 0：基线与质量门 | 已实施，未提交 |
+| Phase 1A：产品表面退役 | 已实施，未提交 |
+| Phase 1B：历史数据契约 | 只读审计基础已实现；真实数据迁移未开始 |
+| Phase 2：Agent Harness | PostgreSQL Store、事务幂等、Checkpoint/Trace、执行租约和取消竞争代码已实现；durable worker、kill/restart、多实例实测和生产 API 未完成 |
+| Phase 3：MCP + Skills | 4 个 Skill、2 个只读 MCP-compatible Tool；注册表和事实安全门已激活 |
+| Phase 4：多 Agent | 5 个 Agent 的 Supervisor/Handoff 隔离闭环已实现，尚未替换生产主链路 |
+| Phase 5：证据化简历改写 | Evidence Hash + source-exact 重排已实现；人工盲评和 120 条基准集尚未完成 |
+
+详细计划见 [`docs/AGENT_PLATFORM_DEVELOPMENT_SPEC.md`](docs/AGENT_PLATFORM_DEVELOPMENT_SPEC.md)。
 
 ## 技术栈
 
 ### 后端
 
-- FastAPI
-- SQLAlchemy Async
-- Alembic
-- SQLite / PostgreSQL
-- Pydantic Settings
-- 本地 RAG 检索
-- 多 LLM Provider 适配：local、OpenAI、Moonshot、DeepSeek、Anthropic、custom
+- Python 3.12、FastAPI、Pydantic Settings；
+- SQLAlchemy Async、Alembic、SQLite/PostgreSQL；
+- Redis/RQ 可选任务队列；
+- Qdrant/关键词检索、Embedding 和 Reranker 适配；
+- 多 LLM Provider 适配层；
+- pytest、coverage、Ruff、mypy、pip-audit。
 
 ### 前端
 
-- React 18
-- Vite
-- TypeScript
-- TailwindCSS
-- Zustand
-- Axios
-- lucide-react
-- Playwright
+- React 18、TypeScript、Vite；
+- TailwindCSS、Zustand、Axios；
+- Vitest、ESLint、Playwright。
 
 ## 项目结构
 
 ```text
 .
-├── backend/                 # FastAPI 后端
-│   ├── app/
-│   │   ├── routers/         # API 路由
-│   │   ├── services/        # 业务服务
-│   │   ├── models/          # SQLAlchemy 模型
-│   │   ├── schemas/         # Pydantic Schema
-│   │   └── utils/           # 工具函数
-│   ├── alembic/             # 数据库迁移
-│   └── tests/               # 后端单元/集成测试
-├── frontend/                # React 前端
-│   ├── src/
-│   │   ├── pages/           # 页面
-│   │   ├── components/      # 组件
-│   │   ├── services/        # API Client
-│   │   └── stores/          # 状态管理
-│   └── e2e/                 # Playwright E2E
-├── docs/                    # 产品、架构、安全、发布和运维文档
-└── .github/workflows/       # CI 流水线
+├── backend/                 # FastAPI、数据模型、服务、迁移和测试
+├── frontend/                # React 前端、单元测试和 E2E
+├── quality/                 # OpenAPI、Agent、Skills 冻结/规划注册表
+├── scripts/                 # 统一质量门、契约和密钥校验
+├── deploy/                  # 部署环境模板
+├── artifacts/               # 本地质量证据；默认不应提交生成物
+└── docs/                    # 架构、质量、评测、ADR 和迁移文档
 ```
 
-## 本地运行
+## 本地开发
 
 ### 后端
 
-```bash
+```powershell
 cd backend
 python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r requirements.txt
-copy .env.example .env
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+Copy-Item .env.example .env
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ### 前端
 
-```bash
+```powershell
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
 默认前端地址为 `http://127.0.0.1:5173`，后端地址为 `http://127.0.0.1:8000`。
 
-## 测试与质量检查
+## 统一质量门
 
-```bash
-# 后端
+```powershell
+# 完整 CI 阻断门
+backend\.venv-codex\Scripts\python.exe scripts\run_quality_gate.py `
+  --profile all `
+  --mode ci
+
+# 发布候选门；后端总行覆盖率必须达到 85%
+backend\.venv-codex\Scripts\python.exe scripts\run_quality_gate.py `
+  --profile all `
+  --mode release
+```
+
+CI 的 64% 是存量 ratchet，不是发布标准。2026-08-27 最新后端 Release Gate 已以 `86.03%` 总行覆盖率通过，前端、契约、安全和 3 条 Chromium E2E 也已通过；不得降低阈值、删除失败测试或把未运行检查写成通过。
+
+质量标准和当前实测值分别见：
+
+- [`docs/QUALITY_GATE_STANDARD.md`](docs/QUALITY_GATE_STANDARD.md)
+- [`docs/BASELINE_INVENTORY.md`](docs/BASELINE_INVENTORY.md)
+
+## Phase 1B 只读数据审计
+
+```powershell
 cd backend
-.\.venv\Scripts\python.exe -m unittest discover -s tests
-.\.venv\Scripts\python.exe -m alembic heads
-
-# 前端
-cd frontend
-npm run typecheck
-npm run build
-npm audit --json
-npm run e2e
+.\.venv-codex\Scripts\python.exe scripts\audit_phase1b_data_contract.py `
+  --database-url "postgresql+asyncpg://<readonly-user>@<host>/<database>" `
+  --report artifacts\data-contract\phase1b-postgresql-audit.json
 ```
 
-当前项目已通过：
+审计只读取 row count、外键和归属关系，不输出用户正文或支付载荷。发现孤儿记录、跨用户归属、共享组织或公司画像 owner 歧义时默认返回非零退出码。执行规范见 [`docs/PHASE1B_DATA_CONTRACT_AUDIT.md`](docs/PHASE1B_DATA_CONTRACT_AUDIT.md)。
 
-- 后端 unittest
-- Alembic head 检查
-- 前端 TypeScript 检查
-- 前端生产构建
-- npm audit
-- Playwright E2E 冒烟测试
+## Docker 部署
 
-## 企业级能力
+项目提供 PostgreSQL、Redis、Qdrant、后端、RQ worker 和前端 Nginx 的 Docker Compose 配置：
 
-- 发布检查：生产环境阻断危险配置，如默认密钥、SQLite、公开 docs、不安全 CORS、未配置真实 LLM 等。
-- 审计日志：记录认证、简历、面试、报告、账号、计费、支付、组织等关键事件。
-- 账号合规：支持账号数据导出、账号删除和删除后的审计匿名化。
-- 组织协作：支持组织实体、组织成员、角色和组织级资源标识。
-- 商业化：支持套餐权益、额度扣减、人工开通、支付订单和签名 webhook。
-- 运维：提供运行指标、备份状态、管理员备份接口、blue/green 和 canary 配置。
-- CI/CD：GitHub Actions 覆盖后端、前端和 E2E。
-
-## 上传 GitHub 前注意
-
-不要提交真实 `.env`、本地数据库、日志、依赖目录、构建产物、测试报告和上传文件。根目录 `.gitignore` 已覆盖这些常见风险。
-
-推荐首次上传前执行：
-
-```bash
-git status --ignored
-git add .
-git status
+```powershell
+Copy-Item deploy/compose.env.example deploy/compose.env
+Copy-Item backend/.env.production.example backend/.env.production
+docker compose --env-file deploy/compose.env build
+docker compose --env-file deploy/compose.env up -d
 ```
 
-确认没有 `.env`、`*.db`、`node_modules/`、`dist/`、`.venv/`、`test-results/`、`playwright-report/` 出现在待提交列表后再 commit。
+生产部署前必须替换密钥、模型 Key、域名和告警配置，并通过 release 质量门、数据库备份恢复演练和安全评审。详见 [`docs/DOCKER_DEPLOYMENT.md`](docs/DOCKER_DEPLOYMENT.md)。
+
+## 文档入口
+
+- [`docs/README.md`](docs/README.md)：权威文档索引；
+- [`docs/AGENT_PLATFORM_DEVELOPMENT_SPEC.md`](docs/AGENT_PLATFORM_DEVELOPMENT_SPEC.md)：企业级开发规范和阶段计划；
+- [`docs/RESUME_REWRITE_EVALUATION.md`](docs/RESUME_REWRITE_EVALUATION.md)：真实有效的简历改写评测标准；
+- [`docs/adr/0002-product-surface-retirement.md`](docs/adr/0002-product-surface-retirement.md)：Phase 1A 退役决策。
+
+## Git 与敏感信息
+
+不要提交真实 `.env`、数据库、日志、依赖目录、构建产物、覆盖率、Playwright 报告、质量 Artifact 或用户数据。提交前至少执行：
+
+```powershell
+git diff --check
+git status --short --branch
+```
+
+本工作区当前改动尚未 commit、未 push。

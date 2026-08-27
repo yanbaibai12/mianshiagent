@@ -11,7 +11,6 @@ from app.config import Settings
 from app.models import AlertNotification
 from app.utils.time import utc_now
 
-
 SEVERITY_RANK = {"info": 1, "warning": 2, "critical": 3}
 
 

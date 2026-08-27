@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "status": "active",
+  "phase": "phase-2-shadow-runtime",
+  "owner": "mcp-skills-team",
+  "tools": [
+    {
+      "name": "resume.read",
+      "version": "0.2.0",
+      "owner": "resume-intelligence-team",
+      "description": "Read one resume from the domain database after run audience and database owner authorization.",
+      "risk_level": "medium",
+      "read_only": true,
+      "requires_approval": false,
+      "allowed_agents": [
+        "resume-analyst",
+        "resume-rewriter"
+      ],
+      "required_arguments": [
+        "resume_id",
+        "audience"
+      ],
+      "output_fields": [
+        "resume_text"
+      ]
+    },
+    {
+      "name": "interview.questions.read",
+      "version": "0.2.0",
+      "owner": "interview-intelligence-team",
+      "description": "Read questions for one interview from the domain database after run audience and database owner authorization.",
+      "risk_level": "medium",
+      "read_only": true,
+      "requires_approval": false,
+      "allowed_agents": [
+        "interview-coach"
+      ],
+      "required_arguments": [
+        "interview_id",
+        "audience"
+      ],
+      "output_fields": [
+        "questions"
+      ]
+    }
+  ]
+}

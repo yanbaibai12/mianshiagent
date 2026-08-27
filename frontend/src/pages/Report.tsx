@@ -4,7 +4,6 @@ import { ArrowLeft, Building2, CalendarCheck2, Download, FileText, Gauge, Lightb
 import AppShell from '../components/AppShell'
 import { Badge, Button, Card, EmptyState, LoadingState, ProgressBar, StatTile } from '../components/ui'
 import { interviewApi, InterviewQuestion, InterviewReport } from '../services/interview'
-import { businessApi, BusinessEntitlements } from '../services/business'
 import { trainingPlanApi } from '../services/trainingPlans'
 
 const scoreLabels: Record<string, string> = {
@@ -69,17 +68,13 @@ export default function ReportPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [report, setReport] = useState<InterviewReport | null>(null)
-  const [business, setBusiness] = useState<BusinessEntitlements | null>(null)
   const [error, setError] = useState('')
   const [generatingPlan, setGeneratingPlan] = useState(false)
 
   useEffect(() => {
     if (!id) return
-    Promise.all([interviewApi.getReport(id), businessApi.entitlements()])
-      .then(([reportRes, businessRes]) => {
-        setReport(reportRes.data)
-        setBusiness(businessRes.data)
-      })
+    interviewApi.getReport(id)
+      .then((reportRes) => setReport(reportRes.data))
       .catch((err: any) => setError(err.response?.data?.detail || '报告加载失败'))
   }, [id])
 
@@ -90,10 +85,6 @@ export default function ReportPage() {
   const totalScore = report?.total_score ?? 0
   const templateInfo = report?.report_details?.interview_template || null
   const companyProfile = report?.company_profile_snapshot || report?.report_details?.company_profile || null
-  const exportPaywallBlocked = Boolean(
-    business?.entitlements.paywall_active && !business.entitlements.can_export_report,
-  )
-
   const handleExport = async (format: 'md' | 'docx' | 'pdf') => {
     try {
       if (format === 'md') {
@@ -103,7 +94,6 @@ export default function ReportPage() {
         const res = await interviewApi.exportReportFile(id!, format)
         downloadBlob(res.data, `面试报告.${format}`)
       }
-      businessApi.entitlements().then((businessRes) => setBusiness(businessRes.data)).catch(() => undefined)
     } catch (err: any) {
       setError(err.response?.data?.detail || '报告导出失败')
     }
@@ -147,15 +137,15 @@ export default function ReportPage() {
             <CalendarCheck2 size={16} />
             {generatingPlan ? '生成中...' : '生成本周训练计划'}
           </Button>
-          <Button type="button" onClick={() => handleExport('md')} disabled={exportPaywallBlocked} data-testid="export-report-md-button">
+          <Button type="button" onClick={() => handleExport('md')} data-testid="export-report-md-button">
             <Download size={16} />
-            {exportPaywallBlocked ? '需升级后导出' : '导出 Markdown'}
+            导出 Markdown
           </Button>
-          <Button type="button" variant="secondary" onClick={() => handleExport('docx')} disabled={exportPaywallBlocked} data-testid="export-report-docx-button">
+          <Button type="button" variant="secondary" onClick={() => handleExport('docx')} data-testid="export-report-docx-button">
             <Download size={16} />
             Word
           </Button>
-          <Button type="button" variant="secondary" onClick={() => handleExport('pdf')} disabled={exportPaywallBlocked} data-testid="export-report-pdf-button">
+          <Button type="button" variant="secondary" onClick={() => handleExport('pdf')} data-testid="export-report-pdf-button">
             <Download size={16} />
             PDF
           </Button>
@@ -164,12 +154,6 @@ export default function ReportPage() {
     >
       <div className="space-y-6" data-testid="report-page">
         {error && <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-        {exportPaywallBlocked && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            免费报告导出额度已用完，请升级 Pro 或联系管理员开通权益。
-          </div>
-        )}
-
         <Card>
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
             <div>

@@ -1,11 +1,13 @@
 from functools import lru_cache
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+
     # 数据库
     DATABASE_URL: str = "sqlite+aiosqlite:///./interview_agent.db"
 
@@ -104,6 +106,10 @@ class Settings(BaseSettings):
     MAX_JD_TEXT_LENGTH: int = 40_000
     MAX_ANSWER_LENGTH: int = 8_000
 
+    # Agent shadow runtime（仅内部评测，进程内状态，不可作为生产运行时）
+    AGENT_SHADOW_API_ENABLED: bool = False
+    AGENT_RUN_STORE_BACKEND: Literal["memory", "postgresql"] = "memory"
+
     # 安全
     ADMIN_EMAILS: str = ""
     CORS_ALLOW_ORIGINS: list[str] | str = [
@@ -130,28 +136,6 @@ class Settings(BaseSettings):
     ALERT_WEBHOOK_TOKEN: str = ""
     ALERT_MIN_SEVERITY: str = "critical"  # critical / warning / info
     ALERT_DEDUPE_MINUTES: int = 60
-    QUALITY_EVAL_CANDIDATE_SCORE_THRESHOLD: int = 2
-
-    # 商业化发布开关
-    BILLING_ENABLED: bool = False
-    PAYMENT_PROVIDER: str = ""  # stripe / wechatpay / alipay / manual
-    PAYMENT_WEBHOOK_SECRET: str = ""
-    PAYMENT_CHECKOUT_BASE_URL: str = ""
-    PAYMENT_SUCCESS_URL: str = ""
-    PAYMENT_CANCEL_URL: str = ""
-    BILLING_UPGRADE_CONTACT: str = ""
-    FREE_RESUME_QUOTA: int = 1
-    FREE_INTERVIEW_QUOTA: int = 1
-    FREE_OPTIMIZE_QUOTA: int = 1
-    FREE_JD_ADAPT_QUOTA: int = 1
-    FREE_REPORT_EXPORT_QUOTA: int = 0
-    PRO_MONTHLY_PRICE_CNY: int = 39
-    PRO_RESUME_QUOTA: int = 10
-    PRO_INTERVIEW_QUOTA: int = 20
-    PRO_OPTIMIZE_QUOTA: int = 30
-    PRO_JD_ADAPT_QUOTA: int = 30
-    PRO_REPORT_EXPORT_QUOTA: int = 20
-    SPRINT_PACKAGE_PRICE_CNY: int = 129
 
     @property
     def is_production(self) -> bool:
@@ -203,7 +187,24 @@ class Settings(BaseSettings):
             for feature in features
         }
 
-    @field_validator("DEBUG", "ENFORCE_RELEASE_CHECKS", "AUTO_CREATE_DB", "ENABLE_DOCS", "BILLING_ENABLED", "LLM_ALLOW_FALLBACK", "METRICS_ENABLED", "BACKUP_ENABLED", "QDRANT_SYNC_ON_STARTUP", "EMBEDDING_USE_FP16", "EMBEDDING_ALLOW_FALLBACK", "RERANK_USE_FP16", "RERANK_ALLOW_FALLBACK", "TASK_ALLOW_LOCAL_FALLBACK", "ALERT_NOTIFY_ENABLED", mode="before")
+    @field_validator(
+        "DEBUG",
+        "ENFORCE_RELEASE_CHECKS",
+        "AUTO_CREATE_DB",
+        "ENABLE_DOCS",
+        "LLM_ALLOW_FALLBACK",
+        "METRICS_ENABLED",
+        "BACKUP_ENABLED",
+        "QDRANT_SYNC_ON_STARTUP",
+        "EMBEDDING_USE_FP16",
+        "EMBEDDING_ALLOW_FALLBACK",
+        "RERANK_USE_FP16",
+        "RERANK_ALLOW_FALLBACK",
+        "TASK_ALLOW_LOCAL_FALLBACK",
+        "ALERT_NOTIFY_ENABLED",
+        "AGENT_SHADOW_API_ENABLED",
+        mode="before",
+    )
     @classmethod
     def parse_bool_like(cls, value: Any) -> Any:
         if isinstance(value, str):
@@ -220,10 +221,6 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
 
 
 @lru_cache

@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0",
+  "status": "active",
+  "phase": "phase-2-shadow-runtime",
+  "owner": "agent-platform-team",
+  "agents": [
+    {
+      "id": "supervisor",
+      "version": "0.2.0",
+      "owner": "agent-platform-team",
+      "description": "Routes a bounded run to one approved specialist without direct tool access.",
+      "entrypoint": "backend/app/agent_platform/agents.py:supervisor_agent",
+      "allowed_tools": [],
+      "max_steps": 8,
+      "max_tokens": 8000,
+      "handoffs": [
+        "resume-analyst",
+        "resume-rewriter",
+        "jd-analyst",
+        "interview-coach"
+      ]
+    },
+    {
+      "id": "resume-analyst",
+      "version": "0.2.0",
+      "owner": "resume-intelligence-team",
+      "description": "Extracts evidence-bound resume claims through the read-only resume tool.",
+      "entrypoint": "backend/app/agent_platform/agents.py:resume_analyst_agent",
+      "allowed_tools": [
+        "resume.read"
+      ],
+      "max_steps": 6,
+      "max_tokens": 6000,
+      "handoffs": []
+    },
+    {
+      "id": "resume-rewriter",
+      "version": "0.1.0",
+      "owner": "resume-intelligence-team",
+      "description": "Selects and orders only evidence-linked resume claims for an explicit JD.",
+      "entrypoint": "backend/app/agent_platform/agents.py:resume_rewriter_agent",
+      "allowed_tools": [
+        "resume.read"
+      ],
+      "max_steps": 6,
+      "max_tokens": 6000,
+      "handoffs": []
+    },
+    {
+      "id": "jd-analyst",
+      "version": "0.1.0",
+      "owner": "job-intelligence-team",
+      "description": "Maps explicit JD requirements without mutating user data.",
+      "entrypoint": "backend/app/agent_platform/agents.py:jd_analyst_agent",
+      "allowed_tools": [],
+      "max_steps": 4,
+      "max_tokens": 4000,
+      "handoffs": []
+    },
+    {
+      "id": "interview-coach",
+      "version": "0.1.0",
+      "owner": "interview-intelligence-team",
+      "description": "Critiques an answer against a bounded rubric using read-only interview context.",
+      "entrypoint": "backend/app/agent_platform/agents.py:interview_coach_agent",
+      "allowed_tools": [
+        "interview.questions.read"
+      ],
+      "max_steps": 6,
+      "max_tokens": 6000,
+      "handoffs": []
+    }
+  ]
+}

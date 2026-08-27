@@ -25,7 +25,6 @@ from app.services.ats_scoring import build_ats_report  # noqa: E402
 from app.services.resume_index import reindex_resume_chunks  # noqa: E402
 from app.utils.security import get_password_hash  # noqa: E402
 
-
 SAMPLE_RESUME = {
     "personal": {"name": "张三", "email": "zhangsan@example.com", "phone": "13800138000", "job_intent": "后端开发工程师"},
     "education": [{"school": "某某大学", "major": "计算机科学与技术", "degree": "本科", "time": "2022-2026"}],

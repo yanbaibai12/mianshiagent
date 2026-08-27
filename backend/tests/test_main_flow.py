@@ -1,16 +1,13 @@
 import json
-import hashlib
-import hmac
 import os
-import time
 import tempfile
 import threading
+import time
 import unittest
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from pathlib import Path
-
 
 _DB_PATH = Path(tempfile.gettempdir()) / f"interview_agent_test_{uuid.uuid4().hex}.db"
 _BACKUP_DIR = Path(tempfile.gettempdir()) / f"interview_agent_backups_{uuid.uuid4().hex}"
@@ -24,7 +21,6 @@ os.environ["AUTO_CREATE_DB"] = "true"
 os.environ["LLM_PROVIDER"] = "local"
 os.environ["LLM_ALLOW_FALLBACK"] = "false"
 os.environ["ADMIN_EMAILS"] = "admin@example.com"
-os.environ["PAYMENT_WEBHOOK_SECRET"] = "unit-test-webhook-secret"
 os.environ["BACKUP_ENABLED"] = "true"
 os.environ["BACKUP_DIR"] = str(_BACKUP_DIR)
 os.environ["VECTOR_STORE_BACKEND"] = "keyword"
@@ -33,9 +29,13 @@ os.environ["EMBEDDING_PROVIDER"] = "hash"
 os.environ["RERANK_PROVIDER"] = "none"
 os.environ["RATE_LIMIT_AUTH_REQUESTS"] = "1000"
 os.environ["RATE_LIMIT_API_REQUESTS"] = "5000"
+os.environ["AGENT_SHADOW_API_ENABLED"] = "true"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+from app.config import get_settings  # noqa: E402
+
+settings = get_settings()
 from app.main import app  # noqa: E402
 from app.services.company_profiles import (  # noqa: E402
     canonicalize_question,
@@ -43,7 +43,6 @@ from app.services.company_profiles import (  # noqa: E402
     normalize_position_name,
     normalize_rounds,
 )
-
 
 SAMPLE_RESUME = """姓名：张三
 邮箱：zhangsan@example.com
@@ -116,7 +115,14 @@ class MainFlowTest(unittest.TestCase):
 
         exported = self.assert_ok(self.client.get("/api/account/export", headers=headers))
         self.assertEqual(exported["user"]["email"], user_email)
-        for key in ["resumes", "interviews", "usage_records", "audit_logs", "quality_annotations", "quality_eval_candidates"]:
+        for key in [
+            "resumes",
+            "interviews",
+            "usage_records",
+            "audit_logs",
+            "quality_annotations",
+            "quality_eval_candidates",
+        ]:
             self.assertIn(key, exported)
         self.assertEqual(len(exported["resumes"]), 1)
         self.assertTrue(any(record["feature"] == "resume_upload" for record in exported["usage_records"]))
@@ -127,7 +133,9 @@ class MainFlowTest(unittest.TestCase):
         self.assertEqual(forbidden.status_code, 403)
 
         admin_headers = self.auth_headers("admin@example.com")
-        audit_logs = self.assert_ok(self.client.get("/api/audit/admin/logs", headers=admin_headers, params={"limit": 200}))["logs"]
+        audit_logs = self.assert_ok(
+            self.client.get("/api/audit/admin/logs", headers=admin_headers, params={"limit": 200})
+        )["logs"]
         event_types = {record["event_type"] for record in audit_logs}
         self.assertIn("auth.login", event_types)
         self.assertIn("resume.upload", event_types)
@@ -147,62 +155,58 @@ class MainFlowTest(unittest.TestCase):
         self.assertIn("anonymized_user", delete_events[0]["metadata"])
         self.assertNotIn(user_email, json.dumps(post_delete_logs, ensure_ascii=False))
 
-    def test_organizations_payment_webhook_and_operations(self):
-        owner_email = f"owner-{uuid.uuid4().hex}@example.com"
-        member_email = f"member-{uuid.uuid4().hex}@example.com"
-        owner_headers = self.auth_headers(owner_email)
-        member_headers = self.auth_headers(member_email)
+    def test_retired_product_apis_are_unavailable_and_operations_remain_available(self):
+        owner_headers = self.auth_headers(f"owner-{uuid.uuid4().hex}@example.com")
+        member_headers = self.auth_headers(f"member-{uuid.uuid4().hex}@example.com")
         admin_headers = self.auth_headers("admin@example.com")
 
-        orgs = self.assert_ok(self.client.get("/api/organizations", headers=owner_headers))["organizations"]
-        self.assertGreaterEqual(len(orgs), 1)
+        retired_operations = [
+            ("GET", "/api/business/admin/usage-summary"),
+            ("GET", "/api/business/entitlements"),
+            ("POST", "/api/business/admin/grant-plan"),
+            ("POST", "/api/business/upgrade-request"),
+            ("GET", "/api/company-profiles"),
+            ("GET", "/api/company-profiles/00000000-0000-0000-0000-000000000000"),
+            ("POST", "/api/company-profiles/rebuild"),
+            ("GET", "/api/organizations"),
+            ("POST", "/api/organizations"),
+            ("GET", "/api/organizations/00000000-0000-0000-0000-000000000000/members"),
+            ("POST", "/api/organizations/00000000-0000-0000-0000-000000000000/members"),
+            ("GET", "/api/payments/orders"),
+            ("POST", "/api/payments/checkout"),
+            ("POST", "/api/payments/webhook"),
+            ("GET", "/api/quality/annotations"),
+            ("POST", "/api/quality/annotations"),
+            ("GET", "/api/quality/admin/summary"),
+            ("GET", "/api/quality/admin/eval-candidates"),
+            ("POST", "/api/quality/admin/eval-candidates/00000000-0000-0000-0000-000000000000/status"),
+        ]
+        for method, path in retired_operations:
+            with self.subTest(operation=f"{method} {path}"):
+                response = self.client.request(method, path, headers=owner_headers, json={})
+                self.assertEqual(response.status_code, 404, response.text)
 
-        org = self.assert_ok(
-            self.client.post("/api/organizations", headers=owner_headers, json={"name": "校招训练团队"})
+        openapi = self.assert_ok(self.client.get("/openapi.json"))
+        retired_prefixes = (
+            "/api/business",
+            "/api/company-profiles",
+            "/api/organizations",
+            "/api/payments",
+            "/api/quality",
         )
-        self.assertEqual(org["role"], "owner")
-
-        invited = self.assert_ok(
-            self.client.post(
-                f"/api/organizations/{org['id']}/members",
-                headers=owner_headers,
-                json={"email": member_email, "role": "member"},
-            )
+        self.assertFalse(
+            any(path.startswith(retired_prefixes) for path in openapi["paths"]),
+            "Retired product APIs must not remain discoverable in OpenAPI",
         )
-        self.assertEqual(invited["email"], member_email)
-        self.assertEqual(invited["role"], "member")
-
-        forbidden = self.client.post(
-            f"/api/organizations/{org['id']}/members",
-            headers=member_headers,
-            json={"email": owner_email, "role": "admin"},
-        )
-        self.assertEqual(forbidden.status_code, 403)
-
-        checkout = self.assert_ok(
-            self.client.post("/api/payments/checkout", headers=owner_headers, json={"plan": "pro", "billing_cycle": "monthly"})
-        )
-        self.assertEqual(checkout["plan"], "pro")
-        self.assertIn(checkout["status"], {"pending", "pending_manual"})
-
-        payload = {
-            "order_id": checkout["order_id"],
-            "status": "paid",
-            "provider_order_id": f"gateway-{uuid.uuid4().hex}",
+        retired_tags = {"business", "company-profiles", "organizations", "payments", "quality"}
+        active_tags = {
+            tag
+            for operation in openapi["paths"].values()
+            for item in operation.values()
+            for tag in item.get("tags", [])
         }
-        raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-        signature = hmac.new(b"unit-test-webhook-secret", raw, hashlib.sha256).hexdigest()
-        webhook = self.assert_ok(
-            self.client.post(
-                "/api/payments/webhook",
-                content=raw,
-                headers={"content-type": "application/json", "x-payment-signature": signature},
-            )
-        )
-        self.assertEqual(webhook["plan"], "pro")
-
-        entitlements = self.assert_ok(self.client.get("/api/business/entitlements", headers=owner_headers))
-        self.assertEqual(entitlements["plan"]["current"], "pro")
+        self.assertTrue(retired_tags.isdisjoint(active_tags))
+        self.assertEqual(self.assert_ok(self.client.get("/health")), {"status": "ok"})
 
         status_payload = self.assert_ok(self.client.get("/api/system/status", headers=owner_headers))
         self.assertIn("operations", status_payload)
@@ -401,9 +405,7 @@ class MainFlowTest(unittest.TestCase):
         self.assertEqual(liked["like_count"], detail["like_count"] + 1)
 
         exported = self.assert_ok(self.client.get("/api/account/export", headers=headers))
-        self.assertTrue(
-            any(item["id"] == created["id"] for item in exported["interview_experience_shares"])
-        )
+        self.assertTrue(any(item["id"] == created["id"] for item in exported["interview_experience_shares"]))
         self.assertTrue(any(item["question_id"] == card["id"] for item in exported["agent_question_practice_states"]))
         self.assertTrue(any(item["dimension_key"] == "rag" for item in exported["training_profile_dimensions"]))
 
@@ -493,19 +495,16 @@ class MainFlowTest(unittest.TestCase):
         )
         self.assertEqual(hr_generated["template"]["template_id"], "hr_behavior")
         self.assertEqual(hr_generated["training_focus"], [])
-        hr_questions = self.assert_ok(
-            self.client.get(f"/api/interviews/{hr['id']}/questions", headers=headers)
-        )
+        hr_questions = self.assert_ok(self.client.get(f"/api/interviews/{hr['id']}/questions", headers=headers))
         hr_modules = [question["module"] for question in hr_questions]
         self.assertIn("behavioral", hr_modules)
         self.assertNotEqual(set(hr_modules), {"agent_fundamentals"})
         self.assertGreater(hr_modules.count("behavioral"), hr_modules.count("agent_fundamentals"))
         self.assertNotEqual(technical_modules, hr_modules)
 
-    def test_company_profiles_feed_interview_generation_with_tenant_isolation(self):
+    def test_historical_company_profile_snapshot_feeds_interview_generation(self):
         owner_headers = self.auth_headers()
         other_headers = self.auth_headers()
-        admin_headers = self.auth_headers("admin@example.com")
         company_base = f"画像测试{uuid.uuid4().hex[:8]}科技"
 
         self.assertEqual(normalize_company_name(f"{company_base}有限公司"), normalize_company_name(company_base))
@@ -513,175 +512,83 @@ class MainFlowTest(unittest.TestCase):
         self.assertEqual(normalize_rounds("技术初面 / 系统设计 / HR 面")[0]["round_type"], "technical_first")
         self.assertEqual(canonicalize_question("请说一下检索增强生成的召回率如何评估？"), "RAG的召回率如何评估")
 
-        public_one = self.assert_ok(
-            self.client.post(
-                "/api/community/experiences",
-                headers=owner_headers,
-                json={
-                    "company": f"{company_base}有限公司",
-                    "position": "AI Agent 开发工程师",
-                    "rounds": "技术初面 / 系统设计",
-                    "difficulty": "hard",
-                    "result": "passed",
-                    "tags": ["RAG", "工程化"],
-                    "questions": ["请说一下检索增强生成的召回率如何评估？"],
-                    "content": "重点考察 RAG 召回、重排、可观测性和上线后的质量评测。",
-                    "visibility": "public",
-                    "is_anonymous": True,
-                    "allow_profile_usage": True,
-                },
+        eligible_shares = [
+            {
+                "company": f"{company_base}有限公司",
+                "position": "AI Agent 开发工程师",
+                "rounds": "技术初面 / 系统设计",
+                "difficulty": "hard",
+                "result": "passed",
+                "tags": ["RAG", "工程化"],
+                "questions": ["请说一下检索增强生成的召回率如何评估？"],
+                "content": "重点考察 RAG 召回、重排、可观测性和上线后的质量评测。",
+                "visibility": "public",
+                "is_anonymous": True,
+                "allow_profile_usage": True,
+            },
+            {
+                "company": company_base,
+                "position": "智能体开发工程师",
+                "rounds": "系统设计 / HR 面",
+                "difficulty": "medium",
+                "result": "offer",
+                "tags": ["RAG", "Tool Calling"],
+                "questions": ["RAG 的召回率应该如何评估？"],
+                "content": "讨论检索指标、工具调用参数校验和失败降级。",
+                "visibility": "public",
+                "is_anonymous": True,
+                "allow_profile_usage": True,
+            },
+            {
+                "company": company_base,
+                "position": "AI Agent 开发工程师",
+                "rounds": "系统设计",
+                "difficulty": "hard",
+                "result": "passed",
+                "tags": ["系统设计", "工程化"],
+                "questions": ["如何设计可观测、可扩展的 Agent 检索与工具调用链路？"],
+                "content": "系统设计轮重点讨论数据流、降级、监控、容量和稳定性。",
+                "visibility": "public",
+                "is_anonymous": True,
+                "allow_profile_usage": True,
+            },
+        ]
+        for payload in eligible_shares:
+            created = self.assert_ok(
+                self.client.post("/api/community/experiences", headers=owner_headers, json=payload)
             )
-        )
-        self.assertTrue(public_one["allow_profile_usage"])
-        public_two = self.assert_ok(
-            self.client.post(
-                "/api/community/experiences",
-                headers=other_headers,
-                json={
-                    "company": company_base,
-                    "position": "智能体开发工程师",
-                    "rounds": "系统设计 / HR 面",
-                    "difficulty": "medium",
-                    "result": "offer",
-                    "tags": ["RAG", "Tool Calling"],
-                    "questions": ["RAG 的召回率应该如何评估？"],
-                    "content": "讨论检索指标、工具调用参数校验和失败降级。",
-                    "visibility": "public",
-                    "is_anonymous": True,
-                    "allow_profile_usage": True,
-                },
-            )
-        )
-        self.assertIn("id", public_two)
-        public_three = self.assert_ok(
-            self.client.post(
-                "/api/community/experiences",
-                headers=owner_headers,
-                json={
-                    "company": company_base,
-                    "position": "AI Agent 开发工程师",
-                    "rounds": "系统设计",
-                    "difficulty": "hard",
-                    "result": "passed",
-                    "tags": ["系统设计", "工程化"],
-                    "questions": ["如何设计可观测、可扩展的 Agent 检索与工具调用链路？"],
-                    "content": "系统设计轮重点讨论数据流、降级、监控、容量和稳定性。",
-                    "visibility": "public",
-                    "is_anonymous": True,
-                    "allow_profile_usage": True,
-                },
-            )
-        )
+            self.assertTrue(created["allow_profile_usage"])
 
-        self.assert_ok(
-            self.client.post(
-                "/api/community/experiences",
-                headers=owner_headers,
-                json={
-                    "company": company_base,
-                    "position": "AI Agent 开发工程师",
-                    "rounds": "项目深挖",
-                    "difficulty": "hard",
-                    "result": "unknown",
-                    "tags": ["内部"],
-                    "questions": ["内部私有题 private-only-marker，联系 secret@example.com"],
-                    "content": "这条面经仅自己可见，手机号 13800138000。",
-                    "visibility": "private",
-                    "is_anonymous": True,
-                    "allow_profile_usage": True,
-                },
-            )
-        )
-        self.assert_ok(
-            self.client.post(
-                "/api/community/experiences",
-                headers=owner_headers,
-                json={
-                    "company": company_base,
-                    "position": "AI Agent 开发工程师",
-                    "rounds": "主管面",
-                    "difficulty": "hard",
-                    "result": "unknown",
-                    "tags": ["未授权"],
-                    "questions": ["未授权画像题 opt-out-only-marker"],
-                    "content": "用户没有授权将这条公开面经用于公司画像。",
-                    "visibility": "public",
-                    "is_anonymous": True,
-                    "allow_profile_usage": False,
-                },
-            )
-        )
-        organization_share = self.assert_ok(
-            self.client.post(
-                "/api/community/experiences",
-                headers=owner_headers,
-                json={
-                    "company": company_base,
-                    "position": "AI Agent 开发工程师",
-                    "rounds": "项目深挖",
-                    "difficulty": "medium",
-                    "result": "passed",
-                    "tags": ["组织题"],
-                    "questions": ["组织内部链路如何做故障复盘 org-only-marker"],
-                    "content": "组织内可复用的故障排查记录。",
-                    "visibility": "organization",
-                    "is_anonymous": True,
-                    "allow_profile_usage": True,
-                },
-            )
-        )
-
-        owner_profiles = self.assert_ok(
-            self.client.get("/api/company-profiles", headers=owner_headers, params={"company": company_base})
-        )
-        self.assertEqual(owner_profiles["total"], 2)
-        public_profile = next(item for item in owner_profiles["items"] if item["scope"] == "public")
-        organization_profile = next(item for item in owner_profiles["items"] if item["scope"] == "organization")
-        self.assertEqual(public_profile["interview_count"], 3)
-        self.assertEqual(organization_profile["interview_count"], 1)
-        self.assertIsNone(public_profile["source_experience_ids"])
-        public_json = json.dumps(public_profile, ensure_ascii=False)
-        self.assertNotIn("private-only-marker", public_json)
-        self.assertNotIn("opt-out-only-marker", public_json)
-        self.assertNotIn("secret@example.com", public_json)
-        self.assertNotIn("13800138000", public_json)
-
-        other_profiles = self.assert_ok(
-            self.client.get("/api/company-profiles", headers=other_headers, params={"company": company_base})
-        )
-        self.assertEqual(other_profiles["total"], 1)
-        self.assertEqual(other_profiles["items"][0]["scope"], "public")
-        self.assertNotIn("org-only-marker", json.dumps(other_profiles, ensure_ascii=False))
-
-        forbidden = self.client.post(
-            "/api/company-profiles/rebuild",
-            headers=owner_headers,
-            json={"company": company_base, "scope": "public"},
-        )
-        self.assertEqual(forbidden.status_code, 403)
-        first_rebuild = self.assert_ok(
-            self.client.post(
-                "/api/company-profiles/rebuild",
-                headers=admin_headers,
-                json={"company": company_base, "scope": "public"},
-            )
-        )
-        second_rebuild = self.assert_ok(
-            self.client.post(
-                "/api/company-profiles/rebuild",
-                headers=admin_headers,
-                json={"company": company_base, "scope": "public"},
-            )
-        )
-        self.assertEqual(first_rebuild["rebuilt_count"], 1)
-        self.assertEqual(second_rebuild["rebuilt_count"], 1)
-        admin_detail = self.assert_ok(
-            self.client.get(f"/api/company-profiles/{public_profile['id']}", headers=admin_headers)
-        )
-        self.assertEqual(
-            set(admin_detail["source_experience_ids"]),
-            {public_one["id"], public_two["id"], public_three["id"]},
-        )
+        excluded_shares = [
+            {
+                "company": company_base,
+                "position": "AI Agent 开发工程师",
+                "rounds": "项目深挖",
+                "difficulty": "hard",
+                "result": "unknown",
+                "tags": ["private-only-marker"],
+                "questions": ["private-only-marker secret@example.com"],
+                "content": "private-only-marker 13800138000",
+                "visibility": "private",
+                "is_anonymous": False,
+                "allow_profile_usage": True,
+            },
+            {
+                "company": company_base,
+                "position": "AI Agent 开发工程师",
+                "rounds": "项目深挖",
+                "difficulty": "medium",
+                "result": "passed",
+                "tags": ["opt-out-only-marker"],
+                "questions": ["opt-out-only-marker"],
+                "content": "opt-out-only-marker secret@example.com 13800138000",
+                "visibility": "public",
+                "is_anonymous": True,
+                "allow_profile_usage": False,
+            },
+        ]
+        for payload in excluded_shares:
+            self.assert_ok(self.client.post("/api/community/experiences", headers=other_headers, json=payload))
 
         resume = self.assert_ok(
             self.client.post(
@@ -702,9 +609,16 @@ class MainFlowTest(unittest.TestCase):
                 },
             )
         )
-        self.assertEqual(interview["company_profile_id"], public_profile["id"])
+        self.assertIsNotNone(interview["company_profile_id"])
         self.assertEqual(interview["company_profile_snapshot"]["source_count"], 3)
-        self.assertEqual(interview["company_profile_snapshot"]["matched_company"], public_profile["company_name"])
+        snapshot_json = json.dumps(interview["company_profile_snapshot"], ensure_ascii=False)
+        for excluded_value in (
+            "private-only-marker",
+            "opt-out-only-marker",
+            "secret@example.com",
+            "13800138000",
+        ):
+            self.assertNotIn(excluded_value, snapshot_json)
 
         generated = self.assert_ok(
             self.client.post(f"/api/interviews/{interview['id']}/generate-questions", headers=owner_headers)
@@ -715,10 +629,7 @@ class MainFlowTest(unittest.TestCase):
             self.client.get(f"/api/interviews/{interview['id']}/questions", headers=owner_headers)
         )
         self.assertTrue(any(question["question_quality"].get("company_profile") for question in generated_questions))
-        self.assertGreaterEqual(
-            sum(question["module"] == "system_design" for question in generated_questions),
-            2,
-        )
+        self.assertGreaterEqual(sum(question["module"] == "system_design" for question in generated_questions), 2)
 
         fallback = self.assert_ok(
             self.client.post(
@@ -733,7 +644,6 @@ class MainFlowTest(unittest.TestCase):
         )
         self.assertIsNone(fallback["company_profile_id"])
         self.assertEqual(fallback["company_profile_snapshot"], {})
-        self.assertEqual(organization_share["visibility"], "organization")
 
     def test_resume_to_report_flow(self):
         headers = self.auth_headers()
@@ -823,7 +733,9 @@ class MainFlowTest(unittest.TestCase):
         self.assertGreaterEqual(len(versions), 2)
         delivery = self.assert_ok(self.client.post(f"/api/resumes/{resume['id']}/versions/delivery", headers=headers))
         self.assertEqual(delivery["version_type"], "delivery")
-        exported_resume = self.client.get(f"/api/resumes/{resume['id']}/export", headers=headers, params={"variant": "delivery"})
+        exported_resume = self.client.get(
+            f"/api/resumes/{resume['id']}/export", headers=headers, params={"variant": "delivery"}
+        )
         self.assertEqual(exported_resume.status_code, 200, exported_resume.text)
         self.assertGreater(len(exported_resume.content), 1000)
 
@@ -876,68 +788,10 @@ class MainFlowTest(unittest.TestCase):
         self.assertEqual(job_after["status"], "optimized")
         self.assertIsNotNone(job_after["current_resume_version_id"])
         optimized_review = (job_after["ats_report"] or {}).get("application_review") or {}
-        self.assertIn(optimized_review.get("decision"), {"apply_now", "revise_before_apply", "low_priority", "not_recommended"})
+        self.assertIn(
+            optimized_review.get("decision"), {"apply_now", "revise_before_apply", "low_priority", "not_recommended"}
+        )
         self.assertGreaterEqual(len(optimized_review.get("reviewer_checks") or []), 3)
-
-        quality = self.assert_ok(
-            self.client.post(
-                "/api/quality/annotations",
-                headers=headers,
-                json={
-                    "target_type": "job",
-                    "target_id": job["id"],
-                    "score": 4,
-                    "labels": ["改动具体", "内容真实", "改动具体"],
-                    "notes": "优化结果能看到前后差异，但结果指标还需要人工确认。",
-                    "metadata": {"job_status": job_after["status"], "jd_text": "不应保存完整 JD"},
-                },
-            )
-        )
-        self.assertEqual(quality["score"], 4)
-        self.assertEqual(quality["labels"], ["改动具体", "内容真实"])
-        self.assertNotIn("jd_text", quality.get("annotation_metadata") or {})
-        quality_list = self.assert_ok(
-            self.client.get(
-                "/api/quality/annotations",
-                headers=headers,
-                params={"target_type": "job", "target_id": job["id"]},
-            )
-        )
-        self.assertEqual(len(quality_list), 1)
-        poor_quality = self.assert_ok(
-            self.client.post(
-                "/api/quality/annotations",
-                headers=headers,
-                json={
-                    "target_type": "job",
-                    "target_id": job["id"],
-                    "score": 2,
-                    "labels": ["表达套话", "遗漏 JD 要求"],
-                    "notes": "有套话，请联系 13800138000 / test@example.com，key sk-test-secret-1234567890 不应保存。",
-                    "metadata": {"source": "manual_review", "phone": "13800138000", "sample": "test@example.com"},
-                },
-            )
-        )
-        self.assertEqual(poor_quality["score"], 2)
-        self.assertIn("[phone_redacted]", poor_quality["notes"])
-        self.assertIn("[email_redacted]", poor_quality["notes"])
-        self.assertIn("[key_redacted]", poor_quality["notes"])
-        self.assertNotIn("phone", poor_quality.get("annotation_metadata") or {})
-        self.assertIn("[email_redacted]", poor_quality["annotation_metadata"]["sample"])
-        quality_summary = self.assert_ok(self.client.get("/api/quality/admin/summary", headers=admin_headers))
-        self.assertGreaterEqual(quality_summary["total"], 2)
-        self.assertGreaterEqual(len(quality_summary["top_labels"]), 1)
-        self.assertGreaterEqual(quality_summary["eval_candidates"]["open"], 1)
-        eval_candidates = self.assert_ok(self.client.get("/api/quality/admin/eval-candidates", headers=admin_headers))
-        self.assertGreaterEqual(len(eval_candidates), 1)
-        updated_candidate = self.assert_ok(
-            self.client.post(
-                f"/api/quality/admin/eval-candidates/{eval_candidates[0]['id']}/status",
-                headers=admin_headers,
-                json={"status": "added_to_eval"},
-            )
-        )
-        self.assertEqual(updated_candidate["status"], "added_to_eval")
 
         interview = self.assert_ok(
             self.client.post(
@@ -954,9 +808,7 @@ class MainFlowTest(unittest.TestCase):
         )
         self.assertGreaterEqual(generated["count"], 5)
 
-        questions = self.assert_ok(
-            self.client.get(f"/api/interviews/{interview['id']}/questions", headers=headers)
-        )
+        questions = self.assert_ok(self.client.get(f"/api/interviews/{interview['id']}/questions", headers=headers))
         self.assertGreaterEqual(len(questions), 3)
         point_titles = [question.get("point_title") or "" for question in questions]
         modules = {question.get("module") for question in questions}
@@ -1010,9 +862,7 @@ class MainFlowTest(unittest.TestCase):
             self.assertIn("issue", scored["score_details"]["technical_accuracy"])
             self.assertIn("suggestion", scored["score_details"]["technical_accuracy"])
 
-        report = self.assert_ok(
-            self.client.post(f"/api/interviews/{interview['id']}/finish", headers=headers)
-        )
+        report = self.assert_ok(self.client.post(f"/api/interviews/{interview['id']}/finish", headers=headers))
         self.assertGreater(report["total_score"], 0)
         self.assertIn("technical_accuracy", report["dimension_scores"])
         self.assertIn("troubleshooting", report["dimension_scores"])
@@ -1021,61 +871,187 @@ class MainFlowTest(unittest.TestCase):
         self.assertIn("module_scores", report["report_details"])
         self.assertIn("follow_up_training_plan", report["report_details"])
 
-        exported = self.assert_ok(
-            self.client.get(f"/api/interviews/{interview['id']}/report/export", headers=headers)
-        )
+        exported = self.assert_ok(self.client.get(f"/api/interviews/{interview['id']}/report/export", headers=headers))
         self.assertTrue(exported["filename"].endswith(".md"))
         self.assertIn("面试总结报告", exported["content"])
-        exported_docx = self.client.get(f"/api/interviews/{interview['id']}/report/export", headers=headers, params={"format": "docx"})
+        exported_docx = self.client.get(
+            f"/api/interviews/{interview['id']}/report/export", headers=headers, params={"format": "docx"}
+        )
         self.assertEqual(exported_docx.status_code, 200, exported_docx.text)
         self.assertGreater(len(exported_docx.content), 1000)
-        exported_pdf = self.client.get(f"/api/interviews/{interview['id']}/report/export", headers=headers, params={"format": "pdf"})
+        exported_pdf = self.client.get(
+            f"/api/interviews/{interview['id']}/report/export", headers=headers, params={"format": "pdf"}
+        )
         self.assertEqual(exported_pdf.status_code, 200, exported_pdf.text)
         self.assertGreater(len(exported_pdf.content), 500)
 
-        deleted = self.assert_ok(
-            self.client.delete(f"/api/interviews/{interview['id']}", headers=headers)
-        )
+        deleted = self.assert_ok(self.client.delete(f"/api/interviews/{interview['id']}", headers=headers))
         self.assertEqual(deleted["message"], "删除成功")
         missing = self.client.get(f"/api/interviews/{interview['id']}", headers=headers)
         self.assertEqual(missing.status_code, 404)
 
-    def test_admin_usage_and_manual_grant(self):
-        user_email = f"candidate-{uuid.uuid4().hex}@example.com"
-        user_headers = self.auth_headers(user_email)
-        admin_headers = self.auth_headers("admin@example.com")
+    def test_agent_shadow_api_enforces_real_resource_ownership_idempotency_and_redaction(self):
+        from app.routers import agent_shadow as agent_shadow_router
 
-        forbidden = self.client.get("/api/business/admin/usage-summary", headers=user_headers)
-        self.assertEqual(forbidden.status_code, 403)
+        registry_path = Path(__file__).resolve().parents[2] / "quality" / "mcp-tool-registry.json"
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        self.assertEqual(registry["status"], "active")
+        for item in registry["tools"]:
+            tool = agent_shadow_router.agent_shadow_runtime.harness.gateway.get(item["name"])
+            self.assertEqual(tool.version, item["version"])
+            self.assertEqual(tool.allowed_agents, frozenset(item["allowed_agents"]))
+            self.assertEqual(tool.required_arguments, frozenset(item["required_arguments"]))
+            self.assertEqual(tool.output_fields, frozenset(item["output_fields"]))
+            self.assertEqual(tool.risk_level.value, item["risk_level"])
+            self.assertIs(tool.read_only, item["read_only"])
+            self.assertIs(tool.requires_approval, item["requires_approval"])
 
-        summary = self.assert_ok(
-            self.client.get("/api/business/admin/usage-summary", headers=admin_headers)
-        )
-        self.assertIn("totals", summary)
-
-        grant = self.assert_ok(
+        owner_headers = self.auth_headers()
+        other_headers = self.auth_headers()
+        resume = self.assert_ok(
             self.client.post(
-                "/api/business/admin/grant-plan",
-                headers=admin_headers,
-                json={"email": user_email, "plan": "pro", "days": 30, "notes": "unit test"},
+                "/api/resumes/upload",
+                headers=owner_headers,
+                json={"title": "Shadow Runtime Resume", "text": SAMPLE_RESUME},
             )
         )
-        self.assertEqual(grant["plan"], "pro")
+        payload = {
+            "objective": "基于真实证据生成岗位定向改写建议",
+            "input": {
+                "mode": "resume-rewrite",
+                "resume_id": resume["id"],
+                "jd_text": "需要 Python、FastAPI、PostgreSQL、Redis、Docker 和 Agent 工程经验",
+            },
+        }
+        headers = {**owner_headers, "Idempotency-Key": f"shadow-{uuid.uuid4().hex}"}
+        created = self.assert_ok(self.client.post("/api/agent-shadow/runs", headers=headers, json=payload))
+        self.assertEqual(created["status"], "completed")
+        self.assertEqual(created["output"]["agent"], "resume-rewriter")
+        self.assertTrue(created["output"]["fact_safe"])
+        self.assertGreater(created["output"]["evidence_claim_count"], 0)
+        self.assertNotIn("state", created["checkpoint"])
+        self.assertNotIn("last_tool_result", json.dumps(created, ensure_ascii=False))
+        self.assertNotIn("request_fingerprint", created)
+        self.assertNotIn("idempotency_key", created)
 
-        entitlements = self.assert_ok(
-            self.client.get("/api/business/entitlements", headers=user_headers)
+        repeated = self.assert_ok(self.client.post("/api/agent-shadow/runs", headers=headers, json=payload))
+        self.assertEqual(repeated["id"], created["id"])
+        self.assertEqual(len(repeated["steps"]), len(created["steps"]))
+
+        changed_budget = {**payload, "budget": {"max_steps": 10}}
+        conflict = self.client.post("/api/agent-shadow/runs", headers=headers, json=changed_budget)
+        self.assertEqual(conflict.status_code, 409, conflict.text)
+
+        owned = self.assert_ok(self.client.get(f"/api/agent-shadow/runs/{created['id']}", headers=owner_headers))
+        self.assertEqual(owned["id"], created["id"])
+        self.assertEqual(
+            self.client.get(f"/api/agent-shadow/runs/{created['id']}", headers=other_headers).status_code,
+            404,
         )
-        self.assertEqual(entitlements["plan"]["current"], "pro")
+        cancelled_terminal = self.assert_ok(
+            self.client.post(f"/api/agent-shadow/runs/{created['id']}/cancel", headers=owner_headers)
+        )
+        self.assertEqual(cancelled_terminal["status"], "completed")
+        self.assertEqual(
+            self.client.post(f"/api/agent-shadow/runs/{created['id']}/retry", headers=owner_headers).status_code,
+            409,
+        )
 
-        enterprise = self.assert_ok(
+        denied_payload = {
+            "objective": "读取不属于当前用户的简历",
+            "input": {"mode": "resume", "resume_id": resume["id"]},
+        }
+        denied_headers = {**other_headers, "Idempotency-Key": f"shadow-{uuid.uuid4().hex}"}
+        denied = self.assert_ok(self.client.post("/api/agent-shadow/runs", headers=denied_headers, json=denied_payload))
+        missing_headers = {**other_headers, "Idempotency-Key": f"shadow-{uuid.uuid4().hex}"}
+        missing = self.assert_ok(
             self.client.post(
-                "/api/business/admin/grant-plan",
-                headers=admin_headers,
-                json={"email": user_email, "plan": "enterprise", "notes": "institution trial"},
+                "/api/agent-shadow/runs",
+                headers=missing_headers,
+                json={
+                    "objective": denied_payload["objective"],
+                    "input": {"mode": "resume", "resume_id": str(uuid.uuid4())},
+                },
             )
         )
-        self.assertEqual(enterprise["plan"], "enterprise")
-        self.assertIsNone(enterprise["expires_at"])
+        for response in (denied, missing):
+            self.assertEqual(response["status"], "failed")
+            self.assertEqual(response["error_code"], "execution_failed")
+            self.assertEqual(response["output"], {})
+            self.assertNotIn("DomainResourceAccessError", json.dumps(response, ensure_ascii=False))
+        self.assertEqual(
+            (denied["status"], denied["error_code"], denied["output"]),
+            (missing["status"], missing["error_code"], missing["output"]),
+        )
+
+        first_retry = self.assert_ok(
+            self.client.post(f"/api/agent-shadow/runs/{denied['id']}/retry", headers=other_headers)
+        )
+        second_retry = self.assert_ok(
+            self.client.post(f"/api/agent-shadow/runs/{denied['id']}/retry", headers=other_headers)
+        )
+        self.assertEqual(first_retry["attempts"], 2)
+        self.assertEqual(second_retry["attempts"], 3)
+        self.assertEqual(
+            self.client.post(f"/api/agent-shadow/runs/{denied['id']}/retry", headers=other_headers).status_code,
+            409,
+        )
+
+        interview = self.assert_ok(
+            self.client.post("/api/interviews", headers=owner_headers, json={"resume_id": resume["id"]})
+        )
+        self.assert_ok(self.client.post(f"/api/interviews/{interview['id']}/generate-questions", headers=owner_headers))
+        interview_shadow = self.assert_ok(
+            self.client.post(
+                "/api/agent-shadow/runs",
+                headers={**owner_headers, "Idempotency-Key": f"shadow-{uuid.uuid4().hex}"},
+                json={
+                    "objective": "根据当前面试题评估回答结构",
+                    "input": {
+                        "mode": "interview",
+                        "interview_id": interview["id"],
+                        "answer": "I designed the workflow, measured the result, and documented the rollback tradeoff.",
+                    },
+                },
+            )
+        )
+        self.assertEqual(interview_shadow["status"], "completed")
+        self.assertEqual(interview_shadow["output"]["agent"], "interview-coach")
+        self.assertGreater(len(interview_shadow["output"]["questions"]), 0)
+
+        invalid = self.client.post(
+            "/api/agent-shadow/runs",
+            headers={**owner_headers, "Idempotency-Key": f"shadow-{uuid.uuid4().hex}"},
+            json={"objective": "invalid", "input": {"mode": "resume"}},
+        )
+        self.assertEqual(invalid.status_code, 422)
+        openapi = self.assert_ok(self.client.get("/openapi.json"))
+        self.assertNotIn("/api/agent-shadow/runs", openapi["paths"])
+
+        original_enabled = agent_shadow_router.settings.AGENT_SHADOW_API_ENABLED
+        try:
+            agent_shadow_router.settings.AGENT_SHADOW_API_ENABLED = False
+            disabled = self.client.post(
+                "/api/agent-shadow/runs",
+                headers={**owner_headers, "Idempotency-Key": f"shadow-{uuid.uuid4().hex}"},
+                json=payload,
+            )
+            self.assertEqual(disabled.status_code, 404)
+        finally:
+            agent_shadow_router.settings.AGENT_SHADOW_API_ENABLED = original_enabled
+
+    def test_core_resume_flow_has_no_commercial_entitlement_dependency(self):
+        headers = self.auth_headers(f"core-flow-{uuid.uuid4().hex}@example.com")
+        response = self.client.post(
+            "/api/resumes/upload",
+            headers=headers,
+            json={"title": "核心简历流程", "text": SAMPLE_RESUME},
+        )
+
+        resume = self.assert_ok(response)
+        self.assertIn("id", resume)
+        self.assertIn("parsed_data", resume)
+        self.assertEqual(self.client.get("/api/business/entitlements", headers=headers).status_code, 404)
 
     def test_training_plan_closed_loop_and_tenant_isolation(self):
         headers = self.auth_headers()
@@ -1149,13 +1125,13 @@ class MainFlowTest(unittest.TestCase):
             timedelta(days=6),
         )
         task_types = {task["task_type"] for task in plan["tasks"]}
-        self.assertTrue(
-            {"wrong_review", "mock_interview", "project_review", "experience_reading"}.issubset(task_types)
-        )
+        self.assertTrue({"wrong_review", "mock_interview", "project_review", "experience_reading"}.issubset(task_types))
         daily_minutes = {}
         for task in plan["tasks"]:
             if task["status"] != "skipped":
-                daily_minutes[task["scheduled_date"]] = daily_minutes.get(task["scheduled_date"], 0) + task["estimated_minutes"]
+                daily_minutes[task["scheduled_date"]] = (
+                    daily_minutes.get(task["scheduled_date"], 0) + task["estimated_minutes"]
+                )
         self.assertTrue(daily_minutes)
         self.assertLessEqual(max(daily_minutes.values()), 45)
 
@@ -1194,9 +1170,7 @@ class MainFlowTest(unittest.TestCase):
         )
         self.assertEqual(invalid_move.status_code, 400, invalid_move.text)
 
-        regenerated = self.assert_ok(
-            self.client.post(f"/api/training-plans/{plan['id']}/regenerate", headers=headers)
-        )
+        regenerated = self.assert_ok(self.client.post(f"/api/training-plans/{plan['id']}/regenerate", headers=headers))
         preserved = next(task for task in regenerated["tasks"] if task["id"] == wrong_task["id"])
         self.assertEqual(preserved["status"], "completed")
         serialized = json.dumps(regenerated, ensure_ascii=False)

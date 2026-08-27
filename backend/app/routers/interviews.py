@@ -1,51 +1,59 @@
 import re
 import uuid
 from copy import deepcopy
-from difflib import SequenceMatcher
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db
-from app.models import User, Resume, Interview, InterviewQuestion, JobApplication
+from app.models import Interview, InterviewQuestion, JobApplication, Resume, User
 from app.schemas import (
-    InterviewCreateRequest,
-    InterviewResponse,
-    InterviewQuestionResponse,
     AnswerSubmitRequest,
     AnswerSubmitResponse,
+    InterviewCreateRequest,
+    InterviewQuestionResponse,
     InterviewReportResponse,
+    InterviewResponse,
     InterviewTemplateResponse,
 )
-from app.services.auth_service import get_current_user
 from app.services.audit import log_audit_event
-from app.services.business import ensure_feature_available, record_usage
-from app.services.document_export import content_disposition, interview_report_to_docx_bytes, interview_report_to_markdown, safe_filename, text_to_pdf_bytes
-from app.services.knowledge_base import build_rag_context, compact_json, retrieve_knowledge
-from app.services.llm_client import get_llm_client
-from app.services.resume_index import ensure_resume_chunks, retrieve_resume_evidence
-from app.services.tenancy import resolve_request_organization, tenant_metadata
-from app.services.training_profile import apply_training_signal, detect_training_dimensions, training_focus_context as build_training_focus_context
-from app.services.interview_templates import (
-    DEFAULT_INTERVIEW_TEMPLATE_ID,
-    get_interview_template,
-    list_interview_templates,
-    template_snapshot,
-)
+from app.services.auth_service import get_current_user
 from app.services.company_profiles import (
     company_profile_prompt_context,
     company_profile_snapshot,
     find_matching_company_profile,
     infer_target_from_jd,
 )
-from app.services.quality import redact_sensitive_text
+from app.services.data_sanitization import redact_sensitive_text
+from app.services.document_export import (
+    content_disposition,
+    interview_report_to_docx_bytes,
+    interview_report_to_markdown,
+    safe_filename,
+    text_to_pdf_bytes,
+)
 from app.services.interview_generation_service import request_generated_questions
 from app.services.interview_report_service import request_interview_report
 from app.services.interview_scoring_service import request_answer_score
-from app.config import get_settings
+from app.services.interview_templates import (
+    DEFAULT_INTERVIEW_TEMPLATE_ID,
+    get_interview_template,
+    list_interview_templates,
+    template_snapshot,
+)
+from app.services.knowledge_base import build_rag_context, compact_json, retrieve_knowledge
+from app.services.llm_client import get_llm_client
+from app.services.resume_index import ensure_resume_chunks, retrieve_resume_evidence
+from app.services.tenancy import resolve_request_organization, tenant_metadata
+from app.services.training_profile import apply_training_signal, detect_training_dimensions
+from app.services.training_profile import training_focus_context as build_training_focus_context
+from app.services.usage_telemetry import record_usage
 from app.utils.time import utc_now
 
 router = APIRouter(prefix="/api/interviews", tags=["interviews"])
@@ -1083,11 +1091,11 @@ def _term_question(term: str, subject: str, module: str) -> str:
     if term == "Qdrant":
         return f"{subject}接入 Qdrant 时，collection 的向量维度、payload、过滤条件和索引重建流程怎么设计？如果召回为空你会怎么排查？"
     if term == "BGE-M3":
-        return f"使用 BGE-M3 做 embedding 时，为什么要确认 1024 维向量与 Qdrant collection 一致？模型切换后如何灰度重建索引？"
+        return "使用 BGE-M3 做 embedding 时，为什么要确认 1024 维向量与 Qdrant collection 一致？模型切换后如何灰度重建索引？"
     if term == "Agent":
         return f"{subject}里的 Agent 决策链路是什么？任务规划、工具选择、上下文记忆、失败兜底分别由哪些模块负责？"
     if term == "Tool Calling":
-        return f"如果 Agent 需要调用外部工具或 API，你怎么定义 tool schema、参数校验、权限边界和失败重试，防止工具误调用？"
+        return "如果 Agent 需要调用外部工具或 API，你怎么定义 tool schema、参数校验、权限边界和失败重试，防止工具误调用？"
     if term == "Prompt Injection":
         return f"遇到简历或 JD 中夹带 prompt injection 指令时，{subject}如何识别并隔离这类输入，避免模型泄露系统提示或越权调用工具？"
     if term == "FastAPI":
@@ -1363,7 +1371,7 @@ def _build_question_batches(
     )
     if experiences:
         titles = [_record_title(item, f"经历 {idx}", is_project=False) for idx, item in enumerate(experiences, 1)]
-        description = "\n".join(f"{idx}. {title}：{_record_description(item)}" for idx, (title, item) in enumerate(zip(titles, experiences), 1))
+        description = "\n".join(f"{idx}. {title}：{_record_description(item)}" for idx, (title, item) in enumerate(zip(titles, experiences, strict=False), 1))
         internship_title = f"实习：{titles[0]}" if len(titles) == 1 else "实习：核心经历"
         batches.append(
             QuestionBatch(
@@ -1469,7 +1477,6 @@ async def create_interview(
 ):
     resume = await _get_resume(req.resume_id, current_user.id, db)
     org = await resolve_request_organization(request, db, current_user)
-    await ensure_feature_available("interview_create", db, current_user.id, settings)
     request_jd = (req.jd_text or "").strip()
     resume_jd = (resume.jd_text or "").strip()
     effective_jd_text = request_jd or resume_jd or None
@@ -2321,7 +2328,6 @@ async def export_report(
 ):
     report = await get_report(interview_id, db, current_user)
     interview = await db.scalar(select(Interview).where(Interview.id == interview_id, Interview.user_id == current_user.id))
-    await ensure_feature_available("report_export", db, current_user.id, settings)
     content = interview_report_to_markdown(report)
     normalized_format = format.lower().strip()
     if normalized_format not in {"md", "docx", "pdf"}:

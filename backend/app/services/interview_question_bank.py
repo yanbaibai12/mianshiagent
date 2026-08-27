@@ -12,7 +12,6 @@ from app.models import KnowledgeChunk, KnowledgeDocument
 from app.services.knowledge_base import _token_estimate
 from app.services.vector_store import sync_knowledge_to_vector_store
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_INTERVIEW_BANK = ROOT / "knowledge" / "agent_interview_question_bank_v1.json"
 
@@ -178,7 +177,6 @@ def normalize_question_bank(payload: dict[str, Any]) -> tuple[dict[str, Any], di
             if len(normalized_question["followups"]) < 2:
                 raise ValueError(f"question {normalized_question['id']} must contain at least 2 followups")
 
-            dedupe_key = f"{normalized_question['id']}::{normalized_question['question']}".lower()
             question_text_key = normalized_question["question"].lower()
             if normalized_question["id"].lower() in seen_question_keys or question_text_key in seen_question_keys:
                 duplicate_count += 1

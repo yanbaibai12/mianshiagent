@@ -9,6 +9,7 @@ export interface AccountExportData {
     created_at: string
     updated_at: string
   }
+  /** Legacy export-only data retained until the Phase 1B contract migration. */
   billing_account: {
     plan: string
     status: string
@@ -21,7 +22,9 @@ export interface AccountExportData {
   resumes: Array<Record<string, unknown>>
   interviews: Array<Record<string, unknown>>
   usage_records: Array<Record<string, unknown>>
+  /** Legacy export-only data retained for portability; not an active product surface. */
   organizations: Array<Record<string, unknown>>
+  /** Legacy export-only payment history; never render as a plan or checkout capability. */
   payment_orders: Array<Record<string, unknown>>
   audit_logs: Array<Record<string, unknown>>
 }

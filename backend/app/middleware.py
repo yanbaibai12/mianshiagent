@@ -6,13 +6,14 @@ from collections.abc import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+from starlette.types import ASGIApp
 
 from app.config import Settings
 from app.services.operations import request_metrics
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, settings: Settings | None = None):
+    def __init__(self, app: ASGIApp, settings: Settings | None = None):
         super().__init__(app)
         self.settings = settings
 
@@ -29,12 +30,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Cache-Control"] = "no-store"
         if self.settings and self.settings.is_production:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-            response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+            )
         return response
 
 
 class InMemoryRateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, settings: Settings):
+    def __init__(self, app: ASGIApp, settings: Settings):
         super().__init__(app)
         self.window_seconds = settings.RATE_LIMIT_WINDOW_SECONDS
         self.auth_limit = settings.RATE_LIMIT_AUTH_REQUESTS
@@ -71,7 +74,7 @@ class InMemoryRateLimitMiddleware(BaseHTTPMiddleware):
 
 
 class RequestMetricsMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, settings: Settings):
+    def __init__(self, app: ASGIApp, settings: Settings):
         super().__init__(app)
         self.enabled = settings.METRICS_ENABLED
 

@@ -7,7 +7,6 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
@@ -24,8 +23,8 @@ os.environ["QDRANT_SYNC_ON_STARTUP"] = "false"
 os.environ["EMBEDDING_PROVIDER"] = "hash"
 os.environ["RERANK_PROVIDER"] = "none"
 
-from app.database import async_session_maker, init_db  # noqa: E402
 from app.config import get_settings  # noqa: E402
+from app.database import async_session_maker, init_db  # noqa: E402
 from app.models import InterviewQuestion, Resume, User  # noqa: E402
 from app.prompts import SCORE_ANSWER_PROMPT  # noqa: E402
 from app.routers.interviews import (  # noqa: E402
@@ -36,16 +35,16 @@ from app.routers.interviews import (  # noqa: E402
     _module_fallback_questions,
     _normalize_score_details,
     _question_quality,
-    _question_similarity_key,
     _resume_evidence_dicts,
 )
 from app.routers.resumes import _adapt_resume_to_jd  # noqa: E402
 from app.services.knowledge_base import compact_json, seed_builtin_knowledge  # noqa: E402
 from app.services.llm_client import get_llm_client  # noqa: E402
-from app.services.resume_index import reindex_resume_chunks  # noqa: E402
-from app.services.resume_index import retrieve_resume_evidence  # noqa: E402
+from app.services.resume_index import (
+    reindex_resume_chunks,  # noqa: E402
+    retrieve_resume_evidence,  # noqa: E402
+)
 from app.utils.security import get_password_hash  # noqa: E402
-
 
 CASES_PATH = ROOT / "quality" / "ats_eval_cases.json"
 BANNED_PHRASES = ("面向该 JD", "可重点呈现", "岗位要求", "建议补充", "本地 MVP")
@@ -137,7 +136,6 @@ async def _evaluate_interview_quality(db: Any, resume: Resume, case: dict[str, A
         )
         for item in selected_items:
             question = item.get("question_text") or item.get("question") or ""
-            key = _question_similarity_key(question)
             duplicate_count += max(0, seen_texts.count(question) - 1)
             generated_questions.append(
                 {

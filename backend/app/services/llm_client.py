@@ -8,7 +8,6 @@ from typing import Any
 from app.config import Settings
 from app.utils.json_extract import extract_json
 
-
 COMMON_SKILLS = [
     "Python",
     "Java",

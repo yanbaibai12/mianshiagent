@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import json  # noqa: E402
+
 from app.services.interview_question_bank import DEFAULT_INTERVIEW_BANK, validate_question_bank  # noqa: E402
 
 

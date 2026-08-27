@@ -1,7 +1,6 @@
 from copy import deepcopy
 from typing import Any
 
-
 DEFAULT_INTERVIEW_TEMPLATE_ID = "comprehensive"
 
 
@@ -26,10 +25,30 @@ INTERVIEW_TEMPLATES: list[dict[str, Any]] = [
         "module_order": ["agent_fundamentals", "project", "system_design", "internship", "resume"],
         "question_focus": ["Agent 八股", "RAG", "Tool Calling", "工程基础", "弱项追问"],
         "scoring_dimensions": [
-            {"key": "technical_accuracy", "label": "技术准确性", "weight": 0.3, "source_score_keys": ["technical_accuracy"]},
-            {"key": "concept_boundary", "label": "概念边界", "weight": 0.2, "source_score_keys": ["technical_accuracy", "structure_clarity"]},
-            {"key": "implementation_detail", "label": "实现细节", "weight": 0.25, "source_score_keys": ["engineering_delivery", "troubleshooting"]},
-            {"key": "engineering_delivery", "label": "工程落地", "weight": 0.25, "source_score_keys": ["engineering_delivery"]},
+            {
+                "key": "technical_accuracy",
+                "label": "技术准确性",
+                "weight": 0.3,
+                "source_score_keys": ["technical_accuracy"],
+            },
+            {
+                "key": "concept_boundary",
+                "label": "概念边界",
+                "weight": 0.2,
+                "source_score_keys": ["technical_accuracy", "structure_clarity"],
+            },
+            {
+                "key": "implementation_detail",
+                "label": "实现细节",
+                "weight": 0.25,
+                "source_score_keys": ["engineering_delivery", "troubleshooting"],
+            },
+            {
+                "key": "engineering_delivery",
+                "label": "工程落地",
+                "weight": 0.25,
+                "source_score_keys": ["engineering_delivery"],
+            },
         ],
         "report_focus": ["技术概念是否准确", "弱项维度是否被补齐", "实现链路和排障证据", "下一轮项目追问风险"],
         "use_training_profile": True,
@@ -56,10 +75,25 @@ INTERVIEW_TEMPLATES: list[dict[str, Any]] = [
         "module_order": ["project", "internship", "system_design", "agent_fundamentals", "resume"],
         "question_focus": ["项目背景", "个人贡献", "技术细节", "故障排查", "结果指标"],
         "scoring_dimensions": [
-            {"key": "project_understanding", "label": "项目理解", "weight": 0.3, "source_score_keys": ["project_understanding"]},
-            {"key": "personal_contribution", "label": "个人贡献", "weight": 0.25, "source_score_keys": ["project_understanding", "engineering_delivery"]},
+            {
+                "key": "project_understanding",
+                "label": "项目理解",
+                "weight": 0.3,
+                "source_score_keys": ["project_understanding"],
+            },
+            {
+                "key": "personal_contribution",
+                "label": "个人贡献",
+                "weight": 0.25,
+                "source_score_keys": ["project_understanding", "engineering_delivery"],
+            },
             {"key": "troubleshooting", "label": "问题定位", "weight": 0.25, "source_score_keys": ["troubleshooting"]},
-            {"key": "result_metrics", "label": "结果指标", "weight": 0.2, "source_score_keys": ["reflection", "engineering_delivery"]},
+            {
+                "key": "result_metrics",
+                "label": "结果指标",
+                "weight": 0.2,
+                "source_score_keys": ["reflection", "engineering_delivery"],
+            },
         ],
         "report_focus": ["项目理解深度", "个人贡献边界", "排障过程证据", "量化结果和复盘动作"],
         "use_training_profile": False,
@@ -86,11 +120,31 @@ INTERVIEW_TEMPLATES: list[dict[str, Any]] = [
         "module_order": ["system_design", "project", "agent_fundamentals", "internship", "resume"],
         "question_focus": ["架构拆解", "接口契约", "数据流", "队列与异步", "观测性", "扩展性"],
         "scoring_dimensions": [
-            {"key": "architecture_clarity", "label": "架构清晰度", "weight": 0.25, "source_score_keys": ["structure_clarity", "technical_accuracy"]},
-            {"key": "tradeoff", "label": "权衡能力", "weight": 0.2, "source_score_keys": ["reflection", "technical_accuracy"]},
+            {
+                "key": "architecture_clarity",
+                "label": "架构清晰度",
+                "weight": 0.25,
+                "source_score_keys": ["structure_clarity", "technical_accuracy"],
+            },
+            {
+                "key": "tradeoff",
+                "label": "权衡能力",
+                "weight": 0.2,
+                "source_score_keys": ["reflection", "technical_accuracy"],
+            },
             {"key": "scalability", "label": "扩展性", "weight": 0.2, "source_score_keys": ["engineering_delivery"]},
-            {"key": "reliability", "label": "稳定性", "weight": 0.2, "source_score_keys": ["troubleshooting", "engineering_delivery"]},
-            {"key": "observability", "label": "可观测性", "weight": 0.15, "source_score_keys": ["troubleshooting", "reflection"]},
+            {
+                "key": "reliability",
+                "label": "稳定性",
+                "weight": 0.2,
+                "source_score_keys": ["troubleshooting", "engineering_delivery"],
+            },
+            {
+                "key": "observability",
+                "label": "可观测性",
+                "weight": 0.15,
+                "source_score_keys": ["troubleshooting", "reflection"],
+            },
         ],
         "report_focus": ["架构边界是否清楚", "关键权衡是否成立", "扩展和稳定性方案", "监控、日志和回滚预案"],
         "use_training_profile": True,
@@ -115,11 +169,31 @@ INTERVIEW_TEMPLATES: list[dict[str, Any]] = [
         "module_order": ["behavioral", "project", "internship", "resume"],
         "question_focus": ["动机一致性", "协作", "冲突处理", "复盘", "STAR 表达", "稳定性"],
         "scoring_dimensions": [
-            {"key": "structure_clarity", "label": "结构表达", "weight": 0.25, "source_score_keys": ["structure_clarity"]},
-            {"key": "motivation_fit", "label": "动机一致性", "weight": 0.2, "source_score_keys": ["project_understanding", "reflection"]},
-            {"key": "collaboration", "label": "协作", "weight": 0.2, "source_score_keys": ["project_understanding", "structure_clarity"]},
+            {
+                "key": "structure_clarity",
+                "label": "结构表达",
+                "weight": 0.25,
+                "source_score_keys": ["structure_clarity"],
+            },
+            {
+                "key": "motivation_fit",
+                "label": "动机一致性",
+                "weight": 0.2,
+                "source_score_keys": ["project_understanding", "reflection"],
+            },
+            {
+                "key": "collaboration",
+                "label": "协作",
+                "weight": 0.2,
+                "source_score_keys": ["project_understanding", "structure_clarity"],
+            },
             {"key": "reflection", "label": "复盘能力", "weight": 0.25, "source_score_keys": ["reflection"]},
-            {"key": "risk_awareness", "label": "风险意识", "weight": 0.1, "source_score_keys": ["troubleshooting", "engineering_delivery"]},
+            {
+                "key": "risk_awareness",
+                "label": "风险意识",
+                "weight": 0.1,
+                "source_score_keys": ["troubleshooting", "engineering_delivery"],
+            },
         ],
         "report_focus": ["STAR 表达完整度", "求职动机和岗位一致性", "协作与冲突处理", "复盘和风险意识"],
         "use_training_profile": False,
@@ -148,11 +222,31 @@ INTERVIEW_TEMPLATES: list[dict[str, Any]] = [
         "module_order": ["project", "agent_fundamentals", "internship", "system_design", "behavioral", "resume"],
         "question_focus": ["项目", "技术基础", "系统设计", "行为表达", "弱项追问"],
         "scoring_dimensions": [
-            {"key": "technical_accuracy", "label": "技术准确性", "weight": 0.2, "source_score_keys": ["technical_accuracy"]},
-            {"key": "project_understanding", "label": "项目理解", "weight": 0.2, "source_score_keys": ["project_understanding"]},
-            {"key": "structure_clarity", "label": "表达结构", "weight": 0.15, "source_score_keys": ["structure_clarity"]},
+            {
+                "key": "technical_accuracy",
+                "label": "技术准确性",
+                "weight": 0.2,
+                "source_score_keys": ["technical_accuracy"],
+            },
+            {
+                "key": "project_understanding",
+                "label": "项目理解",
+                "weight": 0.2,
+                "source_score_keys": ["project_understanding"],
+            },
+            {
+                "key": "structure_clarity",
+                "label": "表达结构",
+                "weight": 0.15,
+                "source_score_keys": ["structure_clarity"],
+            },
             {"key": "troubleshooting", "label": "问题定位", "weight": 0.15, "source_score_keys": ["troubleshooting"]},
-            {"key": "engineering_delivery", "label": "工程落地", "weight": 0.15, "source_score_keys": ["engineering_delivery"]},
+            {
+                "key": "engineering_delivery",
+                "label": "工程落地",
+                "weight": 0.15,
+                "source_score_keys": ["engineering_delivery"],
+            },
             {"key": "reflection", "label": "复盘能力", "weight": 0.15, "source_score_keys": ["reflection"]},
         ],
         "report_focus": ["整体面试信号", "技术与项目平衡", "弱项维度", "下一轮训练优先级"],
@@ -172,7 +266,9 @@ def get_interview_template(template_id: str | None) -> dict[str, Any]:
     for template in INTERVIEW_TEMPLATES:
         if template["template_id"] == normalized:
             return deepcopy(template)
-    return deepcopy(next(template for template in INTERVIEW_TEMPLATES if template["template_id"] == DEFAULT_INTERVIEW_TEMPLATE_ID))
+    return deepcopy(
+        next(template for template in INTERVIEW_TEMPLATES if template["template_id"] == DEFAULT_INTERVIEW_TEMPLATE_ID)
+    )
 
 
 def template_snapshot(template: dict[str, Any]) -> dict[str, Any]:

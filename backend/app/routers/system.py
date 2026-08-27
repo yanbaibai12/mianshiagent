@@ -9,16 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db
 from app.models import KnowledgeChunk, KnowledgeDocument, ResumeChunk, User
-from app.services.auth_service import get_current_user, require_admin_user
-from app.services.audit import log_audit_event
 from app.services.alerting import build_alerting_status, dispatch_system_alerts
+from app.services.audit import log_audit_event
+from app.services.auth_service import get_current_user, require_admin_user
 from app.services.embedding_service import embedding_probe
 from app.services.monitoring import build_system_alerts
 from app.services.operations import build_backup_status, create_sqlite_backup, request_metrics
-from app.services.resume_index import reindex_all_resume_chunks
-from app.services.rerank_service import rerank_documents, rerank_status
-from app.services.task_queue import task_queue_metrics
 from app.services.release_checks import run_release_checks
+from app.services.rerank_service import rerank_documents, rerank_status
+from app.services.resume_index import reindex_all_resume_chunks
+from app.services.task_queue import task_queue_metrics
 from app.services.vector_store import vector_store_status
 
 router = APIRouter(prefix="/api/system", tags=["system"])
@@ -145,23 +145,6 @@ async def status(
             "rate_limit_window_seconds": settings.RATE_LIMIT_WINDOW_SECONDS,
             "auth_requests_per_window": settings.RATE_LIMIT_AUTH_REQUESTS,
             "api_requests_per_window": settings.RATE_LIMIT_API_REQUESTS,
-        },
-        "business": {
-            "billing_enabled": settings.BILLING_ENABLED,
-            "payment_provider": settings.PAYMENT_PROVIDER or "not_configured",
-            "upgrade_contact": settings.BILLING_UPGRADE_CONTACT,
-            "free_resume_quota": settings.FREE_RESUME_QUOTA,
-            "free_interview_quota": settings.FREE_INTERVIEW_QUOTA,
-            "free_optimize_quota": settings.FREE_OPTIMIZE_QUOTA,
-            "free_jd_adapt_quota": settings.FREE_JD_ADAPT_QUOTA,
-            "free_report_export_quota": settings.FREE_REPORT_EXPORT_QUOTA,
-            "pro_monthly_price_cny": settings.PRO_MONTHLY_PRICE_CNY,
-            "pro_resume_quota": settings.PRO_RESUME_QUOTA,
-            "pro_interview_quota": settings.PRO_INTERVIEW_QUOTA,
-            "pro_optimize_quota": settings.PRO_OPTIMIZE_QUOTA,
-            "pro_jd_adapt_quota": settings.PRO_JD_ADAPT_QUOTA,
-            "pro_report_export_quota": settings.PRO_REPORT_EXPORT_QUOTA,
-            "sprint_package_price_cny": settings.SPRINT_PACKAGE_PRICE_CNY,
         },
         "operations": {
             "metrics_enabled": settings.METRICS_ENABLED,

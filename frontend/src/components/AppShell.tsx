@@ -3,7 +3,6 @@ import { NavLink, useLocation, useNavigate } from 'react-router'
 import {
   BarChart3,
   BriefcaseBusiness,
-  Building2,
   BookOpenCheck,
   CalendarCheck2,
   FileText,
@@ -13,7 +12,6 @@ import {
   MoreHorizontal,
   Newspaper,
   Plus,
-  Radar,
   ShieldCheck,
   X,
 } from 'lucide-react'
@@ -52,20 +50,18 @@ const navGroups: Array<{ label: string; items: NavItem[] }> = [
     label: '面试情报',
     items: [
       { to: '/experiences', label: '真实面经', icon: Newspaper },
-      { to: '/company-profiles', label: '公司参考', icon: Radar },
     ],
   },
   {
     label: '管理设置',
     items: [
-      { to: '/organizations', label: '组织管理', icon: Building2 },
       { to: '/account/security', label: '账号安全', icon: ShieldCheck },
     ],
   },
 ]
 
 const allNavItems = navGroups.flatMap((group) => group.items)
-const mobilePrimaryItems = [allNavItems[0], allNavItems[1], allNavItems[3], allNavItems[4]]
+const mobilePrimaryItems = allNavItems.filter((item) => ['/jobs', '/resumes', '/interviews/new', '/training-plan'].includes(item.to))
 
 function isItemActive(item: NavItem, pathname: string) {
   const prefixes = item.matchPrefixes || [item.to]
@@ -230,7 +226,7 @@ export default function AppShell({
         </div>
 
         <div className="sidebar-footer">
-          <div className="security-note"><ShieldCheck size={15} /><span>当前组织内可见</span></div>
+          <div className="security-note"><ShieldCheck size={15} /><span>仅当前账号可见</span></div>
           <div className="user-block">
             <div className="user-avatar">
               <FileText size={16} />

@@ -34,9 +34,8 @@ from sqlalchemy import func, select  # noqa: E402
 from app.database import async_session_maker, init_db  # noqa: E402
 from app.models import AsyncTask, Resume, ResumeVersion, User  # noqa: E402
 from app.services.task_queue import create_task, enqueue_task  # noqa: E402
-from app.workers.task_worker import run_task  # noqa: E402
 from app.utils.security import get_password_hash  # noqa: E402
-
+from app.workers.task_worker import run_task  # noqa: E402
 
 SAMPLE_RESUME = {
     "personal": {"name": "Redis Eval", "job_intent": "AI Agent 应用开发"},
