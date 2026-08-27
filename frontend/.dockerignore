@@ -1,0 +1,10 @@
+.env
+.env.*
+node_modules/
+dist/
+.vite-cache/
+test-results/
+playwright-report/
+coverage/
+*.log
+*.err

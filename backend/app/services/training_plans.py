@@ -28,7 +28,6 @@ from app.services.interview_question_bank import load_agent_question_cards
 from app.services.training_profile import apply_training_signal, detect_training_dimensions
 from app.utils.time import utc_now
 
-
 MAX_DAILY_MINUTES = 45
 TASK_TYPES = {"agent_question", "wrong_review", "mock_interview", "experience_reading", "project_review"}
 

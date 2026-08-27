@@ -13,11 +13,8 @@ const InterviewPage = lazy(() => import('./pages/Interview'))
 const ReportPage = lazy(() => import('./pages/Report'))
 const AgentQuestionBankPage = lazy(() => import('./pages/AgentQuestionBank'))
 const ExperienceSharesPage = lazy(() => import('./pages/ExperienceShares'))
-const CompanyProfilesPage = lazy(() => import('./pages/CompanyProfiles'))
 const TrainingPlanPage = lazy(() => import('./pages/TrainingPlan'))
-const SystemAdminPage = lazy(() => import('./pages/SystemAdmin'))
 const AccountSecurityPage = lazy(() => import('./pages/AccountSecurity'))
-const OrganizationSettingsPage = lazy(() => import('./pages/OrganizationSettings'))
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const token = useAuthStore((state) => state.token)
@@ -102,14 +99,6 @@ function App() {
           }
         />
         <Route
-          path="/company-profiles"
-          element={
-            <PrivateRoute>
-              <CompanyProfilesPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
           path="/training-plan"
           element={
             <PrivateRoute>
@@ -118,26 +107,10 @@ function App() {
           }
         />
         <Route
-          path="/organizations"
-          element={
-            <PrivateRoute>
-              <OrganizationSettingsPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
           path="/account/security"
           element={
             <PrivateRoute>
               <AccountSecurityPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/admin/system"
-          element={
-            <PrivateRoute>
-              <SystemAdminPage />
             </PrivateRoute>
           }
         />

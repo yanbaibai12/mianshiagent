@@ -93,23 +93,6 @@ export interface SystemStatus {
     auth_requests_per_window: number
     api_requests_per_window: number
   }
-  business: {
-    billing_enabled: boolean
-    payment_provider: string
-    upgrade_contact: string
-    free_resume_quota: number
-    free_interview_quota: number
-    free_optimize_quota: number
-    free_jd_adapt_quota: number
-    free_report_export_quota: number
-    pro_monthly_price_cny: number
-    pro_resume_quota: number
-    pro_interview_quota: number
-    pro_optimize_quota: number
-    pro_jd_adapt_quota: number
-    pro_report_export_quota: number
-    sprint_package_price_cny: number
-  }
   operations: {
     metrics_enabled: boolean
     metrics: {

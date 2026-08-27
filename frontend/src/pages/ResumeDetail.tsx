@@ -26,7 +26,6 @@ import { Badge, Button, Card, EmptyState, Field, LoadingState, ProgressBar, Stat
 import { resumeApi, type AtsReport, type Resume, type ResumeChunk, type ResumeVersion } from '../services/resume'
 import { taskApi, type AsyncTask } from '../services/tasks'
 import { templateApi, ResumeTemplate } from '../services/template'
-import { businessApi, BusinessEntitlements } from '../services/business'
 import {
   ResumeStructuredEditor,
   ResumeStructuredPreview,
@@ -239,7 +238,6 @@ export default function ResumeDetailPage() {
   const [versions, setVersions] = useState<ResumeVersion[]>([])
   const [activeTask, setActiveTask] = useState<AsyncTask | null>(null)
   const [templates, setTemplates] = useState<ResumeTemplate[]>([])
-  const [business, setBusiness] = useState<BusinessEntitlements | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState('')
   const [jdText, setJdText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -267,12 +265,6 @@ export default function ResumeDetailPage() {
   const references = referencesFrom(resume?.optimized_data)
   const atsReport = atsFrom(resume?.optimized_data)
   const changeDetails = changeDetailsFrom(resume?.optimized_data)
-  const optimizePaywallBlocked = Boolean(
-    business?.entitlements.paywall_active && !business.entitlements.can_optimize_resume,
-  )
-  const jdAdaptPaywallBlocked = Boolean(
-    business?.entitlements.paywall_active && !business.entitlements.can_adapt_jd,
-  )
 
   const stats = useMemo(() => {
     const data = resume?.optimized_data || resume?.parsed_data || {}
@@ -292,16 +284,14 @@ export default function ResumeDetailPage() {
   const loadData = async () => {
     setError('')
     try {
-      const [resumeRes, templateRes, businessRes, chunkRes, versionRes] = await Promise.all([
+      const [resumeRes, templateRes, chunkRes, versionRes] = await Promise.all([
         resumeApi.get(id!),
         templateApi.list(),
-        businessApi.entitlements(),
         resumeApi.chunks(id!),
         resumeApi.versions(id!),
       ])
       setResume(resumeRes.data)
       setTemplates(templateRes.data)
-      setBusiness(businessRes.data)
       setChunks(chunkRes.data)
       setVersions(versionRes.data)
       setSelectedTemplate(resumeRes.data.template_id || '')
@@ -320,7 +310,6 @@ export default function ResumeDetailPage() {
       setResume(res.data)
       setActiveTab('optimized')
       setMessage('模板优化完成，已写入 RAG 来源。')
-      businessApi.entitlements().then((businessRes) => setBusiness(businessRes.data)).catch(() => undefined)
     } catch (err: any) {
       setError(err.response?.data?.detail || '优化失败')
     } finally {
@@ -356,7 +345,6 @@ export default function ResumeDetailPage() {
       setVersions(versionRes.data)
       setActiveTab('optimized')
       setMessage('JD 定向完善完成，匹配度和优化结果已更新。')
-      businessApi.entitlements().then((businessRes) => setBusiness(businessRes.data)).catch(() => undefined)
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || 'JD 适配失败')
     } finally {
@@ -516,14 +504,9 @@ export default function ResumeDetailPage() {
                     ))}
                   </select>
                 </Field>
-                {optimizePaywallBlocked && (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                    免费模板优化额度已用完，请升级 Pro 或联系管理员开通权益。
-                  </div>
-                )}
-                <Button type="button" className="w-full" onClick={handleOptimize} disabled={loading || !selectedTemplate || optimizePaywallBlocked}>
+                <Button type="button" className="w-full" onClick={handleOptimize} disabled={loading || !selectedTemplate}>
                   <Wand2 size={16} />
-                  {loading ? '处理中...' : optimizePaywallBlocked ? '需升级后优化' : '基于模板优化'}
+                  {loading ? '处理中...' : '基于模板优化'}
                 </Button>
               </div>
             </Card>
@@ -543,14 +526,9 @@ export default function ResumeDetailPage() {
                     maxLength={40000}
                   />
                 </Field>
-                {jdAdaptPaywallBlocked && (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                    免费 JD 适配额度已用完，请升级 Pro 或联系管理员开通权益。
-                  </div>
-                )}
-                <Button type="button" className="w-full" onClick={handleAdaptJD} disabled={loading || !jdText.trim() || jdAdaptPaywallBlocked} data-testid="resume-adapt-jd-button">
+                <Button type="button" className="w-full" onClick={handleAdaptJD} disabled={loading || !jdText.trim()} data-testid="resume-adapt-jd-button">
                   <FilePenLine size={16} />
-                  {loading ? '任务执行中...' : jdAdaptPaywallBlocked ? '需升级后适配' : '根据 JD 完善'}
+                  {loading ? '任务执行中...' : '根据 JD 完善'}
                 </Button>
                 {activeTask && (
                   <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3" data-testid="resume-task-progress">

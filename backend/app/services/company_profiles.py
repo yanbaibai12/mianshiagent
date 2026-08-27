@@ -9,10 +9,9 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import CompanyInterviewProfile, InterviewExperienceShare
-from app.services.quality import redact_sensitive_text
+from app.services.data_sanitization import redact_sensitive_text
 from app.services.training_profile import TRAINING_DIMENSIONS
 from app.utils.time import utc_now
-
 
 PROFILE_VERSION = 1
 

@@ -138,17 +138,10 @@ export default function AccountSecurityPage() {
 
             {exportData && (
               <div className="mt-6 overflow-hidden rounded-md border border-slate-200">
-                <div className="grid grid-cols-1 divide-y divide-slate-200 text-sm md:grid-cols-2 md:divide-x md:divide-y-0">
-                  <div className="p-4">
-                    <div className="text-xs font-semibold text-slate-500">账号</div>
-                    <div className="mt-1 font-semibold text-slate-950">{exportData.user.email}</div>
-                    <div className="mt-1 text-slate-500">创建于 {formatDate(exportData.user.created_at)}</div>
-                  </div>
-                  <div className="p-4">
-                    <div className="text-xs font-semibold text-slate-500">权益</div>
-                    <div className="mt-1 font-semibold text-slate-950">{exportData.billing_account?.plan || 'free'}</div>
-                    <div className="mt-1 text-slate-500">到期 {formatDate(exportData.billing_account?.expires_at)}</div>
-                  </div>
+                <div className="p-4 text-sm">
+                  <div className="text-xs font-semibold text-slate-500">账号</div>
+                  <div className="mt-1 font-semibold text-slate-950">{exportData.user.email}</div>
+                  <div className="mt-1 text-slate-500">创建于 {formatDate(exportData.user.created_at)}</div>
                 </div>
               </div>
             )}

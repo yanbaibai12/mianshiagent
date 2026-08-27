@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import User
-from app.schemas import UserRegisterRequest, UserLoginRequest, UserResponse, TokenResponse
+from app.schemas import TokenResponse, UserLoginRequest, UserRegisterRequest, UserResponse
 from app.services.audit import log_audit_event
 from app.services.auth_service import create_access_token, get_current_user
 from app.services.tenancy import ensure_personal_organization

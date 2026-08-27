@@ -22,8 +22,9 @@ class ReleaseCheck:
         }
 
 
-def _has_local_origin(origins: list[str]) -> bool:
-    return any("localhost" in origin or "127.0.0.1" in origin for origin in origins)
+def _has_local_origin(origins: list[str] | str) -> bool:
+    values = [item.strip() for item in origins.split(",")] if isinstance(origins, str) else origins
+    return any("localhost" in origin or "127.0.0.1" in origin for origin in values)
 
 
 def _is_local_endpoint(value: str | None) -> bool:
@@ -34,7 +35,6 @@ def _is_local_endpoint(value: str | None) -> bool:
 def run_release_checks(settings: Settings) -> dict:
     checks: list[ReleaseCheck] = []
     is_production = settings.is_production
-    payment_provider = settings.PAYMENT_PROVIDER.strip().lower()
     secret_is_default = settings.SECRET_KEY in {
         "your-secret-key-here-change-in-production",
         "local-mvp-secret-change-before-production",
@@ -44,7 +44,9 @@ def run_release_checks(settings: Settings) -> dict:
         ReleaseCheck(
             key="secret_key",
             severity="critical" if secret_is_default or len(settings.SECRET_KEY) < 32 else "pass",
-            message="SECRET_KEY 使用默认值或长度过短" if secret_is_default or len(settings.SECRET_KEY) < 32 else "SECRET_KEY 已配置",
+            message="SECRET_KEY 使用默认值或长度过短"
+            if secret_is_default or len(settings.SECRET_KEY) < 32
+            else "SECRET_KEY 已配置",
             recommendation="生产环境使用至少 32 位随机字符串，并通过密钥管理服务或环境变量注入。",
         )
     )
@@ -70,7 +72,11 @@ def run_release_checks(settings: Settings) -> dict:
     checks.append(
         ReleaseCheck(
             key="database",
-            severity="critical" if is_production and settings.DATABASE_URL.startswith("sqlite") else "warning" if settings.DATABASE_URL.startswith("sqlite") else "pass",
+            severity="critical"
+            if is_production and settings.DATABASE_URL.startswith("sqlite")
+            else "warning"
+            if settings.DATABASE_URL.startswith("sqlite")
+            else "pass",
             message="当前使用 SQLite" if settings.DATABASE_URL.startswith("sqlite") else "数据库配置可用于多人环境",
             recommendation="正式发布使用 PostgreSQL，并开启备份和迁移流程。",
         )
@@ -80,7 +86,9 @@ def run_release_checks(settings: Settings) -> dict:
         ReleaseCheck(
             key="auto_create_db",
             severity="critical" if is_production and settings.AUTO_CREATE_DB else "pass",
-            message="生产环境不应在应用启动时自动建表" if is_production and settings.AUTO_CREATE_DB else "数据库建表策略可接受",
+            message="生产环境不应在应用启动时自动建表"
+            if is_production and settings.AUTO_CREATE_DB
+            else "数据库建表策略可接受",
             recommendation="生产环境设置 AUTO_CREATE_DB=false，并通过 Alembic 执行迁移。",
         )
     )
@@ -98,7 +106,11 @@ def run_release_checks(settings: Settings) -> dict:
     checks.append(
         ReleaseCheck(
             key="llm_fallback",
-            severity="critical" if is_production and settings.LLM_ALLOW_FALLBACK else "warning" if settings.LLM_ALLOW_FALLBACK else "pass",
+            severity="critical"
+            if is_production and settings.LLM_ALLOW_FALLBACK
+            else "warning"
+            if settings.LLM_ALLOW_FALLBACK
+            else "pass",
             message="LLM 失败会降级到本地规则结果" if settings.LLM_ALLOW_FALLBACK else "LLM 失败不会静默兜底",
             recommendation="收费产品应明确提示模型失败；如启用兜底，需要在前端和运营日志中标识结果来源。",
         )
@@ -115,12 +127,16 @@ def run_release_checks(settings: Settings) -> dict:
         ReleaseCheck(
             key="llm_profiles",
             severity="warning" if llm_profiles_missing else "pass",
-            message="核心 AI 功能存在未显式配置的模型 profile" if llm_profiles_missing else "核心 AI 功能模型 profile 已显式配置",
+            message="核心 AI 功能存在未显式配置的模型 profile"
+            if llm_profiles_missing
+            else "核心 AI 功能模型 profile 已显式配置",
             recommendation="为 JD 优化、面试出题、答案评分、报告生成分别配置 LLM_*_MODEL，并在 /api/system/status 查看 prompt_version 和 model。",
         )
     )
 
-    cors_unsafe = "*" in settings.CORS_ALLOW_ORIGINS or (is_production and _has_local_origin(settings.CORS_ALLOW_ORIGINS))
+    cors_unsafe = "*" in settings.CORS_ALLOW_ORIGINS or (
+        is_production and _has_local_origin(settings.CORS_ALLOW_ORIGINS)
+    )
     checks.append(
         ReleaseCheck(
             key="cors",
@@ -130,7 +146,9 @@ def run_release_checks(settings: Settings) -> dict:
         )
     )
 
-    host_unsafe = "*" in settings.TRUSTED_HOSTS or (is_production and any(host in {"localhost", "127.0.0.1", "testserver"} for host in settings.TRUSTED_HOSTS))
+    host_unsafe = "*" in settings.TRUSTED_HOSTS or (
+        is_production and any(host in {"localhost", "127.0.0.1", "testserver"} for host in settings.TRUSTED_HOSTS)
+    )
     checks.append(
         ReleaseCheck(
             key="trusted_hosts",
@@ -172,15 +190,6 @@ def run_release_checks(settings: Settings) -> dict:
 
     checks.append(
         ReleaseCheck(
-            key="billing",
-            severity="warning" if not settings.BILLING_ENABLED else "pass",
-            message="计费/权益开关未开启" if not settings.BILLING_ENABLED else "计费/权益开关已开启",
-            recommendation="正式收费前至少接入权益扣减，支付可先使用人工开通或第三方支付。",
-        )
-    )
-
-    checks.append(
-        ReleaseCheck(
             key="metrics",
             severity="pass" if settings.METRICS_ENABLED else "warning",
             message="运行指标已启用" if settings.METRICS_ENABLED else "运行指标未启用",
@@ -194,7 +203,11 @@ def run_release_checks(settings: Settings) -> dict:
         ReleaseCheck(
             key="alert_webhook",
             severity="critical" if alert_webhook_missing else "warning" if alerting_absent else "pass",
-            message="告警通知已开启但缺少 Webhook 地址" if alert_webhook_missing else "生产环境未开启主动告警通知" if alerting_absent else "主动告警通知配置可接受",
+            message="告警通知已开启但缺少 Webhook 地址"
+            if alert_webhook_missing
+            else "生产环境未开启主动告警通知"
+            if alerting_absent
+            else "主动告警通知配置可接受",
             recommendation="生产环境建议配置 ALERT_NOTIFY_ENABLED=true、ALERT_WEBHOOK_URL 和 ALERT_MIN_SEVERITY，用于企业微信/飞书/Sentry 等外部告警渠道。",
         )
     )
@@ -204,7 +217,11 @@ def run_release_checks(settings: Settings) -> dict:
     checks.append(
         ReleaseCheck(
             key="task_queue_backend",
-            severity="critical" if is_production and not task_backend_ok else "warning" if not task_backend_ok else "pass",
+            severity="critical"
+            if is_production and not task_backend_ok
+            else "warning"
+            if not task_backend_ok
+            else "pass",
             message="长任务仍使用本地队列" if not task_backend_ok else "长任务队列已配置为 Redis/RQ",
             recommendation="生产环境设置 TASK_QUEUE_BACKEND=redis_rq，并独立启动 RQ worker；本地队列只允许开发调试。",
         )
@@ -214,7 +231,11 @@ def run_release_checks(settings: Settings) -> dict:
     checks.append(
         ReleaseCheck(
             key="task_redis_url",
-            severity="critical" if is_production and task_backend_ok and redis_local else "warning" if task_backend_ok and redis_local else "pass",
+            severity="critical"
+            if is_production and task_backend_ok and redis_local
+            else "warning"
+            if task_backend_ok and redis_local
+            else "pass",
             message="Redis 指向本机地址" if redis_local else "Redis 连接地址可接受",
             recommendation="生产环境使用独立 Redis 服务或云 Redis，并为 worker/API 使用同一个队列名和连接串。",
         )
@@ -223,8 +244,14 @@ def run_release_checks(settings: Settings) -> dict:
     checks.append(
         ReleaseCheck(
             key="task_local_fallback",
-            severity="critical" if is_production and settings.TASK_ALLOW_LOCAL_FALLBACK else "warning" if settings.TASK_ALLOW_LOCAL_FALLBACK else "pass",
-            message="任务队列失败会降级到本地后台任务" if settings.TASK_ALLOW_LOCAL_FALLBACK else "任务队列失败不会静默本地降级",
+            severity="critical"
+            if is_production and settings.TASK_ALLOW_LOCAL_FALLBACK
+            else "warning"
+            if settings.TASK_ALLOW_LOCAL_FALLBACK
+            else "pass",
+            message="任务队列失败会降级到本地后台任务"
+            if settings.TASK_ALLOW_LOCAL_FALLBACK
+            else "任务队列失败不会静默本地降级",
             recommendation="生产环境设置 TASK_ALLOW_LOCAL_FALLBACK=false，避免多实例部署时任务丢失或重复执行。",
         )
     )
@@ -235,8 +262,16 @@ def run_release_checks(settings: Settings) -> dict:
     checks.append(
         ReleaseCheck(
             key="qdrant_external",
-            severity="critical" if is_production and not (qdrant_enabled and qdrant_external) else "warning" if qdrant_enabled and not qdrant_external else "pass",
-            message="Qdrant 未使用外部服务" if qdrant_enabled and not qdrant_external else "向量库不是 Qdrant" if not qdrant_enabled else "Qdrant 已配置外部服务",
+            severity="critical"
+            if is_production and not (qdrant_enabled and qdrant_external)
+            else "warning"
+            if qdrant_enabled and not qdrant_external
+            else "pass",
+            message="Qdrant 未使用外部服务"
+            if qdrant_enabled and not qdrant_external
+            else "向量库不是 Qdrant"
+            if not qdrant_enabled
+            else "Qdrant 已配置外部服务",
             recommendation="生产环境设置 VECTOR_STORE_BACKEND=qdrant、QDRANT_URL=https://... 或内网服务地址；embedded Qdrant 只适合本地开发。",
         )
     )
@@ -264,8 +299,14 @@ def run_release_checks(settings: Settings) -> dict:
     checks.append(
         ReleaseCheck(
             key="embedding_fallback",
-            severity="critical" if is_production and settings.EMBEDDING_ALLOW_FALLBACK else "warning" if settings.EMBEDDING_ALLOW_FALLBACK else "pass",
-            message="Embedding 失败会降级到 hash" if settings.EMBEDDING_ALLOW_FALLBACK else "Embedding 失败不会静默降级",
+            severity="critical"
+            if is_production and settings.EMBEDDING_ALLOW_FALLBACK
+            else "warning"
+            if settings.EMBEDDING_ALLOW_FALLBACK
+            else "pass",
+            message="Embedding 失败会降级到 hash"
+            if settings.EMBEDDING_ALLOW_FALLBACK
+            else "Embedding 失败不会静默降级",
             recommendation="生产环境保持 EMBEDDING_ALLOW_FALLBACK=false，失败时展示任务失败原因并允许重试。",
         )
     )
@@ -285,7 +326,11 @@ def run_release_checks(settings: Settings) -> dict:
         ReleaseCheck(
             key="backup",
             severity="critical" if backup_missing else "pass" if settings.BACKUP_ENABLED else "warning",
-            message="生产环境缺少备份策略" if backup_missing else "备份策略已启用" if settings.BACKUP_ENABLED else "备份策略未启用",
+            message="生产环境缺少备份策略"
+            if backup_missing
+            else "备份策略已启用"
+            if settings.BACKUP_ENABLED
+            else "备份策略未启用",
             recommendation="生产环境配置 BACKUP_ENABLED=true、BACKUP_DIR 和 BACKUP_RETENTION_DAYS，并使用云数据库 PITR 或定时快照。",
         )
     )
@@ -300,106 +345,12 @@ def run_release_checks(settings: Settings) -> dict:
         )
     )
 
-    payment_missing = settings.BILLING_ENABLED and not payment_provider
-    payment_invalid = bool(payment_provider) and payment_provider not in {"stripe", "wechatpay", "alipay", "manual"}
-    checks.append(
-        ReleaseCheck(
-            key="payment_provider",
-            severity="critical" if payment_invalid else "warning" if payment_missing else "pass",
-            message="支付渠道配置不支持" if payment_invalid else "已开启计费但未配置支付渠道" if payment_missing else "支付渠道配置可接受",
-            recommendation="国内优先配置微信支付/支付宝，海外优先 Stripe；早期 B 端可使用 manual。",
-        )
-    )
-
-    webhook_required = settings.BILLING_ENABLED and payment_provider not in {"", "manual"} and not settings.PAYMENT_WEBHOOK_SECRET
-    checks.append(
-        ReleaseCheck(
-            key="payment_webhook",
-            severity="critical" if webhook_required else "pass" if settings.PAYMENT_WEBHOOK_SECRET or payment_provider == "manual" else "warning",
-            message="真实支付缺少 webhook 签名密钥" if webhook_required else "支付 webhook 配置可接受" if settings.PAYMENT_WEBHOOK_SECRET or payment_provider == "manual" else "支付 webhook 未配置",
-            recommendation="真实支付必须配置 PAYMENT_WEBHOOK_SECRET，并在支付网关回调中校验签名后再开通权益。",
-        )
-    )
-
-    contact_missing = (
-        (not settings.BILLING_ENABLED and not settings.BILLING_UPGRADE_CONTACT)
-        or (
-            settings.BILLING_ENABLED
-            and payment_provider == "manual"
-            and not settings.BILLING_UPGRADE_CONTACT
-        )
-    )
-    checks.append(
-        ReleaseCheck(
-            key="billing_contact",
-            severity="warning" if contact_missing else "pass",
-            message="缺少升级联系方式" if contact_missing else "升级联系方式配置可接受",
-            recommendation="PAYMENT_PROVIDER=manual 时配置 BILLING_UPGRADE_CONTACT，确保用户超额后能完成转化。",
-        )
-    )
-
-    admin_missing = (
-        is_production
-        and settings.BILLING_ENABLED
-        and payment_provider == "manual"
-        and not settings.admin_email_list
-    )
     checks.append(
         ReleaseCheck(
             key="admin_emails",
-            severity="critical" if admin_missing else "pass" if settings.admin_email_list else "warning",
-            message="manual 计费模式缺少管理员邮箱" if admin_missing else "管理员邮箱已配置" if settings.admin_email_list else "未配置管理员邮箱",
-            recommendation="配置 ADMIN_EMAILS，用逗号分隔，可用于人工开通 Pro、查看用量和处理升级意向。",
-        )
-    )
-
-    quota_invalid = any(
-        value < 0
-        for value in [
-            settings.FREE_RESUME_QUOTA,
-            settings.FREE_INTERVIEW_QUOTA,
-            settings.FREE_OPTIMIZE_QUOTA,
-            settings.FREE_JD_ADAPT_QUOTA,
-            settings.FREE_REPORT_EXPORT_QUOTA,
-            settings.PRO_RESUME_QUOTA,
-            settings.PRO_INTERVIEW_QUOTA,
-            settings.PRO_OPTIMIZE_QUOTA,
-            settings.PRO_JD_ADAPT_QUOTA,
-            settings.PRO_REPORT_EXPORT_QUOTA,
-        ]
-    )
-    checks.append(
-        ReleaseCheck(
-            key="billing_quota",
-            severity="critical" if quota_invalid else "pass",
-            message="存在负数权益额度配置" if quota_invalid else "权益额度配置可接受",
-            recommendation="所有免费版和 Pro 额度必须为 0 或正整数；如需无限制，使用企业版套餐逻辑处理。",
-        )
-    )
-
-    quota_ladder_invalid = (
-        settings.PRO_RESUME_QUOTA < settings.FREE_RESUME_QUOTA
-        or settings.PRO_INTERVIEW_QUOTA < settings.FREE_INTERVIEW_QUOTA
-        or settings.PRO_OPTIMIZE_QUOTA < settings.FREE_OPTIMIZE_QUOTA
-        or settings.PRO_JD_ADAPT_QUOTA < settings.FREE_JD_ADAPT_QUOTA
-        or settings.PRO_REPORT_EXPORT_QUOTA < settings.FREE_REPORT_EXPORT_QUOTA
-    )
-    checks.append(
-        ReleaseCheck(
-            key="billing_quota_ladder",
-            severity="warning" if quota_ladder_invalid else "pass",
-            message="Pro 权益额度低于免费版" if quota_ladder_invalid else "权益阶梯配置可接受",
-            recommendation="付费权益至少应覆盖免费权益，并在核心功能上形成清晰升级理由。",
-        )
-    )
-
-    price_invalid = settings.PRO_MONTHLY_PRICE_CNY <= 0 or settings.SPRINT_PACKAGE_PRICE_CNY <= 0
-    checks.append(
-        ReleaseCheck(
-            key="billing_price",
-            severity="critical" if settings.BILLING_ENABLED and price_invalid else "warning" if price_invalid else "pass",
-            message="商业价格必须为正数" if price_invalid else "商业价格配置可接受",
-            recommendation="检查 PRO_MONTHLY_PRICE_CNY 和 SPRINT_PACKAGE_PRICE_CNY，确保发布页展示与后台配置一致。",
+            severity="pass" if settings.admin_email_list else "warning",
+            message="管理员邮箱已配置" if settings.admin_email_list else "未配置管理员邮箱",
+            recommendation="如启用受限运维 API，配置 ADMIN_EMAILS 并遵循最小权限和独立审计要求。",
         )
     )
 
@@ -412,6 +363,55 @@ def run_release_checks(settings: Settings) -> dict:
         )
     )
 
+    checks.append(
+        ReleaseCheck(
+            key="agent_shadow_runtime",
+            severity="critical"
+            if is_production and settings.AGENT_SHADOW_API_ENABLED
+            else "warning"
+            if settings.AGENT_SHADOW_API_ENABLED
+            else "pass",
+            message="生产环境启用了进程内 Agent Shadow API"
+            if is_production and settings.AGENT_SHADOW_API_ENABLED
+            else "Agent Shadow API 已启用，仅允许内部评测"
+            if settings.AGENT_SHADOW_API_ENABLED
+            else "Agent Shadow API 默认关闭",
+            recommendation=(
+                "生产环境必须保持 AGENT_SHADOW_API_ENABLED=false；PostgreSQL Run Store、租约锁与事务幂等"
+                "已落地，但仍需真实 PostgreSQL、durable worker 和恢复演练后另行建设生产 Agent API。"
+            ),
+        )
+    )
+
+    postgres_store_mismatch = settings.AGENT_RUN_STORE_BACKEND == "postgresql" and not settings.DATABASE_URL.startswith(
+        "postgresql+"
+    )
+    shadow_memory_outside_local = (
+        settings.AGENT_SHADOW_API_ENABLED
+        and settings.AGENT_RUN_STORE_BACKEND == "memory"
+        and settings.APP_ENV.lower() not in {"local", "dev", "development", "test"}
+    )
+    checks.append(
+        ReleaseCheck(
+            key="agent_run_store",
+            severity="critical"
+            if postgres_store_mismatch or shadow_memory_outside_local
+            else "warning"
+            if settings.AGENT_RUN_STORE_BACKEND == "memory" and settings.AGENT_SHADOW_API_ENABLED
+            else "pass",
+            message="PostgreSQL Run Store 与数据库配置不匹配"
+            if postgres_store_mismatch
+            else "非本地 Shadow Runtime 仍使用内存 Run Store"
+            if shadow_memory_outside_local
+            else "本地 Shadow Runtime 使用内存 Run Store"
+            if settings.AGENT_RUN_STORE_BACKEND == "memory" and settings.AGENT_SHADOW_API_ENABLED
+            else "Agent Run Store 配置可接受",
+            recommendation=(
+                "AGENT_RUN_STORE_BACKEND=postgresql 时必须使用 postgresql+asyncpg 数据库；"
+                "非本地 Shadow 评测必须使用迁移到 0018 的 PostgreSQL Run Store。"
+            ),
+        )
+    )
     checks.append(
         ReleaseCheck(
             key="release_gate",
@@ -440,9 +440,5 @@ def assert_release_ready(settings: Settings) -> None:
     if result["publishable"]:
         return
 
-    blockers = [
-        f"{check['key']}: {check['message']}"
-        for check in result["checks"]
-        if check["severity"] == "critical"
-    ]
+    blockers = [f"{check['key']}: {check['message']}" for check in result["checks"] if check["severity"] == "critical"]
     raise RuntimeError("生产发布检查未通过：" + "；".join(blockers))

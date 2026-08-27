@@ -2,8 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from app.services.quality import API_KEY_PATTERN, EMAIL_PATTERN, PHONE_PATTERN, redact_sensitive_text
-
+from app.services.data_sanitization import API_KEY_PATTERN, EMAIL_PATTERN, PHONE_PATTERN, redact_sensitive_text
 
 INJECTION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
@@ -59,10 +58,7 @@ class SanitizedContext:
 def sanitize_untrusted_text(value: Any, *, max_chars: int = 12_000) -> SanitizedContext:
     risk_counts: dict[str, int] = {}
     raw_text = str(value or "")
-    sensitive_count = sum(
-        len(pattern.findall(raw_text))
-        for pattern in (EMAIL_PATTERN, PHONE_PATTERN, API_KEY_PATTERN)
-    )
+    sensitive_count = sum(len(pattern.findall(raw_text)) for pattern in (EMAIL_PATTERN, PHONE_PATTERN, API_KEY_PATTERN))
     if sensitive_count:
         risk_counts["sensitive_data"] = sensitive_count
     text = redact_sensitive_text(raw_text)
@@ -96,11 +92,7 @@ def wrap_untrusted_data(source: str, value: Any, *, max_chars: int = 12_000) -> 
     sanitized = sanitize_untrusted_text(value, max_chars=max_chars)
     safe_source = re.sub(r"[^a-z0-9_\-]", "_", source.lower())[:40] or "unknown"
     return SanitizedContext(
-        text=(
-            f'<UNTRUSTED_DATA source="{safe_source}">\n'
-            f"{sanitized.text}\n"
-            "</UNTRUSTED_DATA>"
-        ),
+        text=(f'<UNTRUSTED_DATA source="{safe_source}">\n{sanitized.text}\n</UNTRUSTED_DATA>'),
         risk_types=sanitized.risk_types,
         removed_count=sanitized.removed_count,
     )

@@ -1,53 +1,56 @@
+import time
+import uuid
+from typing import Optional
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import Response
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from typing import Optional
-import uuid
-import time
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import async_session_maker, get_db
-from app.models import AsyncTask, JobApplication, ResumeVersion, User, Resume, ResumeChunk, ResumeTemplate
+from app.models import AsyncTask, JobApplication, Resume, ResumeChunk, ResumeTemplate, ResumeVersion, User
+from app.prompts import ADAPT_JD_PROMPT, OPTIMIZE_RESUME_PROMPT, PARSE_RESUME_PROMPT
 from app.schemas import (
-    ResumeResponse,
-    ResumeListItemResponse,
-    ResumeCreateRequest,
-    ResumeUpdateRequest,
-    ResumeOptimizeRequest,
     ResumeAdaptJDRequest,
-    ResumeAdaptJDResponse,
     ResumeAdaptJDTaskResponse,
     ResumeChunkResponse,
+    ResumeListItemResponse,
+    ResumeOptimizeRequest,
     ResumeReindexResponse,
+    ResumeResponse,
+    ResumeUpdateRequest,
     ResumeVersionResponse,
-    AsyncTaskResponse,
 )
-from app.services.auth_service import get_current_user
+from app.services.ats_scoring import build_ats_report
 from app.services.audit import log_audit_event
-from app.services.business import ensure_feature_available, record_usage
+from app.services.auth_service import get_current_user
+from app.services.document_export import content_disposition, resume_to_docx_bytes, safe_filename
 from app.services.knowledge_base import (
     build_rag_context,
     compact_json,
     retrieve_knowledge,
     serialize_rag_references,
 )
-from app.services.resume_parser import ResumeParser
-from app.services.ats_scoring import build_ats_report
 from app.services.llm_client import get_llm_client
 from app.services.rerank_service import rerank_status
-from app.services.document_export import content_disposition, resume_to_docx_bytes, safe_filename
-from app.services.resume_versions import build_version_compare, create_resume_version, ensure_original_version, mark_resume_version_current
-from app.services.task_queue import TaskCancelled, create_task, enqueue_task, update_task
 from app.services.resume_index import (
     delete_resume_vectors,
     ensure_resume_chunks,
     reindex_resume_chunks,
     retrieve_resume_evidence,
 )
+from app.services.resume_parser import ResumeParser
+from app.services.resume_versions import (
+    build_version_compare,
+    create_resume_version,
+    ensure_original_version,
+    mark_resume_version_current,
+)
+from app.services.task_queue import TaskCancelled, create_task, enqueue_task, update_task
 from app.services.tenancy import resolve_request_organization, tenant_metadata
-from app.config import get_settings
-from app.prompts import PARSE_RESUME_PROMPT, OPTIMIZE_RESUME_PROMPT, ADAPT_JD_PROMPT
-from app.utils.storage import delete_uploaded_file, save_upload_file, is_allowed_file
+from app.services.usage_telemetry import record_usage
+from app.utils.storage import delete_uploaded_file, is_allowed_file, save_upload_file
 from app.utils.time import utc_now
 
 router = APIRouter(prefix="/api/resumes", tags=["resumes"])
@@ -208,7 +211,7 @@ async def upload_resume(
             raise HTTPException(
                 status_code=400,
                 detail=f"当前环境暂不支持文件上传，请先粘贴简历文本：{exc}",
-            )
+            ) from exc
         title = str(form.get("title") or "").strip()
         text_value = form.get("text")
         text = str(text_value) if text_value else None
@@ -225,7 +228,6 @@ async def upload_resume(
     if not file and not text:
         raise HTTPException(status_code=400, detail="请上传文件或粘贴简历文本")
     org = await resolve_request_organization(request, db, current_user)
-    await ensure_feature_available("resume_upload", db, current_user.id, settings)
 
     original_text = ""
     original_file = None
@@ -246,7 +248,7 @@ async def upload_resume(
             raise HTTPException(
                 status_code=400,
                 detail=f"文件解析失败，请改用粘贴纯文本方式上传：{exc}",
-            )
+            ) from exc
     elif text:
         original_text = text
     if len(original_text) > settings.MAX_RESUME_TEXT_LENGTH:
@@ -784,7 +786,6 @@ async def optimize_resume(
     template = template_result.scalar_one_or_none()
     if not template:
         raise HTTPException(status_code=404, detail="模板不存在")
-    await ensure_feature_available("resume_optimize", db, current_user.id, settings)
 
     llm = get_llm_client(settings)
     rag_snippets = await retrieve_knowledge(
@@ -856,7 +857,6 @@ async def _enqueue_resume_adapt_jd_task(
     resume = await db.scalar(select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id))
     if not resume:
         raise HTTPException(status_code=404, detail="简历不存在")
-    await ensure_feature_available("jd_adapt", db, current_user.id, settings)
     task = await create_task(
         db,
         user_id=current_user.id,

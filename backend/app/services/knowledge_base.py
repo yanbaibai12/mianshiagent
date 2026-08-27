@@ -8,11 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import KnowledgeChunk, KnowledgeDocument
 from app.config import get_settings
+from app.models import KnowledgeChunk, KnowledgeDocument
 from app.services.rerank_service import rerank_documents, rerank_enabled
 from app.services.vector_store import search_vector_knowledge, sync_knowledge_to_vector_store
-
 
 DEFAULT_KNOWLEDGE = [
     {

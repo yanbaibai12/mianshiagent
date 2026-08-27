@@ -14,7 +14,6 @@ from app.config import get_settings
 from app.models import KnowledgeChunk, KnowledgeDocument, ResumeChunk
 from app.services.embedding_service import embed_query, embed_texts, embedding_status
 
-
 _client: Any | None = None
 _last_sync: dict[str, Any] = {}
 _last_error: str | None = None

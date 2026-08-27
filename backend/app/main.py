@@ -6,10 +6,24 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import JSONResponse
 
 from app.config import get_settings
-from app.database import assert_database_revision_current, init_db, async_session_maker
+from app.database import assert_database_revision_current, async_session_maker, init_db
 from app.middleware import InMemoryRateLimitMiddleware, RequestMetricsMiddleware, SecurityHeadersMiddleware
 from app.models import ResumeTemplate
-from app.routers import account, audit, auth, resumes, templates, interviews, system, knowledge, business, organizations, payments, tasks, jobs, quality, community, company_profiles, training_plans
+from app.routers import (
+    account,
+    agent_shadow,
+    audit,
+    auth,
+    community,
+    interviews,
+    jobs,
+    knowledge,
+    resumes,
+    system,
+    tasks,
+    templates,
+    training_plans,
+)
 from app.services.knowledge_base import seed_builtin_knowledge
 from app.services.llm_client import LLMCallError
 from app.services.release_checks import assert_release_ready
@@ -106,6 +120,7 @@ async def init_templates():
     async with async_session_maker() as db:
         for tpl in DEFAULT_TEMPLATES:
             from sqlalchemy import select
+
             result = await db.execute(select(ResumeTemplate).where(ResumeTemplate.id == tpl["id"]))
             existing = result.scalar_one_or_none()
             if not existing:
@@ -139,7 +154,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="基于 LLM 的简历优化与模拟面试系统",
+    description="基于受控 Agent 工作流的简历优化与面试训练平台",
     version=settings.APP_VERSION,
     lifespan=lifespan,
     docs_url="/docs" if settings.ENABLE_DOCS else None,
@@ -161,9 +176,8 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(account.router)
+app.include_router(agent_shadow.router)
 app.include_router(audit.router)
-app.include_router(organizations.router)
-app.include_router(payments.router)
 app.include_router(tasks.router)
 app.include_router(jobs.router)
 app.include_router(resumes.router)
@@ -171,10 +185,7 @@ app.include_router(templates.router)
 app.include_router(interviews.router)
 app.include_router(system.router)
 app.include_router(knowledge.router)
-app.include_router(business.router)
-app.include_router(quality.router)
 app.include_router(community.router)
-app.include_router(company_profiles.router)
 app.include_router(training_plans.router)
 
 

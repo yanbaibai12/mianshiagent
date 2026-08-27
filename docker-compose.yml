@@ -1,0 +1,116 @@
+name: ${COMPOSE_PROJECT_NAME:-mianshiagent}
+
+x-backend-common: &backend-common
+  image: mianshiagent-backend:${BACKEND_IMAGE_TAG:-local}
+  build:
+    context: ./backend
+    args:
+      PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}
+  env_file:
+    - ${BACKEND_ENV_FILE:-./backend/.env.production}
+  environment: &backend-environment
+    AGENT_SHADOW_API_ENABLED: "false"
+    AGENT_RUN_STORE_BACKEND: postgresql
+    DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-interview_agent}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in deploy/compose.env}@postgres:5432/${POSTGRES_DB:-interview_agent}
+    TASK_REDIS_URL: redis://redis:6379/0
+    QDRANT_URL: http://qdrant:6333
+    PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://app.example.com}
+    CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-https://app.example.com}
+    TRUSTED_HOSTS: ${TRUSTED_HOSTS:-app.example.com}
+    UPLOAD_DIR: /data/uploads
+    BACKUP_DIR: /data/backups
+    EMBEDDING_CACHE_DIR: /data/models
+  volumes:
+    - backend_uploads:/data/uploads
+    - backend_backups:/data/backups
+    - backend_models:/data/models
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-interview_agent}
+      POSTGRES_USER: ${POSTGRES_USER:-interview_agent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in deploy/compose.env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.1
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend-common
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    <<: *backend-common
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *backend-common
+    command: ["python", "scripts/run_rq_worker.py"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    image: mianshiagent-frontend:${FRONTEND_IMAGE_TAG:-local}
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+    ports:
+      - "${FRONTEND_BIND:-0.0.0.0}:${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  backend_uploads:
+  backend_backups:
+  backend_models:

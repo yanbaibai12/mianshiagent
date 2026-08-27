@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-
 INTERNAL_KEYS = {
     "rag_references",
     "ats_report",

@@ -1,115 +1,128 @@
 # 发布检查清单
 
-## 发布模式
+> 状态：Active
+> 更新日期：2026-08-27
+> 适用范围：Agent Platform v2
 
-| 模式 | 目标 | 允许配置 |
+## 1. 发布级别
+
+| 级别 | 允许范围 | 最低要求 |
 |---|---|---|
-| MVP 演示 | 本机或内测演示 | SQLite、local LLM fallback、本地前端 |
-| 公测发布 | 小流量真实用户 | PostgreSQL、真实 LLM、HTTPS、正式域名 |
-| 商业发布 | 可收费交付 | 公测配置 + 计费/权益开关 + 成本监控 |
+| 本地开发 | 单机开发和自动化测试 | SQLite/local provider 可作为明确标识的测试替身 |
+| 内部 Shadow | 受控账号验证 Agent 行为 | 认证、功能开关、资源归属、脱敏、幂等和回滚开关 |
+| 生产发布 | 真实用户主链路 | PostgreSQL、真实 Provider、HTTPS、正式域名、备份恢复和全部 Release Gate |
 
-生产环境建议保持：
+生产环境必须：
 
 ```env
 APP_ENV=production
 ENFORCE_RELEASE_CHECKS=true
 DEBUG=false
 ENABLE_DOCS=false
+AUTO_CREATE_DB=false
+AGENT_SHADOW_API_ENABLED=false
+AGENT_RUN_STORE_BACKEND=postgresql
+DATABASE_URL=postgresql+asyncpg://...
 ```
 
-后端启动时会执行 `assert_release_ready(settings)`。只要生产环境存在 critical 项，服务会拒绝启动。
+## 2. 必填配置
 
-## 必填环境变量
-
-| 类别 | 变量 |
+| 类别 | 要求 |
 |---|---|
-| 数据库 | `DATABASE_URL=postgresql+asyncpg://...` |
+| 数据库 | `DATABASE_URL=postgresql+asyncpg://...`，迁移到唯一 Alembic head |
 | 认证 | `SECRET_KEY` 至少 32 位随机字符串 |
-| 模型 | `LLM_PROVIDER`、`LLM_MODEL`、`LLM_API_KEY` |
-| 域名 | `PUBLIC_BASE_URL`、`CORS_ALLOW_ORIGINS`、`TRUSTED_HOSTS` |
-| 安全 | `DEBUG=false`、`ENABLE_DOCS=false`、`ENFORCE_RELEASE_CHECKS=true` |
-| 商业化 | `BILLING_ENABLED`、`PAYMENT_PROVIDER`、`BILLING_UPGRADE_CONTACT`、套餐额度和价格 |
+| 模型 | 显式配置核心功能 Provider、Model 和 Prompt Version |
+| 域名 | `PUBLIC_BASE_URL`、`CORS_ALLOW_ORIGINS`、`TRUSTED_HOSTS` 使用正式 HTTPS 域名 |
+| 队列 | `TASK_QUEUE_BACKEND=redis_rq` 且禁止 local fallback |
+| 向量 | 真实 Qdrant/Embedding；生产禁止 hash embedding |
+| 运维 | metrics、alert、backup、retention 和恢复责任人 |
+| Agent | `AGENT_SHADOW_API_ENABLED=false`、`AGENT_RUN_STORE_BACKEND=postgresql`；生产 Agent 路径仍须通过真实 PostgreSQL、多实例、恢复和 durable worker 晋级门 |
 
-参考模板：`backend/.env.production.example`。
+## 3. 质量门
 
-## 构建与迁移
+从仓库根目录执行：
 
-后端：
-
-```bash
-cd backend
-alembic upgrade head
-python -c "import app.main; print('backend import ok')"
-pip-audit -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+```powershell
+backend\.venv-codex\Scripts\python.exe scripts\run_quality_gate.py --profile backend --mode release --report artifacts\quality-gate\backend-release.json
+backend\.venv-codex\Scripts\python.exe scripts\run_quality_gate.py --profile contracts --mode release --report artifacts\quality-gate\contracts-release.json
+backend\.venv-codex\Scripts\python.exe scripts\run_quality_gate.py --profile frontend --mode release --report artifacts\quality-gate\frontend-release.json
 ```
 
-前端：
+E2E：
 
-```bash
+```powershell
+$env:E2E_PYTHON='F:\mianshi agent\backend\.venv-codex\Scripts\python.exe'
 cd frontend
-npm ci
-npm run build
-npm audit --json
+npm.cmd run e2e
 ```
 
-## 安全检查
+规则：
 
-上线前必须确认：
+- CI 覆盖率 ratchet 保持 64%；
+- Release 覆盖率保持 85%；
+- 不得降低阈值、排除核心代码、删除测试或用 Mock 伪造生产证据；
+- 依赖审计、Secret Scan、OpenAPI Contract、Agent/Skill/MCP Registry 任一阻断失败都不得发布；
+- 质量报告必须绑定当前 worktree/commit，不能复用旧报告冒充本次结果。
 
-1. `/health` 可以公开访问，但不返回敏感信息。
-2. `/api/system/status` 和 `/api/system/release-checks` 需要登录。
-3. `SECRET_KEY`、LLM Key、数据库密码不提交到仓库。
-4. CORS 只允许正式前端域名。
-5. Trusted Host 只允许正式 API 域名。
-6. 生产不公开 `/docs`、`/redoc`、`/openapi.json`。
-7. 简历列表接口不返回简历原文。
-8. 用户只能访问自己的简历、面试、报告。
-9. 上传文件大小和文本长度限制生效。
-10. 日志不记录完整简历、JD、回答、Token、API Key。
+## 4. 安全与授权检查
 
-## 商业化检查
+1. 生产不公开 `/docs`、`/redoc`、`/openapi.json`。
+2. 简历列表不返回正文，所有用户资源按当前用户过滤。
+3. Agent Tool 同时校验 Run user、audience、Agent allowlist 和数据库 owner。
+4. 跨用户与不存在的 Shadow 资源返回相同公共失败形态。
+5. Trace 不包含简历正文、JD、回答、联系方式、Token、内部 state 或完整 Tool Result。
+6. 高风险和写 Tool 默认需要审批；当前 Shadow Registry 只允许两个只读 Tool。
+7. 日志和 Artifact 不包含数据库凭证、原始支付历史载荷或用户正文。
 
-1. 免费版必须允许用户完成一次完整体验。
-2. 完整报告、导出、多 JD 适配、多简历版本需要明确付费墙。
-3. `PRO_MONTHLY_PRICE_CNY` 和 `SPRINT_PACKAGE_PRICE_CNY` 必须大于 0。
-4. Pro 权益额度不能低于免费版。
-5. `PAYMENT_PROVIDER=manual` 时必须配置 `BILLING_UPGRADE_CONTACT`。
-6. 接第三方支付前必须完成订单回调验签、幂等处理和对账流程。
-7. 每次 LLM 调用必须能估算成本，避免免费额度被刷穿。
+## 5. 主链路冒烟
 
-## 冒烟测试
+1. 注册、登录和会话刷新。
+2. 上传文本/PDF/DOCX 简历。
+3. 模板优化和 JD 适配。
+4. 创建面试、生成问题、提交回答和完成报告。
+5. Markdown/DOCX/PDF 导出。
+6. 账号导出和删除。
+7. 越权访问返回 404/401。
+8. 超长或非法输入被拒绝。
+9. 系统状态与 release checks 无 production critical。
+10. 退役支付、组织、公司画像 CRUD、运营后台和质量反馈入口不存在。
 
-使用测试账号完成：
+## 6. Agent Shadow 验收
 
-1. 注册、登录、刷新后仍保持会话。
-2. 粘贴文本简历上传成功。
-3. 模板优化返回结构化结果。
-4. JD 适配返回匹配分和弱项。
-5. 创建面试并生成问题。
-6. 提交至少 3 个回答并生成报告。
-7. 报告导出返回 Markdown 内容。
-8. 越权访问其他用户资源返回 404/401。
-9. 超长输入返回 400。
-10. 登录后查看系统状态，发布检查无 critical。
+仅内部环境：
 
-## 回滚
+1. 默认关闭时返回 404，且不进入 OpenAPI。
+2. 创建 Run 必须提供 `Idempotency-Key`。
+3. 同请求同 Key 返回同一 Run；不同请求同 Key 返回 409。
+4. 当前用户 Resume rewrite 和 Interview coach 可通过真实只读 adapter 完成。
+5. 跨用户 Resume/Interview 读取失败且无存在性泄露。
+6. GET/cancel/retry 只能操作自己的 Run。
+7. 响应不含内部 state、完整 Tool Result、指纹和内部异常类。
+8. 生产启用该开关时 release check 为 critical。
 
-1. 前端保留上一版 `dist` 静态产物。
-2. 后端镜像或部署包按版本号保留。
-3. 数据库迁移前先备份。
-4. 发布后出现高错误率，先回滚后端，再回滚前端。
-5. 涉及数据结构变化时，必须准备 Alembic downgrade 或只做向前兼容迁移。
+## 7. 数据迁移与恢复
 
-## 当前不能直接商业发布的情况
+- 真实 PostgreSQL 上执行 Phase 1B 只读审计；
+- 记录迁移前后 row count、owner 映射、孤儿记录和稳定列 checksum；
+- 执行 upgrade、rollback、backup/restore；
+- 历史组织、支付、质量和公司画像数据必须有 retain/export/anonymize/legal-hold/delete 决策；
+- 没有真实 PostgreSQL 证据时不得宣称 Phase 1B 完成。
 
-任一条件满足都应先整改：
+## 8. 回滚
 
-1. 仍使用 SQLite。
-2. 仍使用 `LLM_PROVIDER=local`。
-3. 没有 HTTPS。
-4. 发布检查存在 critical。
-5. 前端构建失败或依赖审计存在 high/critical。
-6. 后端 `pip-audit` 尚未执行或存在 high/critical。
-7. 未完成隐私声明、用户删除和数据导出策略。
-8. 未建立 LLM 成本估算和免费额度风控。
+1. 保留上一版前后端制品和数据库备份。
+2. Agent 异常时首先关闭 Agent/Shadow 功能开关，不破坏稳定主链路。
+3. 数据变更使用 expand/migrate/contract，contract 前必须验证旧版本兼容。
+4. 高错误率、事实安全回归或跨用户风险出现时立即停止灰度。
+5. 回滚后重新执行相关质量门并保存机器可读证据。
+
+## 9. 当前生产阻断
+
+截至 2026-08-27，以下证据尚未具备，因此不能把整体生产就绪度宣称为 90+：
+
+- 真实 PostgreSQL Phase 1B 演练；
+- PostgreSQL Agent Run Store 的真实多实例并发、租约接管、取消竞争和恢复演练；
+- Redis/RQ Agent durable worker 的 kill/restart、重复投递和取消恢复；
+- 网络 MCP Server；
+- Agent SLO 与真实 Provider 成本证据；
+- 至少 120 条分层简历样本和人工双盲效果评测。

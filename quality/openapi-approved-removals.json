@@ -1,0 +1,123 @@
+{
+  "schema_version": "1.0",
+  "phase": "phase-1a-product-surface-retirement",
+  "adr": "docs/adr/0002-product-surface-retirement.md",
+  "owner": "agent-platform-team",
+  "approved_at": "2026-08-27",
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/business/admin/usage-summary",
+      "reason": "商业运营用量后台已从 Agent Platform v2 产品范围退役。",
+      "replacement": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/business/entitlements",
+      "reason": "套餐与权益查询已退役，个人核心流程不再依赖商业额度。",
+      "replacement": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/business/admin/grant-plan",
+      "reason": "人工开通套餐能力已退役，不再保留商业管理员入口。",
+      "replacement": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/business/upgrade-request",
+      "reason": "升级意向收集已退役，平台不再提供商业化转化入口。",
+      "replacement": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/company-profiles",
+      "reason": "公司画像 CRUD 产品接口已退役，仅保留历史快照内部兼容读取。",
+      "replacement": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/company-profiles/{profile_id}",
+      "reason": "公司画像详情产品接口已退役，仅保留历史快照内部兼容读取。",
+      "replacement": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/company-profiles/rebuild",
+      "reason": "公司画像运营重建接口已退役，历史派生数据不再作为产品管理模块暴露。",
+      "replacement": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/organizations",
+      "reason": "组织管理产品接口已退役，个人组织仅作为迁移期内部兼容实现。",
+      "replacement": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/organizations",
+      "reason": "组织创建产品接口已退役，v2 当前采用个人账号使用模式。",
+      "replacement": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/organizations/{organization_id}/members",
+      "reason": "组织成员管理接口已退役，v2 不提供多组织成员产品能力。",
+      "replacement": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/organizations/{organization_id}/members",
+      "reason": "组织成员邀请接口已退役，v2 不提供多组织成员产品能力。",
+      "replacement": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/orders",
+      "reason": "支付订单查询已退役，历史订单仅在账号导出与迁移审计中保留。",
+      "replacement": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/checkout",
+      "reason": "支付结算入口已退役，Agent Platform v2 不建设支付能力。",
+      "replacement": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/webhook",
+      "reason": "支付回调入口已退役，不再接受新的支付状态写入。",
+      "replacement": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/quality/annotations",
+      "reason": "面向用户的质量反馈列表已退役，质量评测迁移为离线受控流程。",
+      "replacement": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/quality/annotations",
+      "reason": "面向用户的质量反馈提交已退役，质量评测迁移为离线受控流程。",
+      "replacement": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/quality/admin/summary",
+      "reason": "质量运营后台汇总接口已退役，离线 Eval 证据不通过运营 UI 管理。",
+      "replacement": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/quality/admin/eval-candidates",
+      "reason": "质量候选运营接口已退役，Eval 数据进入受控离线治理。",
+      "replacement": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/quality/admin/eval-candidates/{candidate_id}/status",
+      "reason": "质量候选状态运营接口已退役，Eval 晋级改由受控离线流程执行。",
+      "replacement": null
+    }
+  ]
+}

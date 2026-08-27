@@ -8,7 +8,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from app.database import async_session_maker, init_db  # noqa: E402
-from app.services.vector_store import search_vector_knowledge, sync_knowledge_to_vector_store, vector_store_status  # noqa: E402
+from app.services.vector_store import (  # noqa: E402
+    search_vector_knowledge,
+    sync_knowledge_to_vector_store,
+    vector_store_status,
+)
 
 
 async def rebuild(recreate: bool) -> dict:

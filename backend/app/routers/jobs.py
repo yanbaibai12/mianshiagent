@@ -5,6 +5,7 @@ from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import async_session_maker, get_db
 from app.models import AsyncTask, Interview, JobApplication, Resume, ResumeVersion, User
 from app.schemas import (
@@ -14,14 +15,13 @@ from app.schemas import (
     JobApplicationUpdateRequest,
     ResumeAdaptJDTaskResponse,
 )
+from app.services.ats_scoring import build_ats_report
 from app.services.audit import log_audit_event
 from app.services.auth_service import get_current_user
-from app.services.ats_scoring import build_ats_report
-from app.services.business import ensure_feature_available, record_usage
 from app.services.document_export import content_disposition, resume_to_docx_bytes, safe_filename
 from app.services.task_queue import TaskCancelled, create_task, enqueue_task, update_task
 from app.services.tenancy import resolve_request_organization, tenant_metadata
-from app.config import get_settings
+from app.services.usage_telemetry import record_usage
 from app.utils.time import utc_now
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
@@ -196,7 +196,6 @@ async def preflight_job(
     resume = await db.scalar(select(Resume).where(Resume.id == job.resume_id, Resume.user_id == current_user.id))
     if not resume:
         raise HTTPException(status_code=404, detail="绑定简历不存在")
-    await ensure_feature_available("jd_adapt", db, current_user.id, settings)
     ats_report = await _preflight_job_application(db, job, resume)
     job.match_score = float(ats_report.get("total_score") or 0)
     job.ats_report = ats_report
@@ -323,7 +322,6 @@ async def create_interview_for_job(
     resume = await db.scalar(select(Resume).where(Resume.id == job.resume_id, Resume.user_id == current_user.id))
     if not resume:
         raise HTTPException(status_code=404, detail="绑定简历不存在")
-    await ensure_feature_available("interview_create", db, current_user.id, settings)
     interview = Interview(
         user_id=current_user.id,
         organization_id=job.organization_id or resume.organization_id,
@@ -501,7 +499,6 @@ async def adapt_resume_for_job_task(
         raise HTTPException(status_code=404, detail="岗位任务不存在")
     if not job.resume_id:
         raise HTTPException(status_code=400, detail="请先绑定简历")
-    await ensure_feature_available("jd_adapt", db, current_user.id, settings)
     task = await create_task(
         db,
         user_id=current_user.id,

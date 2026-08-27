@@ -1,0 +1,2667 @@
+{
+  "schema_version": "1.0",
+  "baseline_date": "2026-08-26",
+  "openapi_version": "3.1.0",
+  "title": "面试简历 Agent",
+  "operation_count": 98,
+  "operations": {
+    "DELETE /api/account/delete": {
+      "operation_id": "delete_account_api_account_delete_delete",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "DELETE /api/community/experiences/{experience_id}": {
+      "operation_id": "delete_experience_api_community_experiences__experience_id__delete",
+      "parameters": {
+        "path:experience_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "9f4b597316dc9e61caa405b2859d1062ba7de8465b65092310948c458c9b2ebc",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "c11dcdbbb2ded88d84778e6c0f28d71bd903d2219bf249430d01f5d9ac7015d4",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "DELETE /api/interviews/{interview_id}": {
+      "operation_id": "delete_interview_api_interviews__interview_id__delete",
+      "parameters": {
+        "path:interview_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c4aa9ec0cec48bfe2e9240a2bb488f5e8efea56da4c60638186968d5afdf6188",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "DELETE /api/jobs/{job_id}": {
+      "operation_id": "delete_job_api_jobs__job_id__delete",
+      "parameters": {
+        "path:job_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "8f7f4d1aeb42a41dd5d7593553dadff10ac34c6aacc08a70cfab78845cb3d32c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "DELETE /api/resumes/{resume_id}": {
+      "operation_id": "delete_resume_api_resumes__resume_id__delete",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/account/export": {
+      "operation_id": "export_account_data_api_account_export_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/audit/admin/logs": {
+      "operation_id": "admin_audit_logs_api_audit_admin_logs_get",
+      "parameters": {
+        "query:event_type": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "1022e2d21f37483ebeb52ce40f8b3bbf4a33da328718505f1225f07813c674a1",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:limit": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "2961d348e72711e84a24b2d37d41a3fda58fc36b9e6867359c17ae48780bb8ea",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/auth/me": {
+      "operation_id": "me_api_auth_me_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "c6253e6ed8a2b8cb918e39db79a4feddec02d457fa95bf2494c55824cfa27b8b"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/business/admin/usage-summary": {
+      "operation_id": "admin_usage_summary_api_business_admin_usage_summary_get",
+      "parameters": {
+        "query:days": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "1241348785d8e8a731d2ed2851b4a216aa8c2ff373fced8816a789aae2f22f27",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:limit": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "e9684911fa8daf0cbe725d8fed88c0e9227e72cbb334e56801927ab47788e3e6",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/business/entitlements": {
+      "operation_id": "entitlements_api_business_entitlements_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/community/agent-questions": {
+      "operation_id": "list_agent_questions_api_community_agent_questions_get",
+      "parameters": {
+        "query:difficulty": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "a868d7d8ac7fcd761ec00920e831314c5e9e890af565219cefce718886a4662e",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:limit": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "e9684911fa8daf0cbe725d8fed88c0e9227e72cbb334e56801927ab47788e3e6",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:offset": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c2912072c9be03f650d7dffdbe760d9299f214dae1d1357710e9f2a2d8d2327d",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:practice_filter": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "8e8f859244db98b23a18479447d2fff2379f9bce5a33cbf74431af0ccf0f408f",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:q": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "d739d639585c847eb946ba0302edb5d00e7e1a8bcf341a4c89bda3467530e55d",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:role": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "8b1da8850201a6eab92d403ed4f8468f94cd98e4a5d6ac94c1461d54df643115",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:section": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "bdb9c51e2103251b30662206db0a85f1a502004124d521ab6fd9584c660b89a6",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:skill": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c6c54ad019814d4b976c6bbd7c66613f04c248ac9f15570a4b52094bff0d2ce4",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "03f9895842dba27f55dee5b681d59f93e17db1c4529a018b6a57e91b7d452784",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/community/agent-questions/{question_id}": {
+      "operation_id": "get_agent_question_api_community_agent_questions__question_id__get",
+      "parameters": {
+        "path:question_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "fd8d77427825e3a2a7eadd9941c1fefb538a19df91facb296342db8cf37a5031",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "4fb9811d61a4d4105241c450db72c2cc9afd90479c18156a9a15c6ed26283d29",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/community/experiences": {
+      "operation_id": "list_experiences_api_community_experiences_get",
+      "parameters": {
+        "query:company": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "05a11a9549b1c0735770dc77b6ed4541df410e92b4d8a0f36f724f443eb6a61d",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:difficulty": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "2b3b37ee20ae5f07f5c6ba0cfd2ce22a6415a196a903abc09086d7e64e20cb88",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:limit": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "e9684911fa8daf0cbe725d8fed88c0e9227e72cbb334e56801927ab47788e3e6",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:offset": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c2912072c9be03f650d7dffdbe760d9299f214dae1d1357710e9f2a2d8d2327d",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:q": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "3bb2da800c855028a2fc5a56e56ae9304153515f8609cc06d1539a59f8ec6a4b",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:result": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "19505067bd30b33720fc64bdeea1b65dfadbf7d45a58200547d91f3ad5e5f7c3",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:tag": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "372f454e6815c158c0f61eb0dfe8d9377c18660e3a45d4e1aa3409f1fb7569f2",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "4e40a3b4aab07feb8072c5e457da9d840ff53d9aeef2a3a9ba7d8fef59053d79",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/community/experiences/{experience_id}": {
+      "operation_id": "get_experience_api_community_experiences__experience_id__get",
+      "parameters": {
+        "path:experience_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "9f4b597316dc9e61caa405b2859d1062ba7de8465b65092310948c458c9b2ebc",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "372e9cc899f117a6b06267de2d0a8525ff3fa31d87652b53acf4b652d87aae33",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/community/training-profile": {
+      "operation_id": "get_training_profile_api_community_training_profile_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "b5e1167ad6c59eb0517f1d94f304a2098d6012e1cc2897b7f41803f33cf4afa1"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/company-profiles": {
+      "operation_id": "list_company_profiles_api_company_profiles_get",
+      "parameters": {
+        "query:company": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "a376f90c88fec3aba2ab45f9f8273d82bc969c460d014d2d8e9d092c05b2a03e",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:limit": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "e9684911fa8daf0cbe725d8fed88c0e9227e72cbb334e56801927ab47788e3e6",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:offset": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c2912072c9be03f650d7dffdbe760d9299f214dae1d1357710e9f2a2d8d2327d",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:position": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "d05434c945a39b0cee2f8834bea57da6b6420556704daef72c65970f07015319",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:round_type": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "41b69d5c297a68e7eaf92724489901d47353d357057b6f3abb6fadc2450a1b1b",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:topic": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c96098ce981db2b210ecfd8f9b2b6808414a705f62b2a24902844b2372a8d87f",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "379659814e0eeca9e5d5960e9f0b3d2bd26ac7a368b9fb863741dccb69898edd",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/company-profiles/{profile_id}": {
+      "operation_id": "get_company_profile_api_company_profiles__profile_id__get",
+      "parameters": {
+        "path:profile_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "3091ecf006a7a4a80d1c8adfd834202be4a63ca58acec6c162f406b89f064188",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "3574f74d077b78672863145da325d1f545ffc56d10231fe768631d71b1f363b6",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/interviews": {
+      "operation_id": "list_interviews_api_interviews_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "5689fbfee7d77e6b28f7195d351b2e1c33bae7bfdd620732bc26f23faaf309e0"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/interviews/templates": {
+      "operation_id": "get_interview_templates_api_interviews_templates_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "69af155c05e076d8fb9263397eb0ff867b44664102e349e3231e2fea0b5fae7b"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/interviews/{interview_id}": {
+      "operation_id": "get_interview_api_interviews__interview_id__get",
+      "parameters": {
+        "path:interview_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c4aa9ec0cec48bfe2e9240a2bb488f5e8efea56da4c60638186968d5afdf6188",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "d556af0fd0bdaf2abf4069d84a7d24b564d4022444c00dfe26b57995a6ded2ec",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/interviews/{interview_id}/questions": {
+      "operation_id": "list_questions_api_interviews__interview_id__questions_get",
+      "parameters": {
+        "path:interview_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c4aa9ec0cec48bfe2e9240a2bb488f5e8efea56da4c60638186968d5afdf6188",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "955d683e72dfbb4820b6beda48ab9dc9d0beeee1e381dded32a210c0235fb1d2",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/interviews/{interview_id}/report": {
+      "operation_id": "get_report_api_interviews__interview_id__report_get",
+      "parameters": {
+        "path:interview_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c4aa9ec0cec48bfe2e9240a2bb488f5e8efea56da4c60638186968d5afdf6188",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "5684b698f8124fcf79fce1edb1e03003b0e7a88eefd205ad5fc01900f1229d6b",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/interviews/{interview_id}/report/export": {
+      "operation_id": "export_report_api_interviews__interview_id__report_export_get",
+      "parameters": {
+        "path:interview_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c4aa9ec0cec48bfe2e9240a2bb488f5e8efea56da4c60638186968d5afdf6188",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:format": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "0635c0a331cc02670d5cbe952a54abf56a516bd8fea82e5d57b3c3d74ee060a0",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/jobs": {
+      "operation_id": "list_jobs_api_jobs_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "fc1b47a327cc280d410aed85f6d88c87b2bfa43bfc6db4de32c5f4b15222804b"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/jobs/{job_id}": {
+      "operation_id": "get_job_api_jobs__job_id__get",
+      "parameters": {
+        "path:job_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "8f7f4d1aeb42a41dd5d7593553dadff10ac34c6aacc08a70cfab78845cb3d32c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "5dd2ea49b2c35ae74be31daf456a6178f2b7a75db60425a04d8ba9a8d687a145",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/jobs/{job_id}/resume/export": {
+      "operation_id": "export_job_delivery_resume_api_jobs__job_id__resume_export_get",
+      "parameters": {
+        "path:job_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "8f7f4d1aeb42a41dd5d7593553dadff10ac34c6aacc08a70cfab78845cb3d32c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/knowledge/stats": {
+      "operation_id": "stats_api_knowledge_stats_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "832ae69fc9f042feb9b77c37d01e03176c98b555591534bdfb57b8d1136fab5a"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/organizations": {
+      "operation_id": "list_organizations_api_organizations_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/organizations/{organization_id}/members": {
+      "operation_id": "list_members_api_organizations__organization_id__members_get",
+      "parameters": {
+        "path:organization_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "f129c7ca4b548c9647fc3c977e4e43319f06ac9d3c64086c10bd78d8348c60b3",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "ab64ca80dab45ce7cf9e797e359781dcad1611d07ae9f002006c79da0f9c41d8",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/payments/orders": {
+      "operation_id": "list_orders_api_payments_orders_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "0ad7fb51d42a0e68baf73f8e3124c90171d47cfe63d0c73ab9eca72cf927eda2"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/quality/admin/eval-candidates": {
+      "operation_id": "admin_eval_candidates_api_quality_admin_eval_candidates_get",
+      "parameters": {
+        "query:limit": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "067ebef73be0e7a29cc7389aad72ce1c09cbaf5ccb74f65136578950e00913f7",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:status": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "2bde2c4b0e7278d1d300f7c68a4ff960544d240033507685aa4a0fa44fc4d386",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "12dc023cb92af6c32808e5bb0867a95ddf3633ba2933fa8383021e31218beaf9",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/quality/admin/summary": {
+      "operation_id": "admin_quality_summary_api_quality_admin_summary_get",
+      "parameters": {
+        "query:limit": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "e9684911fa8daf0cbe725d8fed88c0e9227e72cbb334e56801927ab47788e3e6",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/quality/annotations": {
+      "operation_id": "list_quality_annotations_api_quality_annotations_get",
+      "parameters": {
+        "query:target_id": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "5157146ae893eb674fd681b5f5b1aed36da063e47b4fafddd1ba107f6a49af1d",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:target_type": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "effea9a98a6ee5ed7281ddd5efd0ec075101eb52f00401b7c75938e138daa73a",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "c398212847dc50933fd256ff4bce0d45a8e320f8ba9a142af77cdb092c98f83f",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/resumes": {
+      "operation_id": "list_resumes_api_resumes_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "d9b9dc37da6018c9b5d28305636f1c77709c2c83a21eeb475a1525247f2b6e03"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/resumes/{resume_id}": {
+      "operation_id": "get_resume_api_resumes__resume_id__get",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "74fa2fd46d4f7e26a79821e344f6ab913b31733b04169f6b75645c9888727aee",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/resumes/{resume_id}/chunks": {
+      "operation_id": "list_resume_chunks_api_resumes__resume_id__chunks_get",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "995945f2174bf3f1fff5792e5a5fdbdf15162cc93dacb24e8e5a2c51dc8314b9",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/resumes/{resume_id}/export": {
+      "operation_id": "export_resume_docx_api_resumes__resume_id__export_get",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:variant": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "22bf166f1448dcf6fc608e9da61e87cbfd1ccd43ad0b147ab9750a75fafcddbc",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:version_id": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "fe56b6d94f60d737b2db0755d9af35196a7ccf2e4d775eae480cc5161494ffa4",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/resumes/{resume_id}/versions": {
+      "operation_id": "list_resume_versions_api_resumes__resume_id__versions_get",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "1c58eee119c1ed3295781b6ce1c5c8ad1ab86d52bc0ce98e992501fc566f838f",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/resumes/{resume_id}/versions/{version_id}/compare": {
+      "operation_id": "compare_resume_version_api_resumes__resume_id__versions__version_id__compare_get",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "path:version_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "ad9c2de304fa487325049b456cf9febee7e3266f511ec9acfc378a4a367449c3",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:base_version_id": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "e666fe5c11b862fb53e1289387026fc8608ebefc3dc43ecca69f2f18b2b324b5",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/system/admin/metrics": {
+      "operation_id": "admin_metrics_api_system_admin_metrics_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/system/alerts": {
+      "operation_id": "system_alerts_api_system_alerts_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/system/rag/health": {
+      "operation_id": "rag_health_api_system_rag_health_get",
+      "parameters": {
+        "query:active": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "398c93741b939d44c5866f228ad15353919633753edf1621898d36ad1aa0ec28",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/system/release-checks": {
+      "operation_id": "release_checks_api_system_release_checks_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/system/status": {
+      "operation_id": "status_api_system_status_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/tasks": {
+      "operation_id": "list_tasks_api_tasks_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "63d43e1d31393a1e4b2586c8fb5304ba0278707357e0250196418470a5f36560"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/tasks/{task_id}": {
+      "operation_id": "get_task_api_tasks__task_id__get",
+      "parameters": {
+        "path:task_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "47bcdb626e7e7c80ed7e0a82bfe953e0324e0af77490d366db9d8b8a5b53802a",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "3da14ad8ed1caa17f246bff367da24a8f502da42d7bbceabfc890dc67c88f9ba",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/templates": {
+      "operation_id": "list_templates_api_templates_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "43d6aadd7d0bc77412c3d1d94e12c60952e58cc78a28ba6c1aa26e0f96666e6f"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/templates/{template_id}": {
+      "operation_id": "get_template_api_templates__template_id__get",
+      "parameters": {
+        "path:template_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "df10cc8aaf9640d28060ef5f551f31ef3ec0e2c08c8c8e3bb79926f58d7e5a02",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "52def1cedb048726b9dc6171825060c1c62d0657c13301a12e9220e3ac0767c8",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /api/training-plans/current": {
+      "operation_id": "current_plan_api_training_plans_current_get",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "b5010239cac37ca7323ce79155843584dfa06e07fdcaefa38c9888ab6bb1f873"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "GET /api/training-plans/{plan_id}": {
+      "operation_id": "plan_detail_api_training_plans__plan_id__get",
+      "parameters": {
+        "path:plan_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "d57456f66304a57b45b114abc58ba3a96d43c5bb89b844ec50241c08074f8254",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "b5010239cac37ca7323ce79155843584dfa06e07fdcaefa38c9888ab6bb1f873",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "GET /health": {
+      "operation_id": "health_check_health_get",
+      "parameters": {},
+      "security_sha256": "d1679bc765a7d8e38f0627f94d2a3acfb8b9f96e0e07b1192afaf9232b4fa0bf",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "PATCH /api/training-plans/{plan_id}/tasks/{task_id}": {
+      "operation_id": "update_plan_task_api_training_plans__plan_id__tasks__task_id__patch",
+      "parameters": {
+        "path:plan_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "d57456f66304a57b45b114abc58ba3a96d43c5bb89b844ec50241c08074f8254",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "path:task_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "47bcdb626e7e7c80ed7e0a82bfe953e0324e0af77490d366db9d8b8a5b53802a",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "80382d1988a44212adc91f2ae9952f0884550a94b5ac2aaac92bcfed2f8ba822",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "b5010239cac37ca7323ce79155843584dfa06e07fdcaefa38c9888ab6bb1f873",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/auth/login": {
+      "operation_id": "login_api_auth_login_post",
+      "parameters": {},
+      "security_sha256": "d1679bc765a7d8e38f0627f94d2a3acfb8b9f96e0e07b1192afaf9232b4fa0bf",
+      "request_required": true,
+      "request_schema_sha256": "074ab38a3a380211845f68fd04a0380e3b60f47f3e858feaf073928ac1462ba9",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "4f9e104859bca3956383f76df6e74f0177dd4fb11e967bcd9236ec208e8c996d",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/auth/register": {
+      "operation_id": "register_api_auth_register_post",
+      "parameters": {},
+      "security_sha256": "d1679bc765a7d8e38f0627f94d2a3acfb8b9f96e0e07b1192afaf9232b4fa0bf",
+      "request_required": true,
+      "request_schema_sha256": "78b1e66f14d80f7ea4f987879b59f49bb69e7b7626d08f1df830a6a1fae326f6",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "c6253e6ed8a2b8cb918e39db79a4feddec02d457fa95bf2494c55824cfa27b8b",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/business/admin/grant-plan": {
+      "operation_id": "admin_grant_plan_api_business_admin_grant_plan_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "a86289004eecb65b537b804ab4283f65e88c27ae0158a11f000677ff59380973",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/business/upgrade-request": {
+      "operation_id": "request_upgrade_api_business_upgrade_request_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "POST /api/community/experiences": {
+      "operation_id": "create_experience_api_community_experiences_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "8a82408c2a74c90b3dcda96377abb681b6409cfd6f901a357ab443a57f26c6cd",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "372e9cc899f117a6b06267de2d0a8525ff3fa31d87652b53acf4b652d87aae33",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/community/experiences/{experience_id}/like": {
+      "operation_id": "like_experience_api_community_experiences__experience_id__like_post",
+      "parameters": {
+        "path:experience_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "9f4b597316dc9e61caa405b2859d1062ba7de8465b65092310948c458c9b2ebc",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "372e9cc899f117a6b06267de2d0a8525ff3fa31d87652b53acf4b652d87aae33",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/company-profiles/rebuild": {
+      "operation_id": "rebuild_company_profile_index_api_company_profiles_rebuild_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "cc478552f9c846e26e95212c73cab579d5d3196d36b40f01a51e6ba73603e78f",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "2438845d1a85f83e2764ab40063b667cae8b0f712ab4aa218d062866963dfb12",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/interviews": {
+      "operation_id": "create_interview_api_interviews_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "9e233331b75bddc56313f841d09445bdb1452e2a7c7f9388bfb93b6ba9e1561b",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "d556af0fd0bdaf2abf4069d84a7d24b564d4022444c00dfe26b57995a6ded2ec",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/interviews/{interview_id}/finish": {
+      "operation_id": "finish_interview_api_interviews__interview_id__finish_post",
+      "parameters": {
+        "path:interview_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c4aa9ec0cec48bfe2e9240a2bb488f5e8efea56da4c60638186968d5afdf6188",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "5684b698f8124fcf79fce1edb1e03003b0e7a88eefd205ad5fc01900f1229d6b",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/interviews/{interview_id}/generate-questions": {
+      "operation_id": "generate_questions_api_interviews__interview_id__generate_questions_post",
+      "parameters": {
+        "path:interview_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c4aa9ec0cec48bfe2e9240a2bb488f5e8efea56da4c60638186968d5afdf6188",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:force": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "0d698c6318ac6ee07d9c7631140c9df97120695db110421af3e22b5b127553ea",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/interviews/{interview_id}/questions/{question_id}/answer": {
+      "operation_id": "submit_answer_api_interviews__interview_id__questions__question_id__answer_post",
+      "parameters": {
+        "path:interview_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c4aa9ec0cec48bfe2e9240a2bb488f5e8efea56da4c60638186968d5afdf6188",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "path:question_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "ac35a8541a4ac4ec3c96f479bb659332883144c7bcda16b0612f1a5e1a03c2ee",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "33dcd3ef3419e1eba2bf3bc754512c5191c5dc162deceaf596a59d9b549441c0",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "32023db3e0e6d04339e12112dc39445c5829b13067fb55f53fb7c3984de06ffc",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/interviews/{interview_id}/regenerate-question": {
+      "operation_id": "regenerate_question_api_interviews__interview_id__regenerate_question_post",
+      "parameters": {
+        "path:interview_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "c4aa9ec0cec48bfe2e9240a2bb488f5e8efea56da4c60638186968d5afdf6188",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "query:question_id": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "44874e9c9eed8bd90dccd6463389da93caa44d637432ebc35bf904003bb51c35",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/jobs": {
+      "operation_id": "create_job_api_jobs_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "b639e80ea6d8849624b510fe158f9a43d50469893f7149ef632d73a6e3423418",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "5dd2ea49b2c35ae74be31daf456a6178f2b7a75db60425a04d8ba9a8d687a145",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/jobs/{job_id}/adapt-resume-task": {
+      "operation_id": "adapt_resume_for_job_task_api_jobs__job_id__adapt_resume_task_post",
+      "parameters": {
+        "path:job_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "8f7f4d1aeb42a41dd5d7593553dadff10ac34c6aacc08a70cfab78845cb3d32c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "affc8e32d88ecfecc988529c18829c8345930072222f2cade9fe97ae929aef70",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/jobs/{job_id}/interview": {
+      "operation_id": "create_interview_for_job_api_jobs__job_id__interview_post",
+      "parameters": {
+        "path:job_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "8f7f4d1aeb42a41dd5d7593553dadff10ac34c6aacc08a70cfab78845cb3d32c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "d556af0fd0bdaf2abf4069d84a7d24b564d4022444c00dfe26b57995a6ded2ec",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/jobs/{job_id}/preflight": {
+      "operation_id": "preflight_job_api_jobs__job_id__preflight_post",
+      "parameters": {
+        "path:job_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "8f7f4d1aeb42a41dd5d7593553dadff10ac34c6aacc08a70cfab78845cb3d32c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "5dd2ea49b2c35ae74be31daf456a6178f2b7a75db60425a04d8ba9a8d687a145",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/knowledge/admin/import-interview-bank": {
+      "operation_id": "admin_import_interview_bank_api_knowledge_admin_import_interview_bank_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "18bc6ad44a04d07cf83e4f15aa4dfd15a22366c6ba7817297567ea0693bbba54",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "101149e251d1dceb7c9dd6381a849f71523b31e0550e4fd1be483749b3e59655",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/knowledge/search": {
+      "operation_id": "search_api_knowledge_search_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "36ffaa0db604b944ae22e9cf12348a1349486e5302e1ba9ad471168849c7418f",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "71b47fec4062c63f087e7bd31a4f9776bf226bb676d3bd54a58986c6153d0c91",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/knowledge/sync": {
+      "operation_id": "sync_vector_index_api_knowledge_sync_post",
+      "parameters": {
+        "query:recreate": {
+          "required": false,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "7c14932157079ad93d42e2f65c3e2336c7ce3c990c7eff7f3a9f49d88c1b6c6e",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "21ed3176f3c8c47eca6365cabf534a6107dd5a8ac595aa38f7cb6761ca6aa7cc",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/organizations": {
+      "operation_id": "create_org_api_organizations_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "6c2d369ef704e4f033d6b1c43b9181080066d27051cace2d6eeba5404468c835",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/organizations/{organization_id}/members": {
+      "operation_id": "invite_member_api_organizations__organization_id__members_post",
+      "parameters": {
+        "path:organization_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "f129c7ca4b548c9647fc3c977e4e43319f06ac9d3c64086c10bd78d8348c60b3",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "f851d4b94eeccf5a3e5037ccd4ff01b3e73d20d9790e08901632041ad9d5f580",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "e7c238fc73b5ddaee8b9c84d614d00d40d1c590e0abca3c697cd337b688854fe",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/payments/checkout": {
+      "operation_id": "create_checkout_api_payments_checkout_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "d11fc87107a4e1719024cb3090bbf2ba8f09a49408b0a8dad478ef4a2f161f95",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "55814f9669a070e8a9679387151710cb808468e72ba9a8249632f55d589fb816",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/payments/webhook": {
+      "operation_id": "payment_webhook_api_payments_webhook_post",
+      "parameters": {},
+      "security_sha256": "d1679bc765a7d8e38f0627f94d2a3acfb8b9f96e0e07b1192afaf9232b4fa0bf",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "POST /api/quality/admin/eval-candidates/{candidate_id}/status": {
+      "operation_id": "admin_update_eval_candidate_status_api_quality_admin_eval_candidates__candidate_id__status_post",
+      "parameters": {
+        "path:candidate_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "a7a66fdad957dcc12f858816152eeec885a005c15fb4874643303b5e19f0e8ff",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "4ed02ea51e117338cc594e27595a1c0ef2e539ea88fcaa0d771b80577fd7a6bc",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "e8076735b0f6b97c5c5abbcdc0f668491c223d090d44b78244034b390f4df828",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/quality/annotations": {
+      "operation_id": "create_quality_annotation_api_quality_annotations_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "bfd8a9ae53bbffba94a889bf5ffd538cc97870bb8b6826fc064992a803b32c38",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "f0c9eb3a6582174e99dfaa627e19585ababa65b64088d9da33012f61ce45237f",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/resumes/upload": {
+      "operation_id": "upload_resume_api_resumes_upload_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "74fa2fd46d4f7e26a79821e344f6ab913b31733b04169f6b75645c9888727aee"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "POST /api/resumes/{resume_id}/adapt-jd": {
+      "operation_id": "adapt_jd_api_resumes__resume_id__adapt_jd_post",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "ca284870f6158ece76906a0a5f6b1470193c404d5d2161095412db7b450b8d02",
+      "response_codes": [
+        "202",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "202": "affc8e32d88ecfecc988529c18829c8345930072222f2cade9fe97ae929aef70",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "202": {},
+        "422": {}
+      }
+    },
+    "POST /api/resumes/{resume_id}/adapt-jd-task": {
+      "operation_id": "adapt_jd_task_api_resumes__resume_id__adapt_jd_task_post",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "ca284870f6158ece76906a0a5f6b1470193c404d5d2161095412db7b450b8d02",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "affc8e32d88ecfecc988529c18829c8345930072222f2cade9fe97ae929aef70",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/resumes/{resume_id}/optimize": {
+      "operation_id": "optimize_resume_api_resumes__resume_id__optimize_post",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "666b7df2041c09ca40089ab8d606736c7fdcb33efe8637e535bb5204f38d1b6c",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "74fa2fd46d4f7e26a79821e344f6ab913b31733b04169f6b75645c9888727aee",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/resumes/{resume_id}/reindex": {
+      "operation_id": "reindex_resume_api_resumes__resume_id__reindex_post",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "f9236cac23a32b8007ddec0e17d21cfecccb1983f73722376437884465052ce3",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/resumes/{resume_id}/retrieve-evidence": {
+      "operation_id": "retrieve_evidence_for_jd_api_resumes__resume_id__retrieve_evidence_post",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "ca284870f6158ece76906a0a5f6b1470193c404d5d2161095412db7b450b8d02",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/resumes/{resume_id}/save-optimized": {
+      "operation_id": "save_optimized_api_resumes__resume_id__save_optimized_post",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "74fa2fd46d4f7e26a79821e344f6ab913b31733b04169f6b75645c9888727aee",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/resumes/{resume_id}/versions/delivery": {
+      "operation_id": "create_delivery_version_api_resumes__resume_id__versions_delivery_post",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "8cb654f4e41bbfe6d8d88c2e940033744ea07a5b0b40aef71729544d23e9b820",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/resumes/{resume_id}/versions/{version_id}/rollback": {
+      "operation_id": "rollback_resume_version_api_resumes__resume_id__versions__version_id__rollback_post",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "path:version_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "ad9c2de304fa487325049b456cf9febee7e3266f511ec9acfc378a4a367449c3",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "74fa2fd46d4f7e26a79821e344f6ab913b31733b04169f6b75645c9888727aee",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/system/admin/alerts/notify": {
+      "operation_id": "admin_notify_alerts_api_system_admin_alerts_notify_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "07691eb736a4f4fd86e519626a5b191e4b5f0b6e20dcd14e930222d4702c2790",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/system/admin/backup": {
+      "operation_id": "admin_backup_api_system_admin_backup_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68"
+      },
+      "response_headers": {
+        "200": {}
+      }
+    },
+    "POST /api/system/admin/reindex-resumes": {
+      "operation_id": "admin_reindex_resumes_api_system_admin_reindex_resumes_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "82538fa6c14908eeb4694f0f31ec05398a5103654921b41da9ea297f4fcc3d62",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "acbebb2a263220428773247fbd6720193cbe85286b05a7c6d2f8ca4931e76d68",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/system/rerank/probe": {
+      "operation_id": "rerank_probe_api_system_rerank_probe_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "9bc396eec25406cffcf7dfffa8bb470fc3e19586c0bb0f041fa4dd7ae7ba3a7d",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "9e6360fb846d612225a9f02246fd4edea2020e05a7dbfaab98e06ff7c61c6e07",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/tasks/{task_id}/cancel": {
+      "operation_id": "cancel_async_task_api_tasks__task_id__cancel_post",
+      "parameters": {
+        "path:task_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "47bcdb626e7e7c80ed7e0a82bfe953e0324e0af77490d366db9d8b8a5b53802a",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "3da14ad8ed1caa17f246bff367da24a8f502da42d7bbceabfc890dc67c88f9ba",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/tasks/{task_id}/retry": {
+      "operation_id": "retry_async_task_api_tasks__task_id__retry_post",
+      "parameters": {
+        "path:task_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "47bcdb626e7e7c80ed7e0a82bfe953e0324e0af77490d366db9d8b8a5b53802a",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "3da14ad8ed1caa17f246bff367da24a8f502da42d7bbceabfc890dc67c88f9ba",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/training-plans/generate": {
+      "operation_id": "generate_plan_api_training_plans_generate_post",
+      "parameters": {},
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "6431fbbdad71db881200c466bbba3302b86e900fa4c5ff17042a54a833bedd6d",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "b5010239cac37ca7323ce79155843584dfa06e07fdcaefa38c9888ab6bb1f873",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "POST /api/training-plans/{plan_id}/regenerate": {
+      "operation_id": "regenerate_plan_api_training_plans__plan_id__regenerate_post",
+      "parameters": {
+        "path:plan_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "d57456f66304a57b45b114abc58ba3a96d43c5bb89b844ec50241c08074f8254",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": false,
+      "request_schema_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "b5010239cac37ca7323ce79155843584dfa06e07fdcaefa38c9888ab6bb1f873",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "PUT /api/community/agent-questions/{question_id}/practice": {
+      "operation_id": "update_agent_question_practice_api_community_agent_questions__question_id__practice_put",
+      "parameters": {
+        "path:question_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "fd8d77427825e3a2a7eadd9941c1fefb538a19df91facb296342db8cf37a5031",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "0a60aa39c45633d6c6e8aebf9a789738d740d77694c4e5628f6a38c93aa1df6e",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "d38504e828ef99003e28a61c90a9881a0e0dd096f6f2f469c4e22a3c6ea1ed75",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "PUT /api/community/experiences/{experience_id}": {
+      "operation_id": "update_experience_api_community_experiences__experience_id__put",
+      "parameters": {
+        "path:experience_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "9f4b597316dc9e61caa405b2859d1062ba7de8465b65092310948c458c9b2ebc",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "8c02d3a60fad559bc64a6e8c6cae0daf6155b8e1b958ad2ebfb3622da01124db",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "372e9cc899f117a6b06267de2d0a8525ff3fa31d87652b53acf4b652d87aae33",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "PUT /api/jobs/{job_id}": {
+      "operation_id": "update_job_api_jobs__job_id__put",
+      "parameters": {
+        "path:job_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "8f7f4d1aeb42a41dd5d7593553dadff10ac34c6aacc08a70cfab78845cb3d32c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "b6e42aa5a831122e85b8759f45d53b743b8075bff9baa9853bd68d445bb21591",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "5dd2ea49b2c35ae74be31daf456a6178f2b7a75db60425a04d8ba9a8d687a145",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    },
+    "PUT /api/resumes/{resume_id}": {
+      "operation_id": "update_resume_api_resumes__resume_id__put",
+      "parameters": {
+        "path:resume_id": {
+          "required": true,
+          "deprecated": false,
+          "style": null,
+          "explode": null,
+          "allow_empty_value": false,
+          "schema_sha256": "208a2f23ec71811516df6f18f410321bc8ef9a8e55cb78da5ac08a66fb0c979c",
+          "content_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        }
+      },
+      "security_sha256": "48ef4af24e44e985a3e70d276c701fdf0803cf50b0ef513e6606655036cf3ee8",
+      "request_required": true,
+      "request_schema_sha256": "dd1caf8c6b982221c746c60556bd3e5e5ba9d1aabe96933d47f02e796860792a",
+      "response_codes": [
+        "200",
+        "422"
+      ],
+      "response_schema_sha256": {
+        "200": "74fa2fd46d4f7e26a79821e344f6ab913b31733b04169f6b75645c9888727aee",
+        "422": "74ca8b875901412b7ad21a5a9b92bcddbb3aeb457a611bfb42c52389a6aff0c9"
+      },
+      "response_headers": {
+        "200": {},
+        "422": {}
+      }
+    }
+  }
+}

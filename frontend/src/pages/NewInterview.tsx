@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router'
-import { ArrowLeft, Building2, Check, FileText, Layers3, MessageSquareText, Play, Target } from 'lucide-react'
+import { ArrowLeft, Check, FileText, Layers3, MessageSquareText, Play, Target } from 'lucide-react'
 import AppShell from '../components/AppShell'
-import { Badge, Button, EmptyState, Field, LoadingState } from '../components/ui'
+import { Button, EmptyState, Field, LoadingState } from '../components/ui'
 import { interviewApi, type InterviewTemplate } from '../services/interview'
 import { resumeApi, type Resume, type ResumeSummary } from '../services/resume'
-import { businessApi, BusinessEntitlements } from '../services/business'
 import { SAMPLE_JD_TEXT } from '../data/examples'
-import { companyProfileApi, type CompanyInterviewProfile } from '../services/companyProfiles'
 
 const DEFAULT_TEMPLATE_ID = 'comprehensive'
 
@@ -28,16 +26,12 @@ export default function NewInterviewPage() {
   const initialPosition = searchParams.get('position') || ''
   const [resumes, setResumes] = useState<ResumeSummary[]>([])
   const [selectedResumeDetail, setSelectedResumeDetail] = useState<Resume | null>(null)
-  const [business, setBusiness] = useState<BusinessEntitlements | null>(null)
   const [templates, setTemplates] = useState<InterviewTemplate[]>([])
   const [templateId, setTemplateId] = useState(DEFAULT_TEMPLATE_ID)
   const [resumeId, setResumeId] = useState(initialResumeId)
   const [jdText, setJdText] = useState('')
   const [targetCompany, setTargetCompany] = useState(initialCompany)
   const [targetPosition, setTargetPosition] = useState(initialPosition)
-  const [matchedProfile, setMatchedProfile] = useState<CompanyInterviewProfile | null>(null)
-  const [matchingProfile, setMatchingProfile] = useState(false)
-  const [profileMatchError, setProfileMatchError] = useState('')
   const [autoJdResumeId, setAutoJdResumeId] = useState<string | null>(null)
   const [jdManuallyEdited, setJdManuallyEdited] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -47,10 +41,9 @@ export default function NewInterviewPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    Promise.all([resumeApi.list(), businessApi.entitlements(), interviewApi.templates()])
-      .then(([res, businessRes, templateRes]) => {
+    Promise.all([resumeApi.list(), interviewApi.templates()])
+      .then(([res, templateRes]) => {
         setResumes(res.data)
-        setBusiness(businessRes.data)
         setTemplates(templateRes.data)
         if (!templateRes.data.some((template) => template.template_id === templateId)) {
           setTemplateId(DEFAULT_TEMPLATE_ID)
@@ -90,44 +83,10 @@ export default function NewInterviewPage() {
     }
   }, [resumeId])
 
-  useEffect(() => {
-    if (targetCompany.trim().length < 2) {
-      setMatchedProfile(null)
-      setProfileMatchError('')
-      return
-    }
-    let cancelled = false
-    const timer = window.setTimeout(() => {
-      setMatchingProfile(true)
-      setProfileMatchError('')
-      companyProfileApi.list({
-        company: targetCompany.trim(),
-        position: targetPosition.trim() || undefined,
-        limit: 5,
-      })
-        .then((res) => {
-          if (cancelled) return
-          setMatchedProfile(res.data.items[0] || null)
-        })
-        .catch((err: any) => {
-          if (!cancelled) setProfileMatchError(err.response?.data?.detail || '相关面经查找失败')
-        })
-        .finally(() => !cancelled && setMatchingProfile(false))
-    }, 350)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [targetCompany, targetPosition])
-
   const selectedResume = resumes.find((resume) => resume.id === resumeId)
   const selectedTemplate = templates.find((template) => template.template_id === templateId)
   const recentJd = (selectedResumeDetail?.jd_text || '').trim()
   const usingRecentJd = Boolean(recentJd && autoJdResumeId === resumeId && jdText.trim() === recentJd)
-  const interviewPaywallBlocked = Boolean(
-    business?.entitlements.paywall_active && !business.entitlements.can_create_interview,
-  )
-
   const handleUseRecentJd = () => {
     if (!recentJd || !resumeId) return
     setJdText(recentJd)
@@ -299,21 +258,6 @@ export default function NewInterviewPage() {
                     </Field>
                   </div>
 
-                  {matchingProfile && <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">正在查找相关面经...</div>}
-                  {profileMatchError && <div className="text-sm text-rose-700">{profileMatchError}</div>}
-                  {!matchingProfile && targetCompany.trim().length >= 2 && matchedProfile && (
-                    <div className="rounded-md border border-emerald-200 bg-emerald-50/60 p-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Building2 size={16} className="text-emerald-800" />
-                        <span className="font-semibold text-slate-950">已找到 {matchedProfile.company_name} · {matchedProfile.position_name} 的面试参考</span>
-                        <Badge tone={matchedProfile.profile_confidence === 'low' ? 'warning' : 'success'}>
-                          {matchedProfile.profile_confidence === 'low' ? '样本较少' : matchedProfile.profile_confidence === 'high' ? '样本充分' : '样本一般'}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 text-sm text-slate-600">{matchedProfile.interview_count} 份面经 · {matchedProfile.common_rounds.slice(0, 3).map((item) => item.name).join(' / ') || '轮次待补充'}</p>
-                    </div>
-                  )}
-                  {!matchingProfile && targetCompany.trim().length >= 2 && !matchedProfile && !profileMatchError && <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">暂无相关面经，将按简历、JD 和面试轮次正常出题。</div>}
 
                   {recentJd && (
                     <div className="flex flex-col justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center">
@@ -360,10 +304,9 @@ export default function NewInterviewPage() {
                       <div className="mt-3 text-xs leading-5 text-slate-500">重点：{selectedTemplate.question_focus.slice(0, 4).join('、')}</div>
                     </div>
                   )}
-                  {interviewPaywallBlocked && <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">当前面试额度已用完，请升级或联系管理员。</div>}
-                  <Button type="button" size="lg" className="w-full" onClick={handleStart} disabled={loading || !resumeId || interviewPaywallBlocked}>
+                  <Button type="button" size="lg" className="w-full" onClick={handleStart} disabled={loading || !resumeId}>
                     {loading ? <MessageSquareText size={16} /> : <Play size={16} />}
-                    {loading ? loadingLabel || '处理中...' : interviewPaywallBlocked ? '需升级后创建' : '开始生成面试'}
+                    {loading ? loadingLabel || '处理中...' : '开始生成面试'}
                   </Button>
                 </div>
               </div>

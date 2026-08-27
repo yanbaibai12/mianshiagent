@@ -1,6 +1,5 @@
-import hashlib
 import asyncio
-import json
+import hashlib
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -13,7 +12,6 @@ from app.models import Resume, ResumeChunk
 from app.services.rerank_service import rerank_documents, rerank_enabled
 from app.services.vector_store import delete_vector_payloads, search_vector_payloads, upsert_vector_payloads
 from app.utils.time import utc_now
-
 
 HARD_SKILL_TERMS = [
     "Python",

@@ -13,7 +13,6 @@ from app.schemas import (
 )
 from app.services.audit import log_audit_event
 from app.services.auth_service import get_current_user
-from app.services.business import record_usage
 from app.services.tenancy import resolve_request_organization, tenant_metadata
 from app.services.training_plans import (
     TrainingPlanError,
@@ -24,7 +23,7 @@ from app.services.training_plans import (
     training_plan_generation_lock,
     update_training_task,
 )
-
+from app.services.usage_telemetry import record_usage
 
 router = APIRouter(prefix="/api/training-plans", tags=["training-plans"])
 

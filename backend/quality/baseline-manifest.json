@@ -1,0 +1,159 @@
+{
+  "schema_version": "1.4",
+  "baseline_date": "2026-08-26",
+  "baseline_source_commit": "d66f712",
+  "capture_state": "agent-platform-postgresql-store-release-gates-passed-worktree-uncommitted",
+  "branch": "feature/agent-platform-phase-0",
+  "api": {
+    "historical_router_decorators": 97,
+    "historical_openapi_operations": 98,
+    "historical_router_modules": 17,
+    "active_router_decorators": 78,
+    "active_openapi_operations": 79,
+    "active_router_modules": 12,
+    "approved_operation_removals": 19,
+    "contract_baseline": "quality/openapi-baseline.json",
+    "approved_removals": "quality/openapi-approved-removals.json",
+    "compatibility_status": "passed"
+  },
+  "database": {
+    "table_count": 29,
+    "alembic_heads": [
+      "0018"
+    ],
+    "alembic_version_files": 18,
+    "tables": [
+      "agent_question_practice_states",
+      "agent_run_steps",
+      "agent_run_trace_events",
+      "agent_runs",
+      "alert_notifications",
+      "async_tasks",
+      "audit_logs",
+      "billing_accounts",
+      "company_interview_profiles",
+      "interview_experience_shares",
+      "interview_questions",
+      "interviews",
+      "job_applications",
+      "knowledge_chunks",
+      "knowledge_documents",
+      "organization_members",
+      "organizations",
+      "payment_orders",
+      "quality_annotations",
+      "quality_eval_candidates",
+      "resume_chunks",
+      "resume_templates",
+      "resume_versions",
+      "resumes",
+      "training_plan_tasks",
+      "training_plans",
+      "training_profile_dimensions",
+      "usage_records",
+      "users"
+    ],
+    "phase1b_audit": {
+      "status": "foundation_implemented_not_run_on_postgresql",
+      "read_only": true,
+      "audited_table_count": 26,
+      "blocker_categories": 7,
+      "service": "backend/app/services/data_contract_audit.py",
+      "cli": "backend/scripts/audit_phase1b_data_contract.py",
+      "runbook": "docs/PHASE1B_DATA_CONTRACT_AUDIT.md"
+    },
+    "historical_business_table_count": 26,
+    "agent_runtime_table_count": 3,
+    "agent_run_store": {
+      "implementation_status": "code_implemented_real_postgresql_drill_pending",
+      "local_default": "memory",
+      "production_required_backend": "postgresql",
+      "tables": [
+        "agent_runs",
+        "agent_run_steps",
+        "agent_run_trace_events"
+      ],
+      "transactional_idempotency": true,
+      "persistent_checkpoints": true,
+      "execution_lease": true,
+      "cancellation_race_handling": true,
+      "durable_worker": false,
+      "real_postgresql_multi_instance_evidence": false,
+      "sqlite_contract_tests_are_production_evidence": false,
+      "postgresql_sql_compilation_is_production_evidence": false
+    }
+  },
+  "tests": {
+    "backend_tests": 116,
+    "backend_line_coverage_percent": 86.03,
+    "backend_ci_ratchet_percent": 64,
+    "backend_release_target_percent": 85,
+    "ats_eval_cases": 40,
+    "frontend_unit_tests": 7,
+    "frontend_test_files": 2,
+    "e2e_spec_files": 3,
+    "quality_tooling_and_platform_tests": 30,
+    "backend_ci_status": "passed",
+    "backend_release_status": "passed",
+    "e2e_tests": 3,
+    "e2e_status": "passed",
+    "phase1b_data_audit_tests": 9,
+    "backend_release_report": "artifacts/quality-gate/2026-08-27-all-release-final-v6.json",
+    "all_ci_report": "artifacts/quality-gate/phase1b-all-ci.json",
+    "contracts_release_report": "artifacts/quality-gate/2026-08-27-contracts-release-agent-platform.json",
+    "frontend_release_report": "artifacts/quality-gate/2026-08-27-frontend-release.json",
+    "agent_fact_safety_cases": 8,
+    "agent_fact_safety_status": "passed",
+    "latest_release_gate_status": "passed"
+  },
+  "typing": {
+    "controlled_modules": 20,
+    "controlled_scan_status": "passed",
+    "legacy_full_scan_checked_files": 65,
+    "legacy_full_scan_error_count": 187,
+    "legacy_full_scan_files_with_errors": 31,
+    "legacy_full_scan_command": "python -m mypy app"
+  },
+  "formatting": {
+    "ruff_lint_scope": "backend/app backend/tests backend/scripts",
+    "ruff_format_controlled_modules": 12,
+    "full_backend_formatting_status": "legacy-debt-not-blocking-phase0-ci",
+    "legacy_full_scan_command": "python -m ruff format --check app tests scripts",
+    "legacy_full_scan_checked_files": 83,
+    "legacy_full_scan_files_requiring_format": 41,
+    "legacy_full_scan_files_formatted": 42
+  },
+  "frontend": {
+    "typescript_files": 36,
+    "lint_status": "passed",
+    "typecheck_status": "passed",
+    "build_status": "passed",
+    "page_files": 12,
+    "unit_tests": 7,
+    "unit_test_files": 2
+  },
+  "security": {
+    "python_known_vulnerabilities": 0,
+    "npm_known_vulnerabilities": 0,
+    "secret_scan_findings": 0
+  },
+  "registries": {
+    "agents": "active-shadow",
+    "agent_count": 5,
+    "skills": "active-shadow",
+    "skill_count": 4,
+    "mcp_tools": "active-shadow",
+    "mcp_tool_count": 2
+  },
+  "snapshot_date": "2026-08-27",
+  "phase_status": {
+    "phase_0": "implemented_uncommitted",
+    "phase_1a_product_surface_retirement": "implemented_uncommitted",
+    "phase_1b_data_contract_migration": "audit_foundation_implemented_migration_not_started",
+    "harness": "shadow_runtime_with_postgresql_store_code_not_production",
+    "mcp": "in_process_compatible_gateway_not_network_server",
+    "multi_agent": "five_agent_shadow_runtime_not_on_production_path",
+    "resume_effectiveness": "fact_safety_foundation_passed_blind_eval_pending",
+    "agent_run_store": "postgresql_code_implemented_real_drill_and_durable_worker_pending"
+  }
+}
