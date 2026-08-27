@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import base64
+import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.agent_platform.contracts import AgentRun, RunBudget, RunStatus
 from app.agent_platform.harness import TERMINAL_STATUSES, HarnessError
+from app.agent_platform.run_store import AgentRunSummary, RunStoreError
 from app.agent_platform.runtime import AgentShadowRuntime, agent_shadow_runtime
 from app.config import get_settings
 from app.models import User
@@ -103,6 +106,26 @@ class AgentShadowCheckpointResponse(BaseModel):
     step_count: int
 
 
+class AgentShadowRunSummaryResponse(BaseModel):
+    id: uuid.UUID
+    objective: str
+    input_mode: str
+    current_agent_id: str
+    status: str
+    tokens_used: int
+    tool_calls: int
+    attempts: int
+    cancel_requested: bool
+    error_code: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AgentShadowRunListResponse(BaseModel):
+    items: list[AgentShadowRunSummaryResponse]
+    next_cursor: str | None = None
+
+
 class AgentShadowRunResponse(BaseModel):
     id: uuid.UUID
     objective: str
@@ -152,6 +175,53 @@ def _public_trace_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     if "error_type" in metadata:
         public["error_code"] = "execution_failed"
     return public
+
+
+def _encode_cursor(item: AgentRunSummary) -> str:
+    updated_at = (
+        item.updated_at.replace(tzinfo=UTC) if item.updated_at.tzinfo is None else item.updated_at.astimezone(UTC)
+    )
+    payload = json.dumps(
+        {"updated_at": updated_at.isoformat(), "run_id": str(item.id)},
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+
+
+def _decode_cursor(value: str | None) -> tuple[datetime, uuid.UUID] | None:
+    if value is None:
+        return None
+    try:
+        padded = value + "=" * (-len(value) % 4)
+        payload = json.loads(base64.b64decode(padded, altchars=b"-_", validate=True))
+        if not isinstance(payload, dict) or set(payload) != {"updated_at", "run_id"}:
+            raise ValueError("invalid cursor object")
+        updated_at = datetime.fromisoformat(str(payload["updated_at"]))
+        if updated_at.tzinfo is None:
+            raise ValueError("cursor timestamp must be timezone-aware")
+        normalized_updated_at = updated_at.astimezone(UTC).replace(tzinfo=None)
+        return normalized_updated_at, uuid.UUID(str(payload["run_id"]))
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="分页游标无效") from exc
+
+
+def _serialize_summary(item: AgentRunSummary) -> AgentShadowRunSummaryResponse:
+    return AgentShadowRunSummaryResponse(
+        id=item.id,
+        objective=item.objective,
+        input_mode=item.input_mode,
+        current_agent_id=item.current_agent_id,
+        status=item.status.value,
+        tokens_used=item.tokens_used,
+        tool_calls=item.tool_calls,
+        attempts=item.attempts,
+        cancel_requested=item.cancel_requested,
+        error_code=item.error_code,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
 
 
 def _serialize_run(run: AgentRun) -> AgentShadowRunResponse:
@@ -231,6 +301,37 @@ async def create_agent_shadow_run(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="无法创建运行") from exc
     completed = await runtime.harness.execute(run.id)
     return _serialize_run(completed)
+
+
+@router.get(
+    "/runs",
+    response_model=AgentShadowRunListResponse,
+    dependencies=[Depends(require_agent_shadow_enabled)],
+)
+async def list_agent_shadow_runs(
+    run_status: RunStatus | None = Query(default=None, alias="status"),
+    current_agent_id: str | None = Query(default=None, min_length=1, max_length=100),
+    cursor: str | None = Query(default=None, min_length=1, max_length=512),
+    limit: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    runtime: AgentShadowRuntime = Depends(get_runtime),
+) -> AgentShadowRunListResponse:
+    try:
+        items = await runtime.harness.store.list_for_user(
+            current_user.id,
+            status=run_status,
+            current_agent_id=current_agent_id,
+            before=_decode_cursor(cursor),
+            limit=limit + 1,
+        )
+    except RunStoreError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="运行列表暂时不可用") from exc
+    has_more = len(items) > limit
+    page = items[:limit]
+    return AgentShadowRunListResponse(
+        items=[_serialize_summary(item) for item in page],
+        next_cursor=_encode_cursor(page[-1]) if has_more and page else None,
+    )
 
 
 @router.get(

@@ -1,11 +1,11 @@
 # Agent Platform v2 基线、Phase 1A 与 Phase 1B 审计清单
 
-> 文档版本：1.5.0
-> 状态：Phase 0 基线已冻结；Phase 1A 已实施；Phase 1B 审计基础已实现；均未提交
+> 文档版本：1.6.0
+> 状态：Phase 0 与 Phase 1A 已合并；Phase 1B 审计基础已实现；Run Inspector API 为发布候选
 > 基线日期：2026-08-26
 > 当前快照日期：2026-08-27
-> Git 基线：`d66f712`（`origin/main`）
-> 工作分支：`feature/agent-platform-phase-0`
+> Git 集成基线：`11bf353`（`main` / `origin/main`）
+> 发布候选分支：`feature/agent-run-inspector`
 > Owner：Agent Platform Team
 > 机器可读清单：[`../backend/quality/baseline-manifest.json`](../backend/quality/baseline-manifest.json)
 
@@ -16,7 +16,7 @@
 1. **历史冻结基线**：Agent Platform v2 收缩前的契约与代码规模，用于解释兼容性变化；
 2. **当前活动快照**：产品表面退役并加入 Phase 1B 只读审计基础后的工作区状态，用于质量门和后续开发计划。
 
-当前改动尚未提交，因此机器可读清单标记为 `agent-platform-postgresql-store-release-gates-passed-worktree-uncommitted`。正式合并前必须重新生成质量报告并绑定最终 commit。任何数量、覆盖率或安全结论均以实际执行结果为准，不以文档声明替代 CI 证据。
+Phase 0 与 Phase 1A 已通过 Pull Request #1 合并到 `main`。当前活动快照新增用户隔离、筛选和游标分页的 Run Inspector API；本地 Release Gate 报告记录工作区指纹，正式合并仍必须由 Pull Request GitHub Actions 将证据绑定最终 commit。任何数量、覆盖率或安全结论均以实际执行结果为准，不以文档声明替代 CI 证据。
 
 ## 2. 代码与契约规模
 
@@ -64,7 +64,7 @@ Phase 1B 只能按 expand → migrate → contract 执行数据契约收缩，�
 
 - 数据库 expand/migrate/contract migration、删表、删列或外键收缩；真实 PostgreSQL 数据副本审计也尚未执行；
 - Phase 1B 历史数据 expand/migrate/contract migration、真实 PostgreSQL 数据副本审计和恢复演练；
-- Agent durable worker、kill/restart、重复投递恢复、Run Inspector 和生产 Agent API；
+- Agent durable worker、kill/restart、重复投递恢复、Run Inspector UI 和生产 Agent API；
 - 网络 MCP Server 或正式批准的进程内生产服务边界；
 - Evidence Graph 和经独立人工双盲证明有效的简历改写生产链路。
 
@@ -72,8 +72,8 @@ Phase 1B 只能按 expand → migrate → contract 执行数据契约收缩，�
 
 | 检查 | 2026-08-27 实测结果 | 说明 |
 |---|---:|---|
-| 后端测试 | 116 passed / 19 subtests passed | pytest 全量；含 Agent shadow runtime、文档治理和 Phase 1B 数据审计测试 |
-| 后端行覆盖率 | 86.03% | Release Gate 实测；CI ratchet 仍固定为 64% |
+| 后端测试 | 118 passed / 24 subtests passed | pytest 全量；含 Agent shadow runtime、文档治理和 Phase 1B 数据审计测试 |
+| 后端行覆盖率 | 86.15% | Release Gate 实测；CI ratchet 仍固定为 64% |
 | 后端 Ruff lint | 通过 | `app tests scripts` |
 | 后端 Ruff format | 通过 | 12 个既有受控内核模块 + Agent Platform/Shadow API；contracts scripts 独立全量检查 |
 | 后端 mypy | 通过 | 20 个受控 source files，覆盖 Agent Platform 与既有受控内核 |
@@ -91,17 +91,17 @@ Phase 1B 只能按 expand → migrate → contract 执行数据契约收缩，�
 | Agent Registry | active shadow runtime | 5 agents；真实 entrypoint 与 handoff 契约已校验 |
 | Skills Registry | active shadow runtime | 4 skills；SKILL.md、输入输出和 SemVer 已校验 |
 | MCP Tool Registry | active shadow runtime | 2 个只读工具；Agent allowlist 与 audience 契约已校验 |
-| 质量工具、平台与数据审计测试 | 已纳入 116 个全量测试 | OpenAPI、注册表、文档、部署契约、证据、Secret scan、数据库版本防护和 Phase 1B 审计 |
-| 统一 Release 质量门 | 通过 | `artifacts/quality-gate/2026-08-27-all-release-final-v2.json`；21 项阻断检查全部通过 |
-| Release 质量门 | 通过 | 后端 116 tests + 19 subtests，覆盖率 `86.03%`；前端与契约 Release Gate 通过 |
+| 质量工具、平台、Run Inspector 与数据审计测试 | 已纳入 118 个全量测试 | OpenAPI、注册表、文档、部署契约、证据、Secret scan、数据库版本防护和 Phase 1B 审计 |
+| 统一 Release 质量门 | 通过 | `artifacts/quality-gate/2026-08-27-agent-run-inspector-release.json`；21 项阻断检查全部通过 |
+| Release 质量门 | 通过 | 后端 118 tests + 24 subtests，覆盖率 `86.15%`；前端与契约 Release Gate 通过 |
 
 ### 4.1 阈值解释
 
 - `64%` 是防止存量覆盖率继续下降的 **CI ratchet**；
-- `85%` 是企业发布总行覆盖率门槛，当前后端 Release 覆盖率为 `86.03%`；
+- `85%` 是企业发布总行覆盖率门槛，当前后端 Release 覆盖率为 `86.15%`；
 - Harness、权限、资源隔离、证据验证、幂等和恢复等新增关键模块目标覆盖率为 `>=95%`；
 - Ruff format 当前纳管既有受控内核模块以及 Agent Platform/Shadow API；mypy 纳管 20 个 source files。两者仍非全量后端，不得描述为存量债务已清零；
-- Agent/Skills/MCP 已形成隔离 shadow runtime；PostgreSQL Store、事务幂等和 execution lease 已完成代码实现，但真实 PostgreSQL 多实例/恢复演练、durable worker、生产主链路和网络 MCP 部署仍未完成；
+- Agent/Skills/MCP 已形成隔离 shadow runtime；Run Inspector API 已提供用户隔离、状态/Agent 筛选和稳定游标分页，但 Inspector UI、真实 PostgreSQL 多实例/恢复演练、durable worker、生产主链路和网络 MCP 部署仍未完成；
 - 简历改写效果必须由事实性、JD 相关性、盲评、可读性和回归评测共同证明，不能只引用 ATS 分数。
 
 ## 5. 冻结与实施产物

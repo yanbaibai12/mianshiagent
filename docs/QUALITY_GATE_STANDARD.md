@@ -1,6 +1,6 @@
 # 企业级质量门与发布准入标准
 
-> 文档版本：1.4.0
+> 文档版本：1.5.0
 > 状态：工程 Release Gate 已通过；生产准入仍受数据与效果证据阻断
 > 生效条件：上位开发规范经项目维护者批准
 > 编制日期：2026-08-27
@@ -552,13 +552,13 @@ Agent Event 必须至少包含：
 
 截至 2026-08-27，当前工作区本地验证结果：
 
-- 后端 Release Gate：116 个 pytest 测试与 19 个 subtests 通过，总行覆盖率 `86.03%`；Ruff、受控 Ruff format、mypy、pip-audit、Alembic heads 全部通过；
+- 后端 Release Gate：118 个 pytest 测试与 24 个 subtests 通过，总行覆盖率 `86.15%`；Ruff、受控 Ruff format、mypy、pip-audit、Alembic heads 全部通过；
 - 前端 Release Gate：ESLint、7 个 Vitest 单测及覆盖率、TypeScript、生产 build、npm high audit 全部通过；
 - E2E：Chromium 下 3 个核心场景通过；
 - 契约与安全 Release Gate：文档治理、部署运行时一致性、生产 Shadow fail-closed、OpenAPI、Agent、MCP、Skills、密钥扫描和 Agent fact-safety eval 全部通过；
 - OpenAPI：历史基线 98 个 operation，当前活动 79 个；19 项删除均经 ADR-0002 精确批准，未批准 breaking change 为 0；
-- Agent shadow runtime：5 个 Agent、4 个 Skill、2 个只读 MCP-compatible Tool；具备预算、超时、取消、失败重试、幂等、Checkpoint、Trace、handoff、工具 allowlist、审批和同一 Run 并发串行化；
+- Agent shadow runtime：5 个 Agent、4 个 Skill、2 个只读 MCP-compatible Tool；具备预算、超时、取消、失败重试、幂等、Checkpoint、Trace、handoff、工具 allowlist、审批、同一 Run 并发串行化，以及用户隔离的 Run Inspector API；
 - 自动事实安全评测：8/8 通过，覆盖 PII 排除、Evidence Hash、防篡改、空证据不生成、来源精确和输出上限；
-- 统一证据报告：`artifacts/quality-gate/2026-08-27-all-release-final-v2.json`；报告覆盖 21 项阻断检查，并记录 Git SHA、工作区指纹和证据哈希。
+- 统一证据报告：`artifacts/quality-gate/2026-08-27-agent-run-inspector-release.json`；报告覆盖 21 项阻断检查，并记录 Git SHA、工作区指纹和证据哈希。
 
 工程质量门达到本阶段 Release 标准后，仍不得宣称生产平台完成：PostgreSQL Run Store、事务幂等、执行租约和取消竞争已完成代码与 SQLite 合同测试，但 Phase 1B/0018 尚无真实 PostgreSQL 升降级、并发、多实例和恢复演练；durable worker 与 kill/restart/重复投递恢复未完成；MCP Gateway 不是网络 MCP Server；真实只读领域适配器仍未晋级为生产 Tool 服务；简历改写尚缺至少 120 条分层样本、独立人工盲评、置信区间和群体退化检查。上述项目属于生产准入和效果证明阻断项，不得用 SQLite、SQL 编译、Mock、自动测试或模型自评分替代。

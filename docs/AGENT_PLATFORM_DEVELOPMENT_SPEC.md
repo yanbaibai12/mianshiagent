@@ -749,7 +749,7 @@ backend/app/
 ### Phase 0：基线冻结与治理
 
 **日期：2026-08-26 至 2026-09-04**
-**当前状态：基线工程已实施、尚未提交；2026-08-27 后端、前端和契约 Release Gate 均已通过。**
+**当前状态：已通过 Pull Request #1 合并 `main`（`11bf353`）；2026-08-27 后端、前端和契约 Release Gate 均已通过。**
 
 交付物：
 
@@ -772,7 +772,7 @@ backend/app/
 Phase 0 当前事实基线：
 
 - 历史冻结基线为 17 个 Router 模块、97 个 Router 装饰器、98 个 OpenAPI operation、26 张业务表和 Alembic head `0017`；当前活动快照为 29 张表（26 张历史业务表 + 3 张 Agent Runtime 表）和唯一 head `0018`；
-- 最新后端 Release Gate：116 个 pytest 测试和 19 个 subtests 通过，总行覆盖率 `86.03% >= 85%`；CI ratchet 仍保持 64%，Release 阈值保持 85%；
+- 最新后端 Release Gate：118 个 pytest 测试和 24 个 subtests 通过，总行覆盖率 `86.15% >= 85%`；CI ratchet 仍保持 64%，Release 阈值保持 85%；
 - Ruff lint 全量通过；Ruff format/mypy 已纳管 Agent Platform 与既有受控内核，共 20 个 mypy source files；存量全量格式/类型债务仍需分阶段收敛；
 - 前端 lint、7 个单测、typecheck、build、npm audit 和 3 个 Chromium E2E 场景通过；
 - Python/npm 已知高危漏洞为 0，Secret scan finding 为 0；
@@ -784,7 +784,7 @@ Phase 0 当前事实基线：
 ### Phase 1A：产品表面退役
 
 **实际实施日期：2026-08-27**
-**当前状态：已实施、未提交；ADR-0002 Accepted。**
+**当前状态：已通过 Pull Request #1 合并 `main`（`11bf353`）；ADR-0002 Accepted。**
 
 已交付：
 
@@ -802,7 +802,7 @@ Phase 0 当前事实基线：
 - 退役前端引用扫描为 0；
 - 19 个退役 API 返回 404 且不再出现在 OpenAPI；
 - 账号导出、账号删除、历史画像 snapshot 和运维能力回归通过；
-- 后端 Release Gate 总行覆盖率已提升至 `86.03%`，同时满足 64% CI ratchet 和 85% Release 门。
+- 后端 Release Gate 总行覆盖率已提升至 `86.15%`，同时满足 64% CI ratchet 和 85% Release 门。
 
 ### Phase 1B：历史数据契约迁移
 
@@ -855,9 +855,10 @@ Phase 0 当前事实基线：
 - 真实 Resume/Interview 数据库只读适配器，执行 Run user、Tool audience、双向 allowlist 和数据库 owner 校验；
 - 认证、默认关闭、隐藏 OpenAPI 的 `/api/agent-shadow/runs*`；
 - 同用户 Run 隔离、公共错误码和内部状态/异常脱敏；
+- Run Inspector API 支持按状态/Agent 筛选、`(updated_at, run_id)` 稳定游标分页和摘要查询，不加载 Step/Trace 子表；
 - 生产环境启用 Shadow API 时由 Release Check 和启动检查双重阻断。
 
-以上 Slice 仍仅用于契约验证。PostgreSQL Run Store、事务幂等和 execution lease 已完成代码实现，但真实 PostgreSQL 升级/降级、多实例并发、租约接管、取消竞争与恢复演练仍缺失；durable worker、kill/restart、重复投递恢复、Run Inspector 和生产 Agent API 也未完成。因此下面的 Phase 2 退出标准仍不得整体标记完成。
+以上 Slice 仍仅用于契约验证。PostgreSQL Run Store、事务幂等和 execution lease 已完成代码实现，但真实 PostgreSQL 升级/降级、多实例并发、租约接管、取消竞争与恢复演练仍缺失；durable worker、kill/restart、重复投递恢复、Run Inspector UI 和生产 Agent API 也未完成。因此下面的 Phase 2 退出标准仍不得整体标记完成。
 
 退出标准：
 
